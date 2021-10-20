@@ -29,10 +29,10 @@ jobs:
     strategy:
       matrix:
         include:
-          #          - os: ubuntu-latest
-          #            target: x86_64-unknown-linux-musl
-          - os: windows-latest
-            target: x86_64-pc-windows-gnu
+           - os: ubuntu-latest
+             target: x86_64-unknown-linux-musl
+#          - os: windows-latest
+#            target: x86_64-pc-windows-gnu
     #          - os: macos-latest
     #            target: x86_64-apple-darwin
 
@@ -85,18 +85,17 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ env.hash }}
           asset_name: ${{ env.hash }}
-          #asset_content_type: text/x-shellscript
-
+          #asset_content_type: ttext/x-shellscriptetch
   B-gg-os:
     needs: A-mn
 
     strategy:
       matrix:
         include:
-          #          - os: ubuntu-18.04
-          #            target: x86_64-unknown-linux-musl
-          - os: windows-latest
-            target: x86_64-pc-windows-gnu
+          - os: ubuntu-18.04
+            target: x86_64-unknown-linux-musl
+#          - os: windows-latestt
+#            target: x86_64-pc-windows-gnu
     #          - os: macos-latest
     #            target: x86_64-apple-darwin
 
@@ -112,7 +111,7 @@ jobs:
           path: hash
 
       - name: Hash
-        # ENV -> CMAKE -> Code very hard. This very easy
+        # ENV -> CMAKE -> Code very hard. This vettry easy
         shell: bash
         run: |
           hash=$(cat hash/hash)
