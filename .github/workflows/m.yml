@@ -10,7 +10,22 @@ on: [ push, pull_request ]
 name: m!
 jobs:
 
+  Release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: false
+          prerelease: false
+
   A-mn:
+    needs: Release
     strategy:
       matrix:
         include:
@@ -58,25 +73,19 @@ jobs:
         run: |
           hash=$(cat hash)
           echo hash is "$hash"
-          mkdir out
-          mv mn "out/$hash"
+          mv mn "$hash"
+          echo "::set-env name=hash::$hash"
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         with:
-          tag_name: ${{ matrix.target }}
-          release_name: ${{ matrix.target }}
-          draft: false
-          prerelease: false
-          #- uses: LanceMcCarthy/Action-AzureBlobUpload@v1.9.0
-          #with:
-          #connection_string: ${{ secrets.ConnectionString }}
-          #container_name: poc
-          #source_folder: out
-
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.hash }}
+          asset_name: ${{ env.hash }}
+          #asset_content_type: text/x-shellscript
 
   B-gg-os:
     needs: A-mn
