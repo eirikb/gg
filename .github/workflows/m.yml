@@ -76,10 +76,10 @@ jobs:
         include:
           #          - os: ubuntu-18.04
           #            target: x86_64-unknown-linux-musl
-          #          - os: windows-latest
-          #            target: x86_64-pc-windows-gnu
-          - os: macos-latest
-            target: x86_64-apple-darwin
+                    - os: windows-latest
+                      target: x86_64-pc-windows-gnu
+#          - os: macos-latest
+#            target: x86_64-apple-darwin
 
     runs-on: ${{ matrix.os }}
 
