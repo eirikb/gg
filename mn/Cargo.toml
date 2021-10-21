@@ -1,0 +1,7 @@
+[package]
+name = "mn"
+version = "0.1.0"
+authors = ["Eirik Brandtzæg <eirikb@eirikb.no>"]
+edition = "2018"
+
+[dependencies]
