@@ -37,7 +37,11 @@ jobs:
 
       - name: Hash!
         run: |
+          du -a
+          echo "ok" > ok
+          sha512sum ok
           gcc -o print_hash gg/print_hash.c
+          ./print_hash ok
           ./print_hash mn > hash
           cat hash
 
