@@ -14,12 +14,12 @@ jobs:
     strategy:
       matrix:
         include:
-          #          - os: ubuntu-latest
-          #            target: x86_64-unknown-linux-musl
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
           - os: windows-latest
             target: x86_64-pc-windows-gnu
-    #          - os: macos-latest
-    #            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: x86_64-apple-darwin
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -71,12 +71,12 @@ jobs:
     strategy:
       matrix:
         include:
-          #          - os: ubuntu-18.04
-          #            target: x86_64-unknown-linux-musl
+          - os: ubuntu-18.04
+            target: x86_64-unknown-linux-musl
           - os: windows-latest
             target: x86_64-pc-windows-gnu
-    #          - os: macos-latest
-    #            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: x86_64-apple-darwin
 
     runs-on: ${{ matrix.os }}
 
@@ -159,8 +159,7 @@ jobs:
     needs: C-m
     strategy:
       matrix:
-        #        os: [ ubuntu-18.04, ubuntu-20.04, macos-latest, windows-2016, windows-2019 ]
-        os: [ windows-latest ]
+        os: [ ubuntu-18.04, ubuntu-20.04, macos-latest, windows-2016, windows-2019 ]
 
     runs-on: ${{ matrix.os }}
     steps:
