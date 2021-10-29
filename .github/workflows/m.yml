@@ -36,16 +36,7 @@ jobs:
            find . -type f -name mn -exec cp {} ../mn \;
 
       - name: Hash!
-        run: |
-          du -a
-          echo "ok" > ok
-          sha512sum ok
-          sha512sum mn
-          gcc -o print_hash gg/print_hash.c
-          ./print_hash ok
-          ./print_hash mn > hash
-          cat hash
-          sha512sum mn > hash
+        run: sha512sum mn | awk '{print $1}' > hash
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
