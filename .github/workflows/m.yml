@@ -36,7 +36,13 @@ jobs:
            find . -type f -name mn -exec cp {} ../mn \;
 
       - name: Hash!
-        run: sha512sum mn | awk '{print $1}' > hash
+        run: |
+          ls -lah
+          cmake -S . -B build
+          cmake --build build
+          ls -lah build
+          ./build/print_hash mn > hash
+          cat hash
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2

@@ -13,3 +13,10 @@ if (WIN32)
 else ()
     add_executable(gg main.c)
 endif ()
+
+project(print_hash C)
+
+add_executable(print_hash print_hash.c)
+if (WIN32)
+    set_target_properties(gg PROPERTIES OUTPUT_NAME "gg")
+endif ()
