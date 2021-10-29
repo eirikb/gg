@@ -181,7 +181,7 @@ jobs:
 
   E-release:
     name: Release!
-    needs: [ F-test-os, F-test-docker ]
+    needs: [ D-test-os ]
     runs-on: ubuntu-latest
     steps:
       - name: Generate build number
