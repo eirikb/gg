@@ -9,5 +9,5 @@ do
   fi
 done
 
-echo "Failed?!"
+echo "Your system is not supported"
 exit 1
