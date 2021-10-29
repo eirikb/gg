@@ -36,6 +36,7 @@ jobs:
            find . -type f -name mn -exec cp {} ../mn \;
 
       - name: Hash!
+        shell: bash
         run: |
           cd gg
           cmake -S . -B build
