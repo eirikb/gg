@@ -37,11 +37,9 @@ jobs:
 
       - name: Hash!
         run: |
-          ls -lah
           cd gg
           cmake -S . -B build
           cmake --build build
-          ls -lah build
           cd ..
           ./gg/build/print_hash mn > hash
           cat hash
