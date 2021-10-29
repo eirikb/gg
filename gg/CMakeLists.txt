@@ -9,7 +9,6 @@ set(CMAKE_C_STANDARD 99)
 
 if (WIN32)
     add_executable(gg main-win.c)
-    set_target_properties(gg PROPERTIES OUTPUT_NAME "gg")
 else ()
     add_executable(gg main.c)
 endif ()
