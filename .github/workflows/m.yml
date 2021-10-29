@@ -38,12 +38,9 @@ jobs:
       - name: Hash!
         shell: bash
         run: |
-          cd gg
-          cmake -S . -B build
-          cmake --build build
-          cd ..
-          ./gg/build/print_hash mn > hash
-          cat hash
+          cmake -S gg -B bb
+          cmake --build bb
+          ./bb/build/print_hash mn > hash
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
