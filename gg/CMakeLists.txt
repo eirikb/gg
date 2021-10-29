@@ -18,5 +18,5 @@ project(print_hash C)
 
 add_executable(print_hash print_hash.c)
 if (WIN32)
-    set_target_properties(gg PROPERTIES OUTPUT_NAME "gg")
+    set_target_properties(print_hash PROPERTIES OUTPUT_NAME "print_hash")
 endif ()
