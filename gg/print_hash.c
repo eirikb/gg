@@ -6,7 +6,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  char hash[HASH_SIZE];
+  char hash[128];
   hashForFile(argv[1], hash);
   printf("%s\n", hash);
   return 0;
