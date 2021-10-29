@@ -40,6 +40,7 @@ jobs:
         run: |
           cmake -S gg -B bb
           cmake --build bb
+          find bb -name print_hash.exe -exec mv {} bb/print_hash \;
           ./bb/print_hash mn > hash
 
       - name: Upload artifact
