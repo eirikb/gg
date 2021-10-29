@@ -12,7 +12,3 @@ if (WIN32)
 else ()
     add_executable(gg main.c)
 endif ()
-
-project(print_hash C)
-
-add_executable(print_hash print_hash.c)
