@@ -40,7 +40,7 @@ jobs:
         run: |
           cmake -S gg -B bb
           cmake --build bb
-          ./bb/build/print_hash mn > hash
+          ./bb/print_hash mn > hash
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
