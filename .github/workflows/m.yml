@@ -31,7 +31,8 @@ jobs:
           cd mn2
           rustup target add ${{ matrix.target }}
           rustup toolchain install stable-${{ matrix.target }}
-          cargo build --release --target=${{ matrix.target}}
+          cargo build --release 
+          #--target=${{ matrix.target}}
            find . -type f -name mn.exe -exec cp {} ../mn \;
            find . -type f -name mn -exec cp {} ../mn \;
 
