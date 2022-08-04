@@ -8,8 +8,8 @@ on:
 # B: Build gg (for each target)
 # C: Build m
 # D: Test (for each os target)
-# E: Test (for each container)
-# F: Create release
+# D: Test (for each container)
+# E: Create release
 
 name: m!
 jobs:
@@ -95,6 +95,7 @@ jobs:
         include:
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-musl
+            linker_flags: -static -Os
           - os: windows-latest
             target: x86_64-pc-windows-gnu
           - os: macos-latest
@@ -123,20 +124,8 @@ jobs:
         shell: bash
         run: |
           cd gg
-          echo "build builder build script"
-          echo "cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-static -Os' -DCMAKE_BUILD_TYPE=Release" > b.sh
-          echo "cmake --build build --config Release" >> b.sh
-          echo "Script:"
-          cat b.sh
-          #echo "docker is ${{ matrix.docker }}"
-          #if [ ${{ matrix.docker }} != "" ]; then
-            #echo "run in docker! :O"
-            #docker run --rm -v $(pwd):/b -w /b -u root ${{ matrix.docker }} sh b.sh
-          #else
-            #echo "not in docker"
-            #sh b.sh
-          #fi
-          sh b.sh
+          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
           find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
 
       - name: Upload artifact
@@ -196,9 +185,9 @@ jobs:
           sh m
           echo "Nice, let's try again"
           sh m
-          
+  
 
-  E-test-container:
+  D-test-container:
     needs: C-m
     strategy:
       matrix:
@@ -219,9 +208,9 @@ jobs:
           sh m
 
 
-  F-release:
+  E-release:
     name: Release!
-    needs: [ D-test-os, E-test-container ]
+    needs: [ D-test-os, D-test-container ]
     runs-on: ubuntu-latest
     steps:
       - name: Generate build number
