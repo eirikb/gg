@@ -29,6 +29,11 @@ jobs:
         run: |
           mv mn mn2
           cd mn2
+          if [ "${{ matrix.os }}" == "ubuntu-latest" ]
+          then
+            sudo apt install musl-dev
+          fi
+          
           rustup target add ${{ matrix.target }}
           rustup toolchain install stable-${{ matrix.target }}
           cargo build --release --target=${{ matrix.target}}
