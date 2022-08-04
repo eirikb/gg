@@ -29,19 +29,20 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-#      - uses: actions/cache@v2
-#        with:
-#          path: |
-#            ~/.cargo/registry
-#            ~/.cargo/git
-#            mn2/target
-#          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            mn2/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo pls
         shell: bash
         run: |
           mkdir -p mn2
           mv mn/* mn2
+          rm -rf mn
           cd mn2
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]
           then
