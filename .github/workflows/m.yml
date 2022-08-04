@@ -31,7 +31,8 @@ jobs:
           cd mn2
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]
           then
-            sudo apt install musl-dev musl-gcc
+            sudo apt install musl-dev
+            musl-gcc
           fi
           
           rustup target add ${{ matrix.target }}
