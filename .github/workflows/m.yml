@@ -1,4 +1,7 @@
-on: [ push, pull_request, workflow_dispatch ]
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
 
 # Plan (tiers):
 # A: Build mn (for each target)
