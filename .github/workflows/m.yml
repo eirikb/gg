@@ -32,7 +32,6 @@ jobs:
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]
           then
             sudo apt install musl-tools
-            musl-gcc
           fi
           
           rustup target add ${{ matrix.target }}
