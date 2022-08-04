@@ -40,7 +40,8 @@ jobs:
       - name: cargo pls
         shell: bash
         run: |
-          mv mn mn2
+          mkdir -p mn2
+          mv mn/* mn2
           cd mn2
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]
           then
