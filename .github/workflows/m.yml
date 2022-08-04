@@ -124,7 +124,7 @@ jobs:
         run: |
           cd gg
           echo "build builder build script"
-          echo "cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os -s' -DCMAKE_BUILD_TYPE=Release" > b.sh
+          echo "cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-static -Os' -DCMAKE_BUILD_TYPE=Release" > b.sh
           echo "cmake --build build --config Release" >> b.sh
           echo "Script:"
           cat b.sh
