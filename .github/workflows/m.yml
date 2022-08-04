@@ -128,14 +128,15 @@ jobs:
           echo "cmake --build build --config Release" >> b.sh
           echo "Script:"
           cat b.sh
-          echo "docker is ${{ matrix.docker }}"
-          if [ ${{ matrix.docker }} != "" ]; then
-            echo "run in docker! :O"
+          #echo "docker is ${{ matrix.docker }}"
+          #if [ ${{ matrix.docker }} != "" ]; then
+            #echo "run in docker! :O"
             docker run --rm -v $(pwd):/b -w /b -u root ${{ matrix.docker }} sh b.sh
-          else
-            echo "not in docker"
-            sh b.sh
-          fi
+          #else
+            #echo "not in docker"
+            #sh b.sh
+          #fi
+          sh b.sh
           find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
 
       - name: Upload artifact
