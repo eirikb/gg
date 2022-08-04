@@ -131,7 +131,7 @@ jobs:
           #echo "docker is ${{ matrix.docker }}"
           #if [ ${{ matrix.docker }} != "" ]; then
             #echo "run in docker! :O"
-            docker run --rm -v $(pwd):/b -w /b -u root ${{ matrix.docker }} sh b.sh
+            #docker run --rm -v $(pwd):/b -w /b -u root ${{ matrix.docker }} sh b.sh
           #else
             #echo "not in docker"
             #sh b.sh
