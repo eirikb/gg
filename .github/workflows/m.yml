@@ -7,8 +7,9 @@ on:
 # A: Build mn (for each target)
 # B: Build gg (for each target)
 # C: Build m
-# D: Test (for each target)
-# E: Create release
+# D: Test (for each os target)
+# E: Test (for each container)
+# F: Create release
 
 name: m!
 jobs:
@@ -193,12 +194,32 @@ jobs:
           sh m
           echo "Nice, let's try again"
           sh m
+          
+
+  E-test-container:
+    needs: C-m
+    strategy:
+      matrix:
+        container: [ ubuntu, debian, alpine, archlinux ]
+
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
+    steps:
+      - name: Download m
+        uses: actions/download-artifact@v2
+        with:
+          name: m
+
+      - name: Run!
+        run: |
+          sh m
+          echo "Nice, let's try again"
+          sh m
 
 
-
-  E-release:
+  F-release:
     name: Release!
-    needs: [ D-test-os ]
+    needs: [ D-test-os, E-test-container ]
     runs-on: ubuntu-latest
     steps:
       - name: Generate build number
