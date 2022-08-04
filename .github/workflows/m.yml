@@ -33,7 +33,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            target
+            mn2/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo pls
@@ -41,7 +41,6 @@ jobs:
         run: |
           mv mn mn2
           cd mn2
-          mv ../target .
           if [ "${{ matrix.os }}" == "ubuntu-latest" ]
           then
             sudo apt install musl-tools
