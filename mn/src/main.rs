@@ -8,7 +8,9 @@ fn main() {
         .author("Eirik Brandtzæg. <eirikb@eirikb.no>")
         .about("Bootstrap")
         .subcommand(SubCommand::with_name("node")
-            .about("Ugh node"));
+            .about("Ugh node"))
+        .subcommand(SubCommand::with_name("")
+            .about("Ugh no"));
     let matches = app.get_matches();
 
     let val = matches.value_of("node").unwrap_or("OK");
