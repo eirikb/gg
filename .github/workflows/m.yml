@@ -99,7 +99,6 @@ jobs:
             linker_flags: -static -Os
           - os: windows-latest
             target: x86_64-pc-windows-gnu
-            linker_flags: -Os
           - os: macos-latest
             target: x86_64-apple-darwin
             linker_flags: -Os
