@@ -87,7 +87,7 @@ int main() {
   printf("\nFile downloaded, checking hash...\n");
   char newHash[HASH_SIZE];
   hashForFile("mn", newHash);
-  printf("Hash expected ::%s-::\n", hash);
+  printf("Hash expected ::%s::\n", hash);
   printf("Hash from file: ::%s::\n", newHash);
   if (strcmp(hash, newHash) != 0) {
     printf("Hash did not match :(\n");
