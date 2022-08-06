@@ -130,11 +130,6 @@ jobs:
         shell: bash
         run: |
           cd gg
-          if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
-          then
-            sudo apt install musl-dev musl-tools
-            export CC=musl-gcc
-          fi
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
           find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.os }}-${{ matrix.target }} \;
@@ -180,11 +175,6 @@ jobs:
         shell: bash
         run: |
           cd gg
-          if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
-          then
-            sudo apt install musl-dev musl-tools
-            export CC=musl-gcc
-          fi
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
           find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.os }}-${{ matrix.target }} \;
