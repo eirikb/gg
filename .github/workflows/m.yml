@@ -96,7 +96,7 @@ jobs:
         include:
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-musl
-            linker_flags: -static
+            linker_flags: -static -Os
           - os: windows-latest
             target: x86_64-pc-windows-gnu
           - os: macos-latest
@@ -126,6 +126,11 @@ jobs:
         shell: bash
         run: |
           cd gg
+          if [ "${{ matrix.os }}" == "ubuntu-latest" ]
+          then
+            sudo apt install musl-dev musl-tools
+            export CC=musl-gcc
+          fi
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
           find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
