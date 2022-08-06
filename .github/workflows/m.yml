@@ -162,14 +162,12 @@ jobs:
 
       - name: Hash
         # ENV -> CMAKE -> Code very hard. This very easy
-        shell: bash
         run: |
           hash=$(cat hash/hash)
           echo "now hash is $hash"
           echo "const char *hash = \"$hash\";" > gg/const.h
 
       - name: Makus
-        shell: bash
         run: |
           cd gg
           apk update 
