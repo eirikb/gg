@@ -126,7 +126,7 @@ jobs:
         shell: bash
         run: |
           cd gg
-          if [ "${{ matrix.os }}" == *"ubuntu"* ]
+          if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
           then
             sudo apt install musl-dev musl-tools
             export CC=musl-gcc
