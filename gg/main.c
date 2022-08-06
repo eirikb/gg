@@ -89,6 +89,7 @@ int main() {
   hashForFile("mn", newHash);
   printf("Hash expected ::%s::\n", hash);
   printf("Hash from file: ::%s::\n", newHash);
+  printf("AND IT IS %d\n", strcmp(hash, newHash));
   if (strcmp(hash, newHash) != 0) {
     printf("Hash did not match :(\n");
     return 1;
