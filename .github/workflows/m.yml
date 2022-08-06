@@ -5,11 +5,10 @@ on:
     types: [ published ]
 
 # Plan (tiers):
-# A: Build mn (for each target)
-# B: Build gg (for each target)
+# A: Build mn (for each target). Using musl
+# B: Build gg (for each target (OS + container)). No musl, no static, for less space
 # C: Build m
-# D: Test (for each os target)
-# D: Test (for each container)
+# D: Test (for each os target (OS + container))
 # E: Create release
 
 name: m!
@@ -147,8 +146,58 @@ jobs:
           path: gg_${{ matrix.os }}-${{ matrix.target }}
 
 
+  B-gg-container:
+    needs: A-mn
+
+    strategy:
+      matrix:
+        include:
+          - container: alpine
+            target: x86_64-unknown-linux-musl
+            linker_flags: -Os
+
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download mn hash
+        uses: actions/download-artifact@v2
+        with:
+          name: hash_${{ matrix.target }}
+          path: hash
+
+      - name: Hash
+        # ENV -> CMAKE -> Code very hard. This very easy
+        shell: bash
+        run: |
+          hash=$(cat hash/hash)
+          echo "now hash is $hash"
+          echo "const char *hash = \"$hash\";" > gg/const.h
+
+      - name: Makus
+        shell: bash
+        run: |
+          cd gg
+          if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
+          then
+            sudo apt install musl-dev musl-tools
+            export CC=musl-gcc
+          fi
+          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.os }}-${{ matrix.target }} \;
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: gg_${{ matrix.container }}-${{ matrix.target }}
+          path: gg_${{ matrix.container }}-${{ matrix.target }}
+
+
   C-m:
-    needs: B-gg-os
+    needs: [ B-gg-os, B-gg-container ]
     runs-on: ubuntu-18.04
     steps:
       - name: Source
