@@ -1,10 +1,14 @@
-on: [ push, pull_request ]
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
 
 # Plan (tiers):
 # A: Build mn (for each target)
 # B: Build gg (for each target)
 # C: Build m
-# D: Test (for each target)
+# D: Test (for each os target)
+# D: Test (for each container)
 # E: Create release
 
 name: m!
@@ -24,11 +28,27 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            mn2/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
       - name: cargo pls
         shell: bash
         run: |
-          mv mn mn2
+          mkdir -p mn2
+          mv mn/* mn2
+          rm -rf mn
           cd mn2
+          if [ "${{ matrix.os }}" == "ubuntu-latest" ]
+          then
+            sudo apt install musl-tools
+          fi
+          
           rustup target add ${{ matrix.target }}
           rustup toolchain install stable-${{ matrix.target }}
           cargo build --release --target=${{ matrix.target}}
@@ -76,10 +96,12 @@ jobs:
         include:
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-musl
+            linker_flags: -static -Os
           - os: windows-latest
             target: x86_64-pc-windows-gnu
           - os: macos-latest
             target: x86_64-apple-darwin
+            linker_flags: -Os
 
     runs-on: ${{ matrix.os }}
 
@@ -104,19 +126,13 @@ jobs:
         shell: bash
         run: |
           cd gg
-          echo "build builder build script"
-          echo "cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os -s' -DCMAKE_BUILD_TYPE=Release" > b.sh
-          echo "cmake --build build --config Release" >> b.sh
-          echo "Script:"
-          cat b.sh
-          echo "docker is ${{ matrix.docker }}"
-          if [ ${{ matrix.docker }} != "" ]; then
-            echo "run in docker! :O"
-            docker run --rm -v $(pwd):/b -w /b -u root ${{ matrix.docker }} sh b.sh
-          else
-            echo "not in docker"
-            sh b.sh
+          if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
+          then
+            sudo apt install musl-dev musl-tools
+            export CC=musl-gcc
           fi
+          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
           find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
 
       - name: Upload artifact
@@ -162,7 +178,7 @@ jobs:
     needs: C-m
     strategy:
       matrix:
-        os: [ ubuntu-18.04, ubuntu-20.04, macos-latest, windows-2016, windows-2019 ]
+        os: [ ubuntu-18.04, ubuntu-20.04, macos-latest, windows-2019, windows-2022 ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -176,12 +192,32 @@ jobs:
           sh m
           echo "Nice, let's try again"
           sh m
+  
 
+  D-test-container:
+    needs: C-m
+    strategy:
+      matrix:
+        container: [ ubuntu, debian, alpine, archlinux ]
+
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
+    steps:
+      - name: Download m
+        uses: actions/download-artifact@v2
+        with:
+          name: m
+
+      - name: Run!
+        run: |
+          sh m
+          echo "Nice, let's try again"
+          sh m
 
 
   E-release:
     name: Release!
-    needs: [ D-test-os ]
+    needs: [ D-test-os, D-test-container ]
     runs-on: ubuntu-latest
     steps:
       - name: Generate build number
