@@ -14,7 +14,7 @@ on:
 name: m!
 jobs:
 
-  A-mn:
+  A-mn-os:
     strategy:
       matrix:
         include:
@@ -87,9 +87,37 @@ jobs:
           container_name: poc
           source_folder: out
 
+  A-mn-ARM:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [armv6l, armv7l, aarch64]
+        include:
+          - arch: armv6l
+            cpu: arm1176
+            base_image: raspios_lite:latest
+            cpu_info: raspberrypi_zero_w
+          - arch: armv7l
+            cpu: cortex-a7
+            base_image: raspios_lite:latest
+            cpu_info: raspberrypi_3b
+          - arch: aarch64
+            cpu: cortex-a53
+            base_image: raspios_lite_arm64:latest
+            cpu_info: raspberrypi_zero2_w_arm64_w
+    steps:
+      - uses: pguyot/arm-runner-action@v2
+        with:
+          base_image: ${{ matrix.base_image }}
+          cpu: ${{ matrix.cpu }}
+          cpu_info: ${{ matrix.cpu_info }}
+          commands: |
+            test `uname -m` = ${{ matrix.arch }}
+            grep Model /proc/cpuinfo
+
 
   B-gg-os:
-    needs: A-mn
+    needs: [ A-mn-os, A-mn-ARM ]
 
     strategy:
       matrix:
