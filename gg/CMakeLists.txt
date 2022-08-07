@@ -8,6 +8,7 @@ if (WIN32)
     add_executable(gg main-win.c)
 else ()
     add_executable(gg main.c)
+    target_compile_options(gg PRIVATE -Wall -Wextra)
 endif ()
 
-target_compile_options(gg PRIVATE -Wall -Wextra -Os -s)
+target_compile_options(gg PRIVATE -Os -s)
