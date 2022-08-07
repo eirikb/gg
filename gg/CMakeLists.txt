@@ -1,7 +1,4 @@
-
 cmake_minimum_required(VERSION 3.9.4)
-
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 project(gg C)
 
@@ -12,3 +9,5 @@ if (WIN32)
 else ()
     add_executable(gg main.c)
 endif ()
+
+target_compile_options(gg PRIVATE -Wall -Wextra -Os -s)

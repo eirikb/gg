@@ -439,7 +439,7 @@ static void SHA512_Last(SHA512_CTX *context) {
     SHA512_Transform(context, (sha2_word64 *) context->buffer);
 }
 
-void SHA512_Final(sha2_byte digest[], SHA512_CTX *context) {
+void SHA512_Final(sha2_byte digest[SHA512_DIGEST_LENGTH], SHA512_CTX *context) {
     sha2_word64 *d = (sha2_word64 *) digest;
 
     /* Sanity check: */
