@@ -101,28 +101,12 @@ jobs:
           githubToken: ${{ github.token }}
           run: |
             uname -a
-            which rust
-
-  A-mn-ARM2:
-    runs-on: ubuntu-18.04
-    name: Build on ubuntu-18.04 armv7
-    steps:
-      - uses: actions/checkout@v2.1.0
-      - uses: uraimo/run-on-arch-action@v2
-        name: Run commands
-        id: runcmd
-        with:
-          arch: armv7
-          distro: ubuntu20.04
-          githubToken: ${{ github.token }}
-          run: |
             apt-get -y update
-            apt-get -y install rust cargo
+            apt-get -y install cargo
             ls -lah
             cd mn
             cargo build
-            
-
+              
 
   B-gg-os:
     needs: [ A-mn-os, A-mn-ARM ]
