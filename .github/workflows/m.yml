@@ -104,6 +104,7 @@ jobs:
             apt-get -y install cargo
 
           run: |
+            cd mn
             cargo build
             du -a target  
 
