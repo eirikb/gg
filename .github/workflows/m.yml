@@ -99,14 +99,14 @@ jobs:
           arch: armv7
           distro: ubuntu18.04
           githubToken: ${{ github.token }}
-          run: |
-            uname -a
+          install: |
             apt-get -y update
             apt-get -y install cargo
-            ls -lah
-            cd mn
             cargo build
-              
+
+          run: |
+            cargo build
+            du -a target  
 
   B-gg-os:
     needs: [ A-mn-os, A-mn-ARM ]
