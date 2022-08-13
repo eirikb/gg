@@ -127,6 +127,8 @@ jobs:
             cp -r ~/.cargo/registry /cachus/.cargo/
             cp -r target /cachus/
             cp target/debug/mn /artifacts/
+            du -a /cachus
+            
 
       - run: |
           ls -lah "$PWD/artifacts"
