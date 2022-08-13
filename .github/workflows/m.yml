@@ -107,7 +107,7 @@ jobs:
           setup: mkdir -p "$PWD/artifacts"
           dockerRunArgs: |
             -v "$PWD/artifacts:/artifacts"
-            -v "$PWD/cachus:/cachus"
+            -v "cachus:/cachus"
           install: |
             apt-get -y update
             apt-get -y install cargo
