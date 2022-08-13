@@ -113,16 +113,16 @@ jobs:
             apt-get -y install cargo
 
           run: |
+            cp -r /cachus/cargo ~/.cargo
+            cp -r /cachus/target .
             du -a
-            ls -lah /cachus
-            cat /cachus/ok
-            echo "this is a test" > /cachus/ok
-      #            mkdir -p mn2
-      #            mv mn/* mn2
-      #            rm -rf mn
-      #            cd mn2
-      #            cargo build --release
-      #            cp target/release/mn /artifacts/
+            cargo build
+            rm -rf /cachus/*
+            mkdir -p /cachus/cargo
+            cp -r ~/.cargo/registry /cachus/cargo/
+            cp -r ~/.cargo/git /cachus/cargo/
+            cp -r target /cachus/
+            cp target/debug/mn /artifacts/
 
       - run: |
           ls -lah "$PWD/artifacts"
