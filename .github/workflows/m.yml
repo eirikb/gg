@@ -98,6 +98,8 @@ jobs:
           arch: armv7
           distro: ubuntu18.04
           githubToken: ${{ github.token }}
+          setup: mkdir -p "$PWD/artifacts"
+          dockerRunArgs: -v "$PWD/artifacts:/artifacts"
           install: |
             apt-get -y update
             apt-get -y install cargo
@@ -241,6 +243,7 @@ jobs:
     name: Release!
     needs: [ D-test-os, D-test-container ]
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
     steps:
       - name: Generate build number
         id: buildnumber
