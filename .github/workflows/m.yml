@@ -122,8 +122,8 @@ jobs:
             cd mn
             cargo build
             rm -rf /cachus/*
-            mkdir -p /cachus/cargo
-            cp -r ~/.cargo/registry /cachus/cargo/
+            mkdir -p /cachus/.cargo
+            cp -r ~/.cargo/registry /cachus/.cargo/
             cp -r target /cachus/
             cp target/debug/mn /artifacts/
 
