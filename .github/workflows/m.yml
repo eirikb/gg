@@ -119,6 +119,7 @@ jobs:
               cp -r /cachus/target .
             fi
             du -a
+            cd mn
             cargo build
             rm -rf /cachus/*
             mkdir -p /cachus/cargo
