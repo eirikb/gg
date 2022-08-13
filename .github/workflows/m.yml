@@ -94,7 +94,7 @@ jobs:
 
       - uses: actions/cache@v2
         with:
-          path: cachus
+          path: ~/cachus
           key: arch-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: uraimo/run-on-arch-action@v2
@@ -107,7 +107,7 @@ jobs:
           setup: mkdir -p "$PWD/artifacts"
           dockerRunArgs: |
             -v "$PWD/artifacts:/artifacts"
-            -v "cachus:/cachus"
+            -v "~/cachus:/cachus"
           install: |
             apt-get -y update
             apt-get -y install cargo
