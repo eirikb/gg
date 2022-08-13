@@ -114,6 +114,7 @@ jobs:
 
           run: |
             if [ -e /cachus/cargo ]
+            then
               cp -r /cachus/cargo ~/.cargo
               cp -r /cachus/target .
             fi
