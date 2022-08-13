@@ -14,78 +14,78 @@ on:
 name: m!
 jobs:
 
-  #  A-mn-os:
-  #    strategy:
-  #      matrix:
-  #        include:
-  #          - os: ubuntu-latest
-  #            target: x86_64-unknown-linux-musl
-  #          - os: windows-latest
-  #            target: x86_64-pc-windows-gnu
-  #          - os: macos-latest
-  #            target: x86_64-apple-darwin
-  #
-  #    runs-on: ${{ matrix.os }}
-  #    steps:
-  #      - uses: actions/checkout@v2
-  #
-  #      - uses: actions/cache@v2
-  #        with:
-  #          path: |
-  #            ~/.cargo/registry
-  #            ~/.cargo/git
-  #            mn2/target
-  #          key: OS-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-  #
-  #      - name: cargo pls
-  #        shell: bash
-  #        run: |
-  #          mkdir -p mn2
-  #          mv mn/* mn2
-  #          rm -rf mn
-  #          cd mn2
-  #          if [ "${{ matrix.os }}" == "ubuntu-latest" ]
-  #          then
-  #            sudo apt install musl-tools
-  #          fi
-  #
-  #          rustup target add ${{ matrix.target }}
-  #          rustup toolchain install stable-${{ matrix.target }}
-  #          cargo build --release --target=${{ matrix.target}}
-  #           find . -type f -name mn.exe -exec cp {} ../mn \;
-  #           find . -type f -name mn -exec cp {} ../mn \;
-  #
-  #      - name: Hash!
-  #        shell: bash
-  #        run: |
-  #          gcc gg/print_hash.c -o print_hash
-  #          ./print_hash mn > hash
-  #
-  #      - name: Upload artifact
-  #        uses: actions/upload-artifact@v2
-  #        with:
-  #          name: mn_${{ matrix.target }}
-  #          path: mn
-  #
-  #      - name: Upload artifact
-  #        uses: actions/upload-artifact@v2
-  #        with:
-  #          name: hash_${{ matrix.target }}
-  #          path: hash
-  #
-  #      - name: Rename to hash
-  #        shell: bash
-  #        run: |
-  #          hash=$(cat hash)
-  #          echo hash is "$hash"
-  #          mkdir out
-  #          mv mn "out/$hash"
-  #
-  #      - uses: LanceMcCarthy/Action-AzureBlobUpload@v1.9.0
-  #        with:
-  #          connection_string: ${{ secrets.ConnectionString }}
-  #          container_name: poc
-  #          source_folder: out
+  A-mn-os:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            mn2/target
+          key: OS-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: cargo pls
+        shell: bash
+        run: |
+          mkdir -p mn2
+          mv mn/* mn2
+          rm -rf mn
+          cd mn2
+          if [ "${{ matrix.os }}" == "ubuntu-latest" ]
+          then
+            sudo apt install musl-tools
+          fi
+          
+          rustup target add ${{ matrix.target }}
+          rustup toolchain install stable-${{ matrix.target }}
+          cargo build --release --target=${{ matrix.target}}
+           find . -type f -name mn.exe -exec cp {} ../mn \;
+           find . -type f -name mn -exec cp {} ../mn \;
+
+      - name: Hash!
+        shell: bash
+        run: |
+          gcc gg/print_hash.c -o print_hash
+          ./print_hash mn > hash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: mn_${{ matrix.target }}
+          path: mn
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: hash_${{ matrix.target }}
+          path: hash
+
+      - name: Rename to hash
+        shell: bash
+        run: |
+          hash=$(cat hash)
+          echo hash is "$hash"
+          mkdir out
+          mv mn "out/$hash"
+
+      - uses: LanceMcCarthy/Action-AzureBlobUpload@v1.9.0
+        with:
+          connection_string: ${{ secrets.ConnectionString }}
+          container_name: poc
+          source_folder: out
 
   A-mn-arch:
     runs-on: ubuntu-18.04
