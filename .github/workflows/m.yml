@@ -89,7 +89,6 @@ jobs:
 
   A-mn-ARM:
     runs-on: ubuntu-18.04
-    name: Build on ubuntu-18.04 armv7
     steps:
       - uses: actions/checkout@v2.1.0
       - uses: uraimo/run-on-arch-action@v2
@@ -105,8 +104,11 @@ jobs:
 
           run: |
             cd mn
-            cargo build
-            du -a target  
+            cargo build --release
+            cp target/release/mn /artifacts/
+      - run: |
+          ls -lah "$PWD/artifacts"
+          ls -lah artifacts
 
   B-gg-os:
     needs: [ A-mn-os, A-mn-ARM ]
