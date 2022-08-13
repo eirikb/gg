@@ -97,6 +97,11 @@ jobs:
           path: ~/cachus
           key: arch-cargo-${{ hashFiles('**/Cargo.lock') }}
 
+      - run: |
+          du -a ~/cachus
+          ls -lah
+
+
       - uses: uraimo/run-on-arch-action@v2
         name: Run commands
         id: runcmd
