@@ -35,7 +35,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             mn2/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: OS-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo pls
         shell: bash
@@ -87,10 +87,19 @@ jobs:
           container_name: poc
           source_folder: out
 
-  A-mn-ARM:
+  A-mn-arch:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2.1.0
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            mn2/target
+          key: arch-cargo-${{ hashFiles('**/Cargo.lock') }}
+
       - uses: uraimo/run-on-arch-action@v2
         name: Run commands
         id: runcmd
@@ -105,15 +114,19 @@ jobs:
             apt-get -y install cargo
 
           run: |
-            cd mn
+            mkdir -p mn2
+            mv mn/* mn2
+            rm -rf mn
+            cd mn2
             cargo build --release
             cp target/release/mn /artifacts/
+
       - run: |
           ls -lah "$PWD/artifacts"
           ls -lah artifacts
 
   B-gg-os:
-    needs: [ A-mn-os, A-mn-ARM ]
+    needs: [ A-mn-os, A-mn-arch ]
 
     strategy:
       matrix:
