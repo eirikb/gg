@@ -113,9 +113,9 @@ jobs:
             apt-get -y install cargo
 
           run: |
-            if [ -e /cachus/cargo ]
+            if [ -e /cachus/.cargo ]
             then
-              cp -r /cachus/cargo ~/.cargo
+              cp -r /cachus/.cargo ~/.cargo
               cp -r /cachus/target .
             fi
             du -a
