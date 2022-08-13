@@ -124,7 +124,6 @@ jobs:
             rm -rf /cachus/*
             mkdir -p /cachus/cargo
             cp -r ~/.cargo/registry /cachus/cargo/
-            cp -r ~/.cargo/git /cachus/cargo/
             cp -r target /cachus/
             cp target/debug/mn /artifacts/
 
