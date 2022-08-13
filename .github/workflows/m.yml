@@ -115,7 +115,7 @@ jobs:
           run: |
             du -a
             ls -lah /cachus
-            cat /cachus/ok
+            cat /cachus/*
             echo "this is a test" > /cachus/ok
       #            mkdir -p mn2
       #            mv mn/* mn2
