@@ -99,9 +99,7 @@ jobs:
 
       - run: |
           mkdir -p ~/cachus
-          du -a ~/cachus
           ls -lah
-
 
       - uses: uraimo/run-on-arch-action@v2
         name: Run commands
@@ -119,13 +117,15 @@ jobs:
             apt-get -y install cargo
 
           run: |
-            du -a /cachus
             if [ -e /cachus/.cargo ]
             then
+              echo make it
+              rm -rf ~/.cargo target
               cp -r /cachus/.cargo ~/.cargo
               cp -r /cachus/target .
+              ls -lah ~/
+              ls -lah .
             fi
-            du -a
             cd mn
             cargo build
             rm -rf /cachus/*
@@ -133,8 +133,6 @@ jobs:
             cp -r ~/.cargo/registry /cachus/.cargo/
             cp -r target /cachus/
             cp target/debug/mn /artifacts/
-            du -a /cachus
-
 
       - run: |
           ls -lah "$PWD/artifacts"
@@ -144,7 +142,6 @@ jobs:
           mkdir -p ~/cachus
           echo ok
           sudo chown -R 1000:1000 ~/cachus
-          du -a ~/cachus
           sudo chown -R $(id -u):$(id -g) ~/cachus
 
 #  B-gg-os:
