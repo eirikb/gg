@@ -134,7 +134,7 @@ jobs:
             cargo check
             echo build
             cargo build --release
-            cp target/debug/mn /artifacts/
+            cp target/release/mn /artifacts/
             rm -rf /cachus/*
             cp -r ~/.cargo /cachus/
             cp -r target /cachus/
