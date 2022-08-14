@@ -128,8 +128,8 @@ jobs:
             cp -r /cachus/.cargo ~/ || :
             cp -r /cachus/target . || :
             echo home
-            ls -lah ~
             echo size
+            ls -lah ~
             echo check
             cargo check
             echo build
