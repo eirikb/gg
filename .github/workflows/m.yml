@@ -132,6 +132,9 @@ jobs:
             ls -lah ~
             echo size
             du -sh ~/.cargo/*
+            echo check
+            cargo check
+            echo build
             cargo build
             cp target/debug/mn /artifacts/
             rm -rf /cachus/*
