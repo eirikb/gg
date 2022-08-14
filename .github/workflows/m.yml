@@ -95,11 +95,7 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: ~/cachus
-          key: arch-cargo-x1-${{ hashFiles('**/Cargo.lock') }}
-
-      - run: |
-          mkdir -p ~/cachus
-          ls -lah
+          key: arch-cargo-x2-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: uraimo/run-on-arch-action@v2
         name: Run commands
@@ -111,38 +107,26 @@ jobs:
           setup: mkdir -p "$PWD/artifacts"
           dockerRunArgs: |
             -v "$PWD/artifacts:/artifacts"
-            -v "~/cachus:/cachus"
+            -v "~/cachus/.cargo:~/.cargo"
+
           install: |
             apt-get -y update
             apt-get -y install cargo
 
           run: |
-            if [ -e /cachus/.cargo ]
-            then
-              echo make it
-              rm -rf ~/.cargo target
-              cp -r /cachus/.cargo ~/.cargo
-              cp -r /cachus/target .
-              ls -lah ~/
-              ls -lah .
-            fi
             cd mn
             cargo build
-            rm -rf /cachus/*
-            mkdir -p /cachus/.cargo
-            cp -r ~/.cargo/registry /cachus/.cargo/
+            rm -rf /cachus/target
             cp -r target /cachus/
+            chown -R 1000:1000 /cachus
             cp target/debug/mn /artifacts/
 
       - run: |
           ls -lah "$PWD/artifacts"
           ls -lah artifacts
+          ls -lah ~/cachus
+          ls -lah cachus
 
-      - run: |
-          mkdir -p ~/cachus
-          echo ok
-          sudo chown -R 1000:1000 ~/cachus
-          sudo chown -R $(id -u):$(id -g) ~/cachus
 
 #  B-gg-os:
 #    needs: [ A-mn-os, A-mn-arch ]
