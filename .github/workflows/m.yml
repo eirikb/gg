@@ -94,7 +94,7 @@ jobs:
 
       - uses: actions/cache@v2
         with:
-          path: ~/cachus
+          path: $PWD/cachus
           key: arch-cargo-x2-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: uraimo/run-on-arch-action@v2
@@ -128,9 +128,9 @@ jobs:
       - run: |
           ls -lah "$PWD/artifacts"
           ls -lah artifacts
-          ls -lah ~/cachus
-          ls -lah ~/cachus/target
-          ls -lah ~/cachus/.cargo
+          ls -lah $PWD/cachus
+          ls -lah $PWD/cachus/target
+          ls -lah $PWD/cachus/.cargo
 
 
 #  B-gg-os:
