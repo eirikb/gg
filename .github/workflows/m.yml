@@ -95,7 +95,7 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: ~/cachus
-          key: arch-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: arch-cargo-x-${{ hashFiles('**/Cargo.lock') }}
 
       - run: |
           mkdir -p ~/cachus
