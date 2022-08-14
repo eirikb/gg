@@ -94,7 +94,7 @@ jobs:
 
       - uses: actions/cache@v2
         with:
-          path: $PWD/cachus
+          path: cachus
           key: arch-cargo-x3-${{ hashFiles('**/Cargo.lock') }}
       #
       #      - run: |
@@ -145,7 +145,7 @@ jobs:
           ls -lah $PWD/cachus
           ls -lah $PWD/cachus/target
           ls -lah $PWD/cachus/.cargo
-          du -sh $PWD
+          du -sh $PWD/cachus
          
 
 
