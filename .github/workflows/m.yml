@@ -140,6 +140,12 @@ jobs:
           ls -lah "$PWD/artifacts"
           ls -lah artifacts
 
+      - run: |
+          mkdir -p ~/cachus
+          echo ok
+          du -a ~/cachus
+          ls -lah
+
 #  B-gg-os:
 #    needs: [ A-mn-os, A-mn-arch ]
 #
