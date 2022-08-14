@@ -95,7 +95,7 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: cachus
-          key: arch-cargo-x3-${{ hashFiles('**/Cargo.lock') }}
+          key: arch-cargo-x4-${{ hashFiles('**/Cargo.lock') }}
       #
       #      - run: |
       #          pwd
@@ -135,7 +135,7 @@ jobs:
             echo check
             cargo check
             echo build
-            cargo build
+            cargo build --release
             cp target/debug/mn /artifacts/
             rm -rf /cachus/*
             cp -r ~/.cargo /cachus/
