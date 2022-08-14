@@ -143,6 +143,7 @@ jobs:
       - run: |
           mkdir -p ~/cachus
           echo ok
+          sudo chown -R 1000:1000 ~/cachus
           du -a ~/cachus
           ls -lah
 
