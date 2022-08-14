@@ -95,7 +95,7 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: ~/cachus
-          key: arch-cargo-x-${{ hashFiles('**/Cargo.lock') }}
+          key: arch-cargo-x1-${{ hashFiles('**/Cargo.lock') }}
 
       - run: |
           mkdir -p ~/cachus
@@ -146,6 +146,7 @@ jobs:
           sudo chown -R 1000:1000 ~/cachus
           du -a ~/cachus
           ls -lah
+          sudo chown -R $(id -u):$(id -g) ~/cachus
 
 #  B-gg-os:
 #    needs: [ A-mn-os, A-mn-arch ]
