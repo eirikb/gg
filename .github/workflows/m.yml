@@ -145,7 +145,6 @@ jobs:
           echo ok
           sudo chown -R 1000:1000 ~/cachus
           du -a ~/cachus
-          ls -lah
           sudo chown -R $(id -u):$(id -g) ~/cachus
 
 #  B-gg-os:
