@@ -124,7 +124,6 @@ jobs:
 
           run: |
             cd mn
-            du -sh /cachus/*
             rm -rf ~/.cargo target
             cp -r /cachus/.cargo ~/ || :
             cp -r /cachus/target . || :
