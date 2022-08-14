@@ -128,8 +128,7 @@ jobs:
       - run: |
           ls -lah "$PWD/artifacts"
           ls -lah artifacts
-          ls -lah ~/cachus
-          ls -lah cachus
+          ls -lah /cachus
 
 
 #  B-gg-os:
