@@ -107,19 +107,23 @@ jobs:
           setup: mkdir -p "$PWD/artifacts"
           dockerRunArgs: |
             -v "$PWD/artifacts:/artifacts"
-            -v "~/cachus/.cargo:~/.cargo"
+            -v "$PWD/cachus:/.cargo"
 
           install: |
             apt-get -y update
             apt-get -y install cargo
 
           run: |
+            rm -rf ~/.cargo target
+            cp -r /cachus/.cargo ~/ || :
+            cp -r /cachus/target . || :
             cd mn
             cargo build
-            rm -rf /cachus/target
+            cp target/debug/mn /artifacts/
+            rm -rf /cachus/*
+            cp -r ~/.cargo /cachus/
             cp -r target /cachus/
             chown -R 1000:1000 /cachus
-            cp target/debug/mn /artifacts/
 
       - run: |
           ls -lah "$PWD/artifacts"
