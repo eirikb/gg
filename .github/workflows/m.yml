@@ -96,6 +96,15 @@ jobs:
         with:
           path: $PWD/cachus
           key: arch-cargo-x2-${{ hashFiles('**/Cargo.lock') }}
+#
+#      - run: |
+#          pwd
+#          echo 1
+#          ls -lah $PWD
+#          mkdir -p $PWD/cachus
+#          echo 2
+#          ls -lah $PWD/cachus
+
 
       - uses: uraimo/run-on-arch-action@v2
         name: Run commands
@@ -107,7 +116,7 @@ jobs:
           setup: mkdir -p "$PWD/artifacts"
           dockerRunArgs: |
             -v "$PWD/artifacts:/artifacts"
-            -v "$PWD/cachus:/.cargo"
+            -v "$PWD/cachus:/cachus"
 
           install: |
             apt-get -y update
@@ -124,6 +133,10 @@ jobs:
             cp -r ~/.cargo /cachus/
             cp -r target /cachus/
             chown -R 1000:1000 /cachus
+            echo 1
+            ls -lah /
+            echo 2
+            ls -lah /cachus
 
       - run: |
           ls -lah "$PWD/artifacts"
