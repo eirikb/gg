@@ -132,19 +132,10 @@ jobs:
             rm -rf /cachus/*
             cp -r ~/.cargo /cachus/
             cp -r target /cachus/
-            echo 1
-            ls -lah /
-            echo 2
-            ls -lah /cachus
 
       - run: |
           sudo chown -R $(id -u):$(id -g) $PWD/cachus
           sudo chown -R $(id -u):$(id -g) $PWD/artifacts
-          ls -lah "$PWD/artifacts"
-          ls -lah artifacts
-          ls -lah $PWD/cachus
-          ls -lah $PWD/cachus/target
-          ls -lah $PWD/cachus/.cargo
           du -sh $PWD/cachus
          
 
