@@ -95,15 +95,15 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: $PWD/cachus
-          key: arch-cargo-x2-${{ hashFiles('**/Cargo.lock') }}
-#
-#      - run: |
-#          pwd
-#          echo 1
-#          ls -lah $PWD
-#          mkdir -p $PWD/cachus
-#          echo 2
-#          ls -lah $PWD/cachus
+          key: arch-cargo-x3-${{ hashFiles('**/Cargo.lock') }}
+      #
+      #      - run: |
+      #          pwd
+      #          echo 1
+      #          ls -lah $PWD
+      #          mkdir -p $PWD/cachus
+      #          echo 2
+      #          ls -lah $PWD/cachus
 
 
       - uses: uraimo/run-on-arch-action@v2
@@ -132,18 +132,21 @@ jobs:
             rm -rf /cachus/*
             cp -r ~/.cargo /cachus/
             cp -r target /cachus/
-            chown -R 1000:1000 /cachus
             echo 1
             ls -lah /
             echo 2
             ls -lah /cachus
 
       - run: |
+          sudo chown -R $(id -u):$(id -g) $PWD/cachus
+          sudo chown -R $(id -u):$(id -g) $PWD/artifacts
           ls -lah "$PWD/artifacts"
           ls -lah artifacts
           ls -lah $PWD/cachus
           ls -lah $PWD/cachus/target
           ls -lah $PWD/cachus/.cargo
+          du -sh $PWD
+         
 
 
 #  B-gg-os:
