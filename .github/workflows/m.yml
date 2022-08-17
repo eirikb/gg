@@ -114,6 +114,7 @@ jobs:
             apt-get -y install cargo
 
           run: |
+            echo go
             cd mn
             cp -r /cachus/* . || :
             ls -lah
