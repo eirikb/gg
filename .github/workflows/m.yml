@@ -96,15 +96,6 @@ jobs:
         with:
           path: cachus
           key: arch-cargo-x4-${{ hashFiles('**/Cargo.lock') }}
-      #
-      #      - run: |
-      #          pwd
-      #          echo 1
-      #          ls -lah $PWD
-      #          mkdir -p $PWD/cachus
-      #          echo 2
-      #          ls -lah $PWD/cachus
-
 
       - uses: uraimo/run-on-arch-action@v2
         name: Run commands
@@ -124,26 +115,18 @@ jobs:
 
           run: |
             cd mn
-            rm -rf ~/.cargo target
-            cp -r /cachus/.cargo ~/ || :
-            cp -r /cachus/target . || :
-            echo home
-            echo size
-            ls -lah ~
-            echo check
-            cargo check
-            echo build
-            cargo build --release
-            cp target/release/mn /artifacts/
-            rm -rf /cachus/*
-            cp -r ~/.cargo /cachus/
+            cp -r /cachus/* . || :
+            ls -lah
+            CARGO_HOME=ok cargo build --release
             cp -r target /cachus/
+            cp -r ok /cachus/
+            cp target/release/mn /artifacts/
 
       - run: |
           sudo chown -R $(id -u):$(id -g) $PWD/cachus
           sudo chown -R $(id -u):$(id -g) $PWD/artifacts
           du -sh $PWD/cachus
-         
+
 
 
 #  B-gg-os:
