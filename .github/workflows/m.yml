@@ -117,6 +117,8 @@ jobs:
             echo go
             cd mn
             cp -r /cachus/* . || :
+            id
+            chown -R 1001:1001 .
             ls -lah
             CARGO_HOME=ok cargo build --release
             cp -r target /cachus/
