@@ -95,7 +95,7 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: cachus
-          key: arch-cargo-x4-${{ hashFiles('**/Cargo.lock') }}
+          key: arch-cargo-x5-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: uraimo/run-on-arch-action@v2
         name: Run commands
