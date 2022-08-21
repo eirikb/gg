@@ -371,9 +371,42 @@ jobs:
           sh m
 
 
+  D-test-arch:
+    needs: C-m
+    strategy:
+      matrix:
+        include:
+          - arch: armv7
+            target: armv7-unknown-linux-musl
+
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Download m
+        uses: actions/download-artifact@v2
+        with:
+          name: m
+
+      - uses: uraimo/run-on-arch-action@v2
+        name: Run commands
+        id: runcmd
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ubuntu18.04
+          githubToken: ${{ github.token }}
+          dockerRunArgs: |
+            -v "$PWD:/ok"
+          run: |
+            uname -a
+            cd /ok
+            ls -lah
+            sh m
+            echo "Nice, let's try again"
+            sh m
+
+
   E-release:
     name: Release!
-    needs: [ D-test-OS, D-test-container ]
+    needs: [ D-test-OS, D-test-container, D-test-arch ]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
     steps:
