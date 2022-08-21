@@ -166,7 +166,7 @@ jobs:
           for dir in mn_*
           do
             echo dir is $dir
-            file = $dir/mn
+            file=$dir/mn
             echo file is $file
             hash=$(sha512sum $file | awk '{ print $1 }')
             echo hash is $hash
