@@ -150,9 +150,9 @@ jobs:
     needs: [ A-mn-OS, A-mn-arch ]
     runs-on: ubuntu-20.04
     steps:
-      - name: Hash!
-        shell: bash
-        run: gcc gg/print_hash.c -o print_hash
+#      - name: Hash!
+#        shell: bash
+#        run: gcc gg/print_hash.c -o print_hash
 
       - name: Rename to hash
         shell: bash
@@ -163,7 +163,7 @@ jobs:
           for file in mn_*
           do
             echo file is $file
-            hash=$(print_hash $file)
+            hash=$(sha512sum $file | awk '{ print $1 }')
             echo hash is $hash
             cp $file out/$hash
             echo $hash > hash/hash_$file
