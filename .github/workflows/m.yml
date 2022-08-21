@@ -238,7 +238,7 @@ jobs:
 
 
   B-gg-arch:
-    needs: A-mn-arch
+    needs: Hash
 
     strategy:
       matrix:
@@ -260,7 +260,7 @@ jobs:
       - name: Download mn hash
         uses: actions/download-artifact@v2
         with:
-          name: hash_${{ matrix.target }}
+          name: hash_mn_${{ matrix.target }}
           path: hash
 
       - name: Hash
