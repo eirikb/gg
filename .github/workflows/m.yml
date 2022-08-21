@@ -5,11 +5,12 @@ on:
 
 # Plan (tiers):
 # A: Build mn (for each target)
-# B: Build gg (for each target)
-# C: Build m
-# D: Test (for each os target)
-# D: Test (for each container)
-# E: Create release
+# B: Hash (create hash for each target)
+# C: Build gg (for each target)
+# D: Build m
+# E Test (for each os target)
+# F: Test (for each container)
+# G: Create release
 
 name: m!
 jobs:
@@ -146,7 +147,7 @@ jobs:
           path: mn
 
 
-  Hash:
+  B-hash:
     needs: [ A-mn-OS, A-mn-arch ]
     runs-on: ubuntu-20.04
     steps:
@@ -188,8 +189,8 @@ jobs:
           source_folder: out
 
 
-  B-gg-OS:
-    needs: Hash
+  C-gg-OS:
+    needs: B-hash
 
     strategy:
       matrix:
@@ -243,8 +244,8 @@ jobs:
           path: gg_${{ matrix.target }}
 
 
-  B-gg-arch:
-    needs: Hash
+  C-gg-arch:
+    needs: B-hash
 
     strategy:
       matrix:
@@ -308,8 +309,8 @@ jobs:
 
 
 
-  C-m:
-    needs: [ B-gg-OS, B-gg-arch ]
+  D-m:
+    needs: [ C-gg-OS, C-gg-arch ]
     runs-on: ubuntu-18.04
     steps:
       - name: Source
@@ -340,8 +341,8 @@ jobs:
           path: m
 
 
-  D-test-OS:
-    needs: C-m
+  E-test-OS:
+    needs: D-m
     strategy:
       matrix:
         os: [ ubuntu-18.04, ubuntu-20.04, macos-latest, windows-2019, windows-2022 ]
@@ -360,8 +361,8 @@ jobs:
           sh m
 
 
-  D-test-container:
-    needs: C-m
+  E-test-container:
+    needs: D-m
     strategy:
       matrix:
         container: [ ubuntu, debian, alpine, archlinux ]
@@ -381,8 +382,8 @@ jobs:
           sh m
 
 
-  D-test-arch:
-    needs: C-m
+  E-test-arch:
+    needs: D-m
     strategy:
       matrix:
         include:
@@ -414,9 +415,9 @@ jobs:
             sh m
 
 
-  E-release:
+  F-release:
     name: Release!
-    needs: [ D-test-OS, D-test-container, D-test-arch ]
+    needs: [ E-test-OS, E-test-container, E-test-arch ]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
     steps:
