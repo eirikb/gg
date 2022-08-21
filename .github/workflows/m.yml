@@ -252,7 +252,7 @@ jobs:
         include:
           - arch: armv7
             target: armv7-unknown-linux-musl
-            linker_flags: -static -Os
+            linker_flags: -Os
 
     runs-on: ubuntu-20.04
 
@@ -291,7 +291,7 @@ jobs:
             du -a
             cd gg
             ls -lah
-            export CC=musl-gcc
+            #export CC=musl-gcc
             mkdir build
             cd build
             cmake .. -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
