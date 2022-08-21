@@ -252,6 +252,7 @@ jobs:
         include:
           - arch: armv7
             target: armv7-unknown-linux-musl
+            linker_flags: -static -Os
 
     runs-on: ubuntu-20.04
 
@@ -269,7 +270,7 @@ jobs:
         id: runcmd
         with:
           arch: ${{ matrix.arch }}
-          distro: ubuntu18.04
+          distro: ubuntu20.04
           githubToken: ${{ github.token }}
           setup: mkdir -p "$PWD/artifacts"
           dockerRunArgs: |
@@ -278,21 +279,21 @@ jobs:
 
           install: |
             apt-get -y update
-            apt-get -y install cmake build-essential
+            apt-get -y install cmake build-essential musl-dev musl-tools
 
           run: |
+            set -x
             cd /yes
             ls -lah
             hash=$(cat hash/hash_mn_${{ matrix.target }})
             echo "now hash is $hash"
             echo "const char *hash = \"$hash\";" > gg/const.h
+            du -a
             cd gg
-            if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
-            then
-              sudo apt install musl-dev musl-tools
-              export CC=musl-gcc
-            fi
+            ls -lah
+            #export CC=musl-gcc
             cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
+            ls -lah
             cmake --build build --config Release
             find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
 
