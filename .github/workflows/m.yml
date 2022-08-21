@@ -115,6 +115,7 @@ jobs:
 
           run: |
             set -x
+            echo eh
             cd mn
             cp -rp /cachus/* . || :
             ls -lah
