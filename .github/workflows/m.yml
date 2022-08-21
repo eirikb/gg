@@ -211,7 +211,8 @@ jobs:
       - name: Download mn hash
         uses: actions/download-artifact@v2
         with:
-          name: hash_mn_${{ matrix.target }}
+          name: hash
+          #          hash_mn_${{ matrix.target }}
           path: hash
 
       - name: Hash
@@ -219,7 +220,7 @@ jobs:
         shell: bash
         run: |
           du -a
-          hash=$(cat hash/hash)
+          hash=$(cat hash/hash_mn_${{ matrix.target }})
           echo "now hash is $hash"
           echo "const char *hash = \"$hash\";" > gg/const.h
 
