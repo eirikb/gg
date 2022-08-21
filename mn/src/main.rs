@@ -14,5 +14,5 @@ fn main() {
     // let matches = app.get_matches();
     //
     // let val = matches.value_of("node").unwrap_or("OK");
-    println!("Hello, world!");
+    println!("Hello, world 2!");
 }
