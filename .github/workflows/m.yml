@@ -146,145 +146,168 @@ jobs:
           path: mn
 
 
-#  B-gg-OS:
-#    needs: A-mn-OS
-#
-#    strategy:
-#      matrix:
-#        include:
-#          - os: ubuntu-18.04
-#            target: x86_64-unknown-linux-musl
-#            linker_flags: -static -Os
-#          - os: windows-latest
-#            target: x86_64-pc-windows-gnu
-#          - os: macos-latest
-#            target: x86_64-apple-darwin
-#            linker_flags: -Os
-#
-#    runs-on: ${{ matrix.os }}
-#
-#    steps:
-#      - uses: actions/checkout@v2
-#
-#      - name: Download mn hash
-#        uses: actions/download-artifact@v2
-#        with:
-#          name: hash_${{ matrix.target }}
-#          path: hash
-#
-#      - name: Hash
-#        # ENV -> CMAKE -> Code very hard. This very easy
-#        shell: bash
-#        run: |
-#          hash=$(cat hash/hash)
-#          echo "now hash is $hash"
-#          echo "const char *hash = \"$hash\";" > gg/const.h
-#
-#      - name: Makus
-#        shell: bash
-#        run: |
-#          cd gg
-#          if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
-#          then
-#            sudo apt install musl-dev musl-tools
-#            export CC=musl-gcc
-#          fi
-#          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
-#          cmake --build build --config Release
-#          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
-#
-#      - name: Upload artifact
-#        uses: actions/upload-artifact@v2
-#        with:
-#          name: gg_${{ matrix.target }}
-#          path: gg_${{ matrix.target }}
-#
-#
-#  B-gg-arch:
-#    needs: A-mn-arch
-#
-#    strategy:
-#      matrix:
-#        include:
-#          - os: ubuntu-18.04
-#            target: x86_64-unknown-linux-musl
-#            linker_flags: -static -Os
-#          - os: windows-latest
-#            target: x86_64-pc-windows-gnu
-#          - os: macos-latest
-#            target: x86_64-apple-darwin
-#            linker_flags: -Os
-#
-#    runs-on: ${{ matrix.os }}
-#
-#    steps:
-#      - uses: actions/checkout@v2
-#
-#      - name: Download mn hash
-#        uses: actions/download-artifact@v2
-#        with:
-#          name: hash_${{ matrix.target }}
-#          path: hash
-#
-#      - name: Hash
-#        # ENV -> CMAKE -> Code very hard. This very easy
-#        shell: bash
-#        run: |
-#          hash=$(cat hash/hash)
-#          echo "now hash is $hash"
-#          echo "const char *hash = \"$hash\";" > gg/const.h
-#
-#      - name: Makus
-#        shell: bash
-#        run: |
-#          cd gg
-#          if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
-#          then
-#            sudo apt install musl-dev musl-tools
-#            export CC=musl-gcc
-#          fi
-#          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
-#          cmake --build build --config Release
-#          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
-#
-#      - name: Upload artifact
-#        uses: actions/upload-artifact@v2
-#        with:
-#          name: gg_${{ matrix.target }}
-#          path: gg_${{ matrix.target }}
-#
-#
-#
-#  C-m-arch:
-#    needs: [ B-gg-OS, B-gg-arch ]
-#    runs-on: ubuntu-18.04
-#    steps:
-#      - name: Source
-#        uses: actions/checkout@v2.1.0
-#
-#      - name: Download gg
-#        uses: actions/download-artifact@v2
-#
-#      - name: m
-#        run: |
-#          mv m _m
-#          mkdir -p .cache/m
-#          rm -rf gg
-#          for dir in gg*; do
-#            for file in "$dir"/*; do
-#              cp "$file" .cache/m/
-#            done
-#          done
-#          cp _m/init.sh .cache/m/
-#          chmod +x .cache/m/init.sh
-#          tar -zpvcf m.tgz .cache
-#          cat _m/kick.sh m.tgz > m
-#
-#      - name: Upload artifact
-#        uses: actions/upload-artifact@v2
-#        with:
-#          name: m
-#          path: m
+  #  B-gg-OS:
+  #    needs: A-mn-OS
+  #
+  #    strategy:
+  #      matrix:
+  #        include:
+  #          - os: ubuntu-18.04
+  #            target: x86_64-unknown-linux-musl
+  #            linker_flags: -static -Os
+  #          - os: windows-latest
+  #            target: x86_64-pc-windows-gnu
+  #          - os: macos-latest
+  #            target: x86_64-apple-darwin
+  #            linker_flags: -Os
+  #
+  #    runs-on: ${{ matrix.os }}
+  #
+  #    steps:
+  #      - uses: actions/checkout@v2
+  #
+  #      - name: Download mn hash
+  #        uses: actions/download-artifact@v2
+  #        with:
+  #          name: hash_${{ matrix.target }}
+  #          path: hash
+  #
+  #      - name: Hash
+  #        # ENV -> CMAKE -> Code very hard. This very easy
+  #        shell: bash
+  #        run: |
+  #          hash=$(cat hash/hash)
+  #          echo "now hash is $hash"
+  #          echo "const char *hash = \"$hash\";" > gg/const.h
+  #
+  #      - name: Makus
+  #        shell: bash
+  #        run: |
+  #          cd gg
+  #          if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
+  #          then
+  #            sudo apt install musl-dev musl-tools
+  #            export CC=musl-gcc
+  #          fi
+  #          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
+  #          cmake --build build --config Release
+  #          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
+  #
+  #      - name: Upload artifact
+  #        uses: actions/upload-artifact@v2
+  #        with:
+  #          name: gg_${{ matrix.target }}
+  #          path: gg_${{ matrix.target }}
+  #
+  #
+  #  B-gg-arch:
+  #    needs: A-mn-arch
+  #
+  #    strategy:
+  #      matrix:
+  #        include:
+  #          - os: ubuntu-18.04
+  #            target: x86_64-unknown-linux-musl
+  #            linker_flags: -static -Os
+  #          - os: windows-latest
+  #            target: x86_64-pc-windows-gnu
+  #          - os: macos-latest
+  #            target: x86_64-apple-darwin
+  #            linker_flags: -Os
+  #
+  #    runs-on: ${{ matrix.os }}
+  #
+  #    steps:
+  #      - uses: actions/checkout@v2
+  #
+  #      - name: Download mn hash
+  #        uses: actions/download-artifact@v2
+  #        with:
+  #          name: hash_${{ matrix.target }}
+  #          path: hash
+  #
+  #      - name: Hash
+  #        # ENV -> CMAKE -> Code very hard. This very easy
+  #        shell: bash
+  #        run: |
+  #          hash=$(cat hash/hash)
+  #          echo "now hash is $hash"
+  #          echo "const char *hash = \"$hash\";" > gg/const.h
+  #
+  #      - name: Makus
+  #        shell: bash
+  #        run: |
+  #          cd gg
+  #          if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
+  #          then
+  #            sudo apt install musl-dev musl-tools
+  #            export CC=musl-gcc
+  #          fi
+  #          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
+  #          cmake --build build --config Release
+  #          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
+  #
+  #      - name: Upload artifact
+  #        uses: actions/upload-artifact@v2
+  #        with:
+  #          name: gg_${{ matrix.target }}
+  #          path: gg_${{ matrix.target }}
+  #
+  #
+  #
+  C-m-arch:
+    needs: [ B-gg-OS, B-gg-arch ]
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Source
+        uses: actions/checkout@v2.1.0
+
+      - name: Download gg / mn
+        uses: actions/download-artifact@v2
+
+      - name: Hash!
+        shell: bash
+        run: gcc gg/print_hash.c -o print_hash
+
+      - name: Rename to hash
+        shell: bash
+        run: |
+          ls -lah
+          mkdir out
+          for file in mn_*
+          do
+            echo file is $file
+            hash=$(print_hash $file)
+            echo hash is $hash
+            cp $file out/$hash
+          done
+
+      - uses: LanceMcCarthy/Action-AzureBlobUpload@v1.9.0
+        with:
+          connection_string: ${{ secrets.ConnectionString }}
+          container_name: poc
+          source_folder: out
+
+      - name: m
+        run: |
+          mv m _m
+          mkdir -p .cache/m
+          rm -rf gg
+          for dir in gg*; do
+            for file in "$dir"/*; do
+              cp "$file" .cache/m/
+            done
+          done
+          cp _m/init.sh .cache/m/
+          chmod +x .cache/m/init.sh
+          tar -zpvcf m.tgz .cache
+          cat _m/kick.sh m.tgz > m
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: m
+          path: m
 #
 #
 #  D-test-OS:
