@@ -118,8 +118,10 @@ jobs:
             cd mn
             cp -r /cachus/* . || :
             ls -lah
-            du -a ok 
-            du -a target
+            du -sh ok 
+            du -sh target
+            ls -lah ok
+            ls -lah target
             CARGO_HOME=ok cargo build --release
             cp -r target /cachus/
             cp -r ok /cachus/
