@@ -276,9 +276,9 @@ jobs:
             -v "$PWD/artifacts:/artifacts"
             -v "$PWD:/yes"
 
-          #          install: |
-          #            apt-get -y update
-          #            apt-get -y install cargo
+          install: |
+            apt-get -y update
+            apt-get -y install cmake build-essential
 
           run: |
             cd /yes
