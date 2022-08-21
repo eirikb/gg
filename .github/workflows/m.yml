@@ -116,15 +116,15 @@ jobs:
           run: |
             set -x
             cd mn
-            cp -r /cachus/* . || :
+            cp -rp /cachus/* . || :
             ls -lah
             du -sh ok 
             du -sh target
             ls -lah ok
             ls -lah target
             CARGO_HOME=ok cargo build --release
-            cp -r target /cachus/
-            cp -r ok /cachus/
+            cp -rp target /cachus/
+            cp -rp ok /cachus/
             cp target/release/mn /artifacts/
 
       - run: |
