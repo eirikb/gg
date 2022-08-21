@@ -150,9 +150,11 @@ jobs:
     needs: [ A-mn-OS, A-mn-arch ]
     runs-on: ubuntu-20.04
     steps:
-#      - name: Hash!
-#        shell: bash
-#        run: gcc gg/print_hash.c -o print_hash
+      #      - name: Hash!
+      #        shell: bash
+      #        run: gcc gg/print_hash.c -o print_hash
+      - name: Download mn hash
+        uses: actions/download-artifact@v2
 
       - name: Rename to hash
         shell: bash
