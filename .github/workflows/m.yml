@@ -14,7 +14,7 @@ on:
 name: m!
 jobs:
 
-  A-mn-os:
+  A-mn-OS:
     strategy:
       matrix:
         include:
@@ -55,11 +55,6 @@ jobs:
            find . -type f -name mn.exe -exec cp {} ../mn \;
            find . -type f -name mn -exec cp {} ../mn \;
 
-      - name: Hash!
-        shell: bash
-        run: |
-          gcc gg/print_hash.c -o print_hash
-          ./print_hash mn > hash
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
@@ -67,27 +62,45 @@ jobs:
           name: mn_${{ matrix.target }}
           path: mn
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: hash_${{ matrix.target }}
-          path: hash
-
-      - name: Rename to hash
-        shell: bash
-        run: |
-          hash=$(cat hash)
-          echo hash is "$hash"
-          mkdir out
-          mv mn "out/$hash"
-
-      - uses: LanceMcCarthy/Action-AzureBlobUpload@v1.9.0
-        with:
-          connection_string: ${{ secrets.ConnectionString }}
-          container_name: poc
-          source_folder: out
+  #      - name: Hash!
+  #        shell: bash
+  #        run: |
+  #          gcc gg/print_hash.c -o print_hash
+  #          ./print_hash mn > hash
+  #
+  #      - name: Upload artifact
+  #        uses: actions/upload-artifact@v2
+  #        with:
+  #          name: mn_${{ matrix.target }}
+  #          path: mn
+  #
+  #      - name: Upload artifact
+  #        uses: actions/upload-artifact@v2
+  #        with:
+  #          name: hash_${{ matrix.target }}
+  #          path: hash
+  #
+  #      - name: Rename to hash
+  #        shell: bash
+  #        run: |
+  #          hash=$(cat hash)
+  #          echo hash is "$hash"
+  #          mkdir out
+  #          mv mn "out/$hash"
+  #
+  #      - uses: LanceMcCarthy/Action-AzureBlobUpload@v1.9.0
+  #        with:
+  #          connection_string: ${{ secrets.ConnectionString }}
+  #          container_name: poc
+  #          source_folder: out
 
   A-mn-arch:
+    strategy:
+      matrix:
+        include:
+          - arch: armv7
+            target: armv7-unknown-linux-musl
+
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2.1.0
@@ -101,7 +114,7 @@ jobs:
         name: Run commands
         id: runcmd
         with:
-          arch: armv7
+          arch: ${{ matrix.arch }}
           distro: ubuntu18.04
           githubToken: ${{ github.token }}
           setup: mkdir -p "$PWD/artifacts"
@@ -123,170 +136,233 @@ jobs:
 
       - run: |
           sudo chown -R $(id -u):$(id -g) $PWD/artifacts
-
-
-  B-gg-os:
-    needs: [ A-mn-os, A-mn-arch ]
-
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-18.04
-            target: x86_64-unknown-linux-musl
-            linker_flags: -static -Os
-          - os: windows-latest
-            target: x86_64-pc-windows-gnu
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            linker_flags: -Os
-
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Download mn hash
-        uses: actions/download-artifact@v2
-        with:
-          name: hash_${{ matrix.target }}
-          path: hash
-
-      - name: Hash
-        # ENV -> CMAKE -> Code very hard. This very easy
-        shell: bash
-        run: |
-          hash=$(cat hash/hash)
-          echo "now hash is $hash"
-          echo "const char *hash = \"$hash\";" > gg/const.h
-
-      - name: Makus
-        shell: bash
-        run: |
-          cd gg
-          if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
-          then
-            sudo apt install musl-dev musl-tools
-            export CC=musl-gcc
-          fi
-          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --config Release
-          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
+          rm -rf mn
+          find $PWD/artifacts -type f -name mn -exec cp {} ./mn \;
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: gg_${{ matrix.target }}
-          path: gg_${{ matrix.target }}
+          name: mn_${{ matrix.target }}
+          path: mn
 
 
-  C-m:
-    needs: B-gg-os
-    runs-on: ubuntu-18.04
-    steps:
-      - name: Source
-        uses: actions/checkout@v2.1.0
-
-      - name: Download gg
-        uses: actions/download-artifact@v2
-
-      - name: m
-        run: |
-          mv m _m
-          mkdir -p .cache/m
-          rm -rf gg
-          for dir in gg*; do
-            for file in "$dir"/*; do
-              cp "$file" .cache/m/
-            done
-          done
-          cp _m/init.sh .cache/m/
-          chmod +x .cache/m/init.sh
-          tar -zpvcf m.tgz .cache
-          cat _m/kick.sh m.tgz > m
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: m
-          path: m
-
-
-  D-test-os:
-    needs: C-m
-    strategy:
-      matrix:
-        os: [ ubuntu-18.04, ubuntu-20.04, macos-latest, windows-2019, windows-2022 ]
-
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Download m
-        uses: actions/download-artifact@v2
-        with:
-          name: m
-
-      - name: Run!
-        run: |
-          sh m
-          echo "Nice, let's try again"
-          sh m
-
-
-  D-test-container:
-    needs: C-m
-    strategy:
-      matrix:
-        container: [ ubuntu, debian, alpine, archlinux ]
-
-    runs-on: ubuntu-latest
-    container: ${{ matrix.container }}
-    steps:
-      - name: Download m
-        uses: actions/download-artifact@v2
-        with:
-          name: m
-
-      - name: Run!
-        run: |
-          sh m
-          echo "Nice, let's try again"
-          sh m
-
-
-  E-release:
-    name: Release!
-    needs: [ D-test-os, D-test-container ]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
-    steps:
-      - name: Generate build number
-        id: buildnumber
-        uses: einaregilsson/build-number@v3
-        with:
-          token: ${{ github.token }}
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          tag_name: ${{ steps.buildnumber.outputs.build_number }}
-          release_name: Release ${{ steps.buildnumber.outputs.build_number }}
-          draft: false
-          prerelease: false
-
-      - name: Download m
-        uses: actions/download-artifact@v2
-        with:
-          name: m
-
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token}}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./m
-          asset_name: m
-          asset_content_type: text/x-shellscript
+#  B-gg-OS:
+#    needs: A-mn-OS
+#
+#    strategy:
+#      matrix:
+#        include:
+#          - os: ubuntu-18.04
+#            target: x86_64-unknown-linux-musl
+#            linker_flags: -static -Os
+#          - os: windows-latest
+#            target: x86_64-pc-windows-gnu
+#          - os: macos-latest
+#            target: x86_64-apple-darwin
+#            linker_flags: -Os
+#
+#    runs-on: ${{ matrix.os }}
+#
+#    steps:
+#      - uses: actions/checkout@v2
+#
+#      - name: Download mn hash
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: hash_${{ matrix.target }}
+#          path: hash
+#
+#      - name: Hash
+#        # ENV -> CMAKE -> Code very hard. This very easy
+#        shell: bash
+#        run: |
+#          hash=$(cat hash/hash)
+#          echo "now hash is $hash"
+#          echo "const char *hash = \"$hash\";" > gg/const.h
+#
+#      - name: Makus
+#        shell: bash
+#        run: |
+#          cd gg
+#          if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
+#          then
+#            sudo apt install musl-dev musl-tools
+#            export CC=musl-gcc
+#          fi
+#          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
+#          cmake --build build --config Release
+#          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
+#
+#      - name: Upload artifact
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: gg_${{ matrix.target }}
+#          path: gg_${{ matrix.target }}
+#
+#
+#  B-gg-arch:
+#    needs: A-mn-arch
+#
+#    strategy:
+#      matrix:
+#        include:
+#          - os: ubuntu-18.04
+#            target: x86_64-unknown-linux-musl
+#            linker_flags: -static -Os
+#          - os: windows-latest
+#            target: x86_64-pc-windows-gnu
+#          - os: macos-latest
+#            target: x86_64-apple-darwin
+#            linker_flags: -Os
+#
+#    runs-on: ${{ matrix.os }}
+#
+#    steps:
+#      - uses: actions/checkout@v2
+#
+#      - name: Download mn hash
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: hash_${{ matrix.target }}
+#          path: hash
+#
+#      - name: Hash
+#        # ENV -> CMAKE -> Code very hard. This very easy
+#        shell: bash
+#        run: |
+#          hash=$(cat hash/hash)
+#          echo "now hash is $hash"
+#          echo "const char *hash = \"$hash\";" > gg/const.h
+#
+#      - name: Makus
+#        shell: bash
+#        run: |
+#          cd gg
+#          if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
+#          then
+#            sudo apt install musl-dev musl-tools
+#            export CC=musl-gcc
+#          fi
+#          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
+#          cmake --build build --config Release
+#          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
+#
+#      - name: Upload artifact
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: gg_${{ matrix.target }}
+#          path: gg_${{ matrix.target }}
+#
+#
+#
+#  C-m-arch:
+#    needs: [ B-gg-OS, B-gg-arch ]
+#    runs-on: ubuntu-18.04
+#    steps:
+#      - name: Source
+#        uses: actions/checkout@v2.1.0
+#
+#      - name: Download gg
+#        uses: actions/download-artifact@v2
+#
+#      - name: m
+#        run: |
+#          mv m _m
+#          mkdir -p .cache/m
+#          rm -rf gg
+#          for dir in gg*; do
+#            for file in "$dir"/*; do
+#              cp "$file" .cache/m/
+#            done
+#          done
+#          cp _m/init.sh .cache/m/
+#          chmod +x .cache/m/init.sh
+#          tar -zpvcf m.tgz .cache
+#          cat _m/kick.sh m.tgz > m
+#
+#      - name: Upload artifact
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: m
+#          path: m
+#
+#
+#  D-test-OS:
+#    needs: C-m
+#    strategy:
+#      matrix:
+#        os: [ ubuntu-18.04, ubuntu-20.04, macos-latest, windows-2019, windows-2022 ]
+#
+#    runs-on: ${{ matrix.os }}
+#    steps:
+#      - name: Download m
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: m
+#
+#      - name: Run!
+#        run: |
+#          sh m
+#          echo "Nice, let's try again"
+#          sh m
+#
+#
+#  D-test-container:
+#    needs: C-m
+#    strategy:
+#      matrix:
+#        container: [ ubuntu, debian, alpine, archlinux ]
+#
+#    runs-on: ubuntu-latest
+#    container: ${{ matrix.container }}
+#    steps:
+#      - name: Download m
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: m
+#
+#      - name: Run!
+#        run: |
+#          sh m
+#          echo "Nice, let's try again"
+#          sh m
+#
+#
+#  E-release:
+#    name: Release!
+#    needs: [ D-test-OS, D-test-container ]
+#    runs-on: ubuntu-latest
+#    if: github.ref == 'refs/heads/master'
+#    steps:
+#      - name: Generate build number
+#        id: buildnumber
+#        uses: einaregilsson/build-number@v3
+#        with:
+#          token: ${{ github.token }}
+#
+#      - name: Create Release
+#        id: create_release
+#        uses: actions/create-release@v1
+#        env:
+#          GITHUB_TOKEN: ${{ github.token }}
+#        with:
+#          tag_name: ${{ steps.buildnumber.outputs.build_number }}
+#          release_name: Release ${{ steps.buildnumber.outputs.build_number }}
+#          draft: false
+#          prerelease: false
+#
+#      - name: Download m
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: m
+#
+#      - name: Upload Release Asset
+#        id: upload-release-asset
+#        uses: actions/upload-release-asset@v1
+#        env:
+#          GITHUB_TOKEN: ${{ github.token}}
+#        with:
+#          upload_url: ${{ steps.create_release.outputs.upload_url }}
+#          asset_path: ./m
+#          asset_name: m
+#          asset_content_type: text/x-shellscript
