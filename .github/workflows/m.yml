@@ -270,7 +270,7 @@ jobs:
         id: runcmd
         with:
           arch: ${{ matrix.arch }}
-          distro: ubuntu20.04
+          distro: ubuntu18.04
           githubToken: ${{ github.token }}
           setup: mkdir -p "$PWD/artifacts"
           dockerRunArgs: |
@@ -292,9 +292,13 @@ jobs:
             cd gg
             ls -lah
             #export CC=musl-gcc
-            cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
+            mkdir build
+            cd build
+            cmake .. -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
+            make
+            #cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
             ls -lah
-            cmake --build build --config Release
+            #cmake --build build --config Release
             find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
 
       - run: |
