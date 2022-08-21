@@ -160,16 +160,20 @@ jobs:
         shell: bash
         run: |
           ls -lah
+          du -a
           mkdir hash
           mkdir out
-          for file in mn_*
+          for dir in mn_*
           do
+            echo dir is $dir
+            file = $dir/mn
             echo file is $file
             hash=$(sha512sum $file | awk '{ print $1 }')
             echo hash is $hash
             cp $file out/$hash
-            echo $hash > hash/hash_$file
+            echo $hash > hash/hash_$dir
           done
+          du -a
 
       - name: Upload hash artifact
         uses: actions/upload-artifact@v2
