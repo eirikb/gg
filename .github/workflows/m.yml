@@ -15,18 +15,18 @@ on:
 name: m!
 jobs:
 
-  A-mn-OS:
+  A-mn:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-          - os: windows-latest
-            target: x86_64-pc-windows-gnu
-          - os: macos-latest
-            target: x86_64-apple-darwin
+          #          - os: ubuntu-latest
+          - target: x86_64-unknown-linux-gnu
+          #          - os: ubuntu-latest
+          - target: x86_64-unknown-linux-musl
+          #          - os: windows-latest
+          - target: x86_64-pc-windows-gnu
+          #          - os: macos-latest
+          - target: x86_64-apple-darwin
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -38,7 +38,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             mn2/target
-          key: OS-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: OS-${{ runner.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo pls
         shell: bash
@@ -66,60 +66,60 @@ jobs:
           path: mn
 
 
-  A-mn-arch:
-    strategy:
-      matrix:
-        include:
-          - arch: armv7
-            target: armv7-unknown-linux-gnu
-
-    runs-on: ubuntu-18.04
-    steps:
-      - uses: actions/checkout@v2.1.0
-
-      - uses: actions/cache@v2
-        with:
-          path: cachus
-          key: arch-cargo-x6-${{ hashFiles('**/Cargo.lock') }}
-
-      - uses: uraimo/run-on-arch-action@v2
-        name: Run commands
-        id: runcmd
-        with:
-          arch: ${{ matrix.arch }}
-          distro: ubuntu18.04
-          githubToken: ${{ github.token }}
-          setup: mkdir -p "$PWD/artifacts"
-          dockerRunArgs: |
-            -v "$PWD/artifacts:/artifacts"
-            -v "$PWD/cachus:/cachus"
-
-          install: |
-            apt-get -y update
-            apt-get -y install cargo
-
-          run: |
-            cd mn
-            cp -rp /cachus/* . || :
-            CARGO_HOME=ok cargo build --release
-            cp -rp target /cachus/
-            cp -rp ok /cachus/
-            cp target/release/mn /artifacts/
-
-      - run: |
-          sudo chown -R $(id -u):$(id -g) $PWD/artifacts
-          rm -rf mn
-          find $PWD/artifacts -type f -name mn -exec cp {} ./mn \;
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: mn_${{ matrix.target }}
-          path: mn
+  #  A-mn-arch:
+  #    strategy:
+  #      matrix:
+  #        include:
+  #          - arch: armv7
+  #            target: armv7-unknown-linux-gnu
+  #
+  #    runs-on: ubuntu-18.04
+  #    steps:
+  #      - uses: actions/checkout@v2.1.0
+  #
+  #      - uses: actions/cache@v2
+  #        with:
+  #          path: cachus
+  #          key: arch-cargo-x6-${{ hashFiles('**/Cargo.lock') }}
+  #
+  #      - uses: uraimo/run-on-arch-action@v2
+  #        name: Run commands
+  #        id: runcmd
+  #        with:
+  #          arch: ${{ matrix.arch }}
+  #          distro: ubuntu18.04
+  #          githubToken: ${{ github.token }}
+  #          setup: mkdir -p "$PWD/artifacts"
+  #          dockerRunArgs: |
+  #            -v "$PWD/artifacts:/artifacts"
+  #            -v "$PWD/cachus:/cachus"
+  #
+  #          install: |
+  #            apt-get -y update
+  #            apt-get -y install cargo
+  #
+  #          run: |
+  #            cd mn
+  #            cp -rp /cachus/* . || :
+  #            CARGO_HOME=ok cargo build --release
+  #            cp -rp target /cachus/
+  #            cp -rp ok /cachus/
+  #            cp target/release/mn /artifacts/
+  #
+  #      - run: |
+  #          sudo chown -R $(id -u):$(id -g) $PWD/artifacts
+  #          rm -rf mn
+  #          find $PWD/artifacts -type f -name mn -exec cp {} ./mn \;
+  #
+  #      - name: Upload artifact
+  #        uses: actions/upload-artifact@v2
+  #        with:
+  #          name: mn_${{ matrix.target }}
+  #          path: mn
 
 
   B-hash:
-    needs: [ A-mn-OS, A-mn-arch ]
+    needs: A-mn
     runs-on: ubuntu-20.04
     steps:
       #      - name: Hash!
