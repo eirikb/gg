@@ -1,8 +1,6 @@
 on:
   workflow_dispatch:
   push:
-  release:
-    types: [ published ]
 
 # Plan (tiers):
 # A: Build mn (for each target)
@@ -426,7 +424,7 @@ jobs:
     name: Release!
     needs: [ E-test-OS, E-test-container, E-test-arch ]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     steps:
       - name: Generate build number
         id: buildnumber
