@@ -137,6 +137,7 @@ jobs:
 
       - run: |
           sudo chown -R $(id -u):$(id -g) $PWD/artifacts
+          sudo chown -R $(id -u):$(id -g) .
           rm -rf mn
           find $PWD/artifacts -type f -name mn -exec cp {} ./mn \;
 
