@@ -15,20 +15,20 @@ on:
 name: m!
 jobs:
 
-  A-mn:
+  A-mn-OS:
     strategy:
       matrix:
         include:
-          #          - os: ubuntu-latest
-          - target: x86_64-unknown-linux-gnu
-          #          - os: ubuntu-latest
-          - target: x86_64-unknown-linux-musl
-          #          - os: windows-latest
-          - target: x86_64-pc-windows-gnu
-          #          - os: macos-latest
-          - target: x86_64-apple-darwin
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-glibc
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
 
-    runs-on: ubuntu-20.04
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
 
@@ -38,7 +38,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             mn2/target
-          key: OS-${{ runner.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: OS-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo pls
         shell: bash
@@ -65,61 +65,60 @@ jobs:
           name: mn_${{ matrix.target }}
           path: mn
 
+  A-mn-arch:
+    strategy:
+      matrix:
+        include:
+          - arch: armv7
+            target: armv7-unknown-linux-glibc
 
-  #  A-mn-arch:
-  #    strategy:
-  #      matrix:
-  #        include:
-  #          - arch: armv7
-  #            target: armv7-unknown-linux-gnu
-  #
-  #    runs-on: ubuntu-18.04
-  #    steps:
-  #      - uses: actions/checkout@v2.1.0
-  #
-  #      - uses: actions/cache@v2
-  #        with:
-  #          path: cachus
-  #          key: arch-cargo-x6-${{ hashFiles('**/Cargo.lock') }}
-  #
-  #      - uses: uraimo/run-on-arch-action@v2
-  #        name: Run commands
-  #        id: runcmd
-  #        with:
-  #          arch: ${{ matrix.arch }}
-  #          distro: ubuntu18.04
-  #          githubToken: ${{ github.token }}
-  #          setup: mkdir -p "$PWD/artifacts"
-  #          dockerRunArgs: |
-  #            -v "$PWD/artifacts:/artifacts"
-  #            -v "$PWD/cachus:/cachus"
-  #
-  #          install: |
-  #            apt-get -y update
-  #            apt-get -y install cargo
-  #
-  #          run: |
-  #            cd mn
-  #            cp -rp /cachus/* . || :
-  #            CARGO_HOME=ok cargo build --release
-  #            cp -rp target /cachus/
-  #            cp -rp ok /cachus/
-  #            cp target/release/mn /artifacts/
-  #
-  #      - run: |
-  #          sudo chown -R $(id -u):$(id -g) $PWD/artifacts
-  #          rm -rf mn
-  #          find $PWD/artifacts -type f -name mn -exec cp {} ./mn \;
-  #
-  #      - name: Upload artifact
-  #        uses: actions/upload-artifact@v2
-  #        with:
-  #          name: mn_${{ matrix.target }}
-  #          path: mn
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2.1.0
+
+      - uses: actions/cache@v2
+        with:
+          path: cachus
+          key: arch-cargo-x6-${{ hashFiles('**/Cargo.lock') }}
+
+      - uses: uraimo/run-on-arch-action@v2
+        name: Run commands
+        id: runcmd
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ubuntu18.04
+          githubToken: ${{ github.token }}
+          setup: mkdir -p "$PWD/artifacts"
+          dockerRunArgs: |
+            -v "$PWD/artifacts:/artifacts"
+            -v "$PWD/cachus:/cachus"
+
+          install: |
+            apt-get -y update
+            apt-get -y install cargo
+
+          run: |
+            cd mn
+            cp -rp /cachus/* . || :
+            CARGO_HOME=ok cargo build --release
+            cp -rp target /cachus/
+            cp -rp ok /cachus/
+            cp target/release/mn /artifacts/
+
+      - run: |
+          sudo chown -R $(id -u):$(id -g) $PWD/artifacts
+          rm -rf mn
+          find $PWD/artifacts -type f -name mn -exec cp {} ./mn \;
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: mn_${{ matrix.target }}
+          path: mn
 
 
   B-hash:
-    needs: A-mn
+    needs: [ A-mn-OS, A-mn-arch ]
     runs-on: ubuntu-20.04
     steps:
       #      - name: Hash!
@@ -167,7 +166,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-18.04
-            target: x86_64-unknown-linux-gnu
+            target: x86_64-unknown-linux-glibc
             linker_flags: -Os
           - os: windows-latest
             target: x86_64-pc-windows-gnu
@@ -215,55 +214,6 @@ jobs:
           path: gg_${{ matrix.target }}
 
 
-  C-gg-container:
-    needs: B-hash
-
-    strategy:
-      matrix:
-        include:
-          - container: alpine
-            target: x86_64-unknown-linux-musl
-
-    runs-on: ubuntu-20.04
-    container: ${{ matrix.container }}
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Download mn hash
-        uses: actions/download-artifact@v2
-        with:
-          name: hash
-          path: hash
-
-      - name: Hash
-        # ENV -> CMAKE -> Code very hard. This very easy
-        shell: bash
-        run: |
-          du -a
-          hash=$(cat hash/hash_mn_${{ matrix.target }})
-          echo "now hash is $hash"
-          echo "const char *hash = \"$hash\";" > gg/const.h
-
-      - name: Makus
-        shell: bash
-        run: |
-          cd gg
-          #if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
-          #then
-            #sudo apt install musl-dev musl-tools
-            #export CC=musl-gcc
-          #fi
-          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --config Release
-          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: gg_${{ matrix.target }}
-          path: gg_${{ matrix.target }}
-
   C-gg-arch:
     needs: B-hash
 
@@ -271,7 +221,7 @@ jobs:
       matrix:
         include:
           - arch: armv7
-            target: armv7-unknown-linux-gnu
+            target: armv7-unknown-linux-glibc
             linker_flags: -Os
 
     runs-on: ubuntu-20.04
@@ -414,7 +364,7 @@ jobs:
       matrix:
         include:
           - arch: armv7
-            target: armv7-unknown-linux-gnu
+            target: armv7-unknown-linux-glibc
 
     runs-on: ubuntu-20.04
     steps:
