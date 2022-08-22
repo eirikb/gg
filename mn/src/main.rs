@@ -1,6 +1,6 @@
-extern crate clap;
+// extern crate clap;
 
-use clap::{App, SubCommand};
+// use clap::{App, SubCommand};
 
 fn main() {
     // let app = App::new("m")
@@ -14,5 +14,5 @@ fn main() {
     // let matches = app.get_matches();
     //
     // let val = matches.value_of("node").unwrap_or("OK");
-    println!("Hello, world 2!");
+    println!("Hello, world 3!");
 }
