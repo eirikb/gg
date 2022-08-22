@@ -5,16 +5,18 @@ on:
     types: [ published ]
 
 # Plan (tiers):
-# A: Build mn (for each target). Using musl
-# B: Build gg (for each target (OS + container)). No musl, no static, for less space
-# C: Build m
-# D: Test (for each os target (OS + container))
-# E: Create release
+# A: Build mn (for each target)
+# B: Hash (create hash for each target)
+# C: Build gg (for each target)
+# D: Build m
+# E Test (for each os target)
+# F: Test (for each container)
+# G: Create release
 
 name: m!
 jobs:
 
-  A-mn:
+  A-mn-OS:
     strategy:
       matrix:
         include:
@@ -35,7 +37,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             mn2/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: OS-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo pls
         shell: bash
@@ -55,11 +57,6 @@ jobs:
            find . -type f -name mn.exe -exec cp {} ../mn \;
            find . -type f -name mn -exec cp {} ../mn \;
 
-      - name: Hash!
-        shell: bash
-        run: |
-          gcc gg/print_hash.c -o print_hash
-          ./print_hash mn > hash
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
@@ -67,19 +64,125 @@ jobs:
           name: mn_${{ matrix.target }}
           path: mn
 
+  #      - name: Hash!
+  #        shell: bash
+  #        run: |
+  #          gcc gg/print_hash.c -o print_hash
+  #          ./print_hash mn > hash
+  #
+  #      - name: Upload artifact
+  #        uses: actions/upload-artifact@v2
+  #        with:
+  #          name: mn_${{ matrix.target }}
+  #          path: mn
+  #
+  #      - name: Upload artifact
+  #        uses: actions/upload-artifact@v2
+  #        with:
+  #          name: hash_${{ matrix.target }}
+  #          path: hash
+  #
+  #      - name: Rename to hash
+  #        shell: bash
+  #        run: |
+  #          hash=$(cat hash)
+  #          echo hash is "$hash"
+  #          mkdir out
+  #          mv mn "out/$hash"
+  #
+  #      - uses: LanceMcCarthy/Action-AzureBlobUpload@v1.9.0
+  #        with:
+  #          connection_string: ${{ secrets.ConnectionString }}
+  #          container_name: poc
+  #          source_folder: out
+
+  A-mn-arch:
+    strategy:
+      matrix:
+        include:
+          - arch: armv7
+            target: armv7-unknown-linux-musl
+
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2.1.0
+
+      - uses: actions/cache@v2
+        with:
+          path: cachus
+          key: arch-cargo-x6-${{ hashFiles('**/Cargo.lock') }}
+
+      - uses: uraimo/run-on-arch-action@v2
+        name: Run commands
+        id: runcmd
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ubuntu18.04
+          githubToken: ${{ github.token }}
+          setup: mkdir -p "$PWD/artifacts"
+          dockerRunArgs: |
+            -v "$PWD/artifacts:/artifacts"
+            -v "$PWD/cachus:/cachus"
+
+          install: |
+            apt-get -y update
+            apt-get -y install cargo
+
+          run: |
+            cd mn
+            cp -rp /cachus/* . || :
+            CARGO_HOME=ok cargo build --release
+            cp -rp target /cachus/
+            cp -rp ok /cachus/
+            cp target/release/mn /artifacts/
+
+      - run: |
+          sudo chown -R $(id -u):$(id -g) $PWD/artifacts
+          sudo chown -R $(id -u):$(id -g) .
+          rm -rf mn
+          find $PWD/artifacts -type f -name mn -exec cp {} ./mn \;
+
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: hash_${{ matrix.target }}
-          path: hash
+          name: mn_${{ matrix.target }}
+          path: mn
+
+
+  B-hash:
+    needs: [ A-mn-OS, A-mn-arch ]
+    runs-on: ubuntu-20.04
+    steps:
+      #      - name: Hash!
+      #        shell: bash
+      #        run: gcc gg/print_hash.c -o print_hash
+      - name: Download mn hash
+        uses: actions/download-artifact@v2
 
       - name: Rename to hash
         shell: bash
         run: |
-          hash=$(cat hash)
-          echo hash is "$hash"
+          ls -lah
+          du -a
+          mkdir hash
           mkdir out
-          mv mn "out/$hash"
+          for dir in mn_*
+          do
+            echo dir is $dir
+            file=$dir/mn
+            echo file is $file
+            hash=$(sha512sum $file | awk '{ print $1 }')
+            echo hash is $hash
+            cp $file out/$hash
+            echo $hash > hash/hash_$dir
+          done
+          du -a
+
+      - name: Upload hash artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: hash
+          path: hash
 
       - uses: LanceMcCarthy/Action-AzureBlobUpload@v1.9.0
         with:
@@ -88,18 +191,20 @@ jobs:
           source_folder: out
 
 
-  B-gg-os:
-    needs: A-mn
+  C-gg-OS:
+    needs: B-hash
 
     strategy:
       matrix:
         include:
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-musl
+            linker_flags: -static -Os
           - os: windows-latest
             target: x86_64-pc-windows-gnu
           - os: macos-latest
             target: x86_64-apple-darwin
+            linker_flags: -Os
 
     runs-on: ${{ matrix.os }}
 
@@ -109,14 +214,15 @@ jobs:
       - name: Download mn hash
         uses: actions/download-artifact@v2
         with:
-          name: hash_${{ matrix.target }}
+          name: hash
           path: hash
 
       - name: Hash
         # ENV -> CMAKE -> Code very hard. This very easy
         shell: bash
         run: |
-          hash=$(cat hash/hash)
+          du -a
+          hash=$(cat hash/hash_mn_${{ matrix.target }})
           echo "now hash is $hash"
           echo "const char *hash = \"$hash\";" > gg/const.h
 
@@ -124,28 +230,33 @@ jobs:
         shell: bash
         run: |
           cd gg
-          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
+          then
+            sudo apt install musl-dev musl-tools
+            export CC=musl-gcc
+          fi
+          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
-          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.os }}-${{ matrix.target }} \;
+          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: gg_${{ matrix.os }}-${{ matrix.target }}
-          path: gg_${{ matrix.os }}-${{ matrix.target }}
+          name: gg_${{ matrix.target }}
+          path: gg_${{ matrix.target }}
 
 
-  B-gg-container:
-    needs: A-mn
+  C-gg-arch:
+    needs: B-hash
 
     strategy:
       matrix:
         include:
-          - container: alpine
-            target: x86_64-unknown-linux-musl
+          - arch: armv7
+            target: armv7-unknown-linux-musl
+            linker_flags: -static -Os
 
-    runs-on: ubuntu-latest
-    container: ${{ matrix.container }}
+    runs-on: ubuntu-20.04
 
     steps:
       - uses: actions/checkout@v2
@@ -153,40 +264,66 @@ jobs:
       - name: Download mn hash
         uses: actions/download-artifact@v2
         with:
-          name: hash_${{ matrix.target }}
+          name: hash
           path: hash
 
-      - name: Hash
-        # ENV -> CMAKE -> Code very hard. This very easy
-        run: |
-          hash=$(cat hash/hash)
-          echo "now hash is $hash"
-          echo "const char *hash = \"$hash\";" > gg/const.h
+      - uses: uraimo/run-on-arch-action@v2
+        name: Run commands
+        id: runcmd
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ubuntu18.04
+          githubToken: ${{ github.token }}
+          setup: mkdir -p "$PWD/artifacts"
+          dockerRunArgs: |
+            -v "$PWD/artifacts:/artifacts"
+            -v "$PWD:/yes"
 
-      - name: Makus
-        run: |
-          cd gg
-          apk update 
-          apk add build-base cmake
-          cmake -B build -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --config Release
-          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.container }}-${{ matrix.target }} \;
+          install: |
+            apt-get -y update
+            apt-get -y install cmake build-essential musl-dev musl-tools
+
+          run: |
+            set -x
+            cd /yes
+            ls -lah
+            hash=$(cat hash/hash_mn_${{ matrix.target }})
+            echo "now hash is $hash"
+            echo "const char *hash = \"$hash\";" > gg/const.h
+            du -a
+            cd gg
+            ls -lah
+            export CC=musl-gcc
+            mkdir build
+            cd build
+            cmake .. -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
+            make
+            #cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
+            ls -lah
+            #cmake --build build --config Release
+            find . -type f \( -name gg -o -name gg.exe \) -exec cp {} /artifacts/gg_${{ matrix.target }} \;
+
+      - run: |
+          ls -lah
+          ls -lah artifacts
+          cp artifacts/* ./
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: gg_${{ matrix.container }}-${{ matrix.target }}
-          path: gg_${{ matrix.container }}-${{ matrix.target }}
+          name: gg_${{ matrix.target }}
+          path: gg_${{ matrix.target }}
 
 
-  C-m:
-    needs: [ B-gg-os, B-gg-container ]
+
+  D-m:
+    needs: [ C-gg-OS, C-gg-arch ]
     runs-on: ubuntu-18.04
     steps:
       - name: Source
         uses: actions/checkout@v2.1.0
 
-      - name: Download gg
+      - name: Download gg / mn
         uses: actions/download-artifact@v2
 
       - name: m
@@ -211,8 +348,8 @@ jobs:
           path: m
 
 
-  D-test-os:
-    needs: C-m
+  E-test-OS:
+    needs: D-m
     strategy:
       matrix:
         os: [ ubuntu-18.04, ubuntu-20.04, macos-latest, windows-2019, windows-2022 ]
@@ -229,10 +366,10 @@ jobs:
           sh m
           echo "Nice, let's try again"
           sh m
-  
 
-  D-test-container:
-    needs: C-m
+
+  E-test-container:
+    needs: D-m
     strategy:
       matrix:
         container: [ ubuntu, debian, alpine, archlinux ]
@@ -252,11 +389,44 @@ jobs:
           sh m
 
 
-  E-release:
+  E-test-arch:
+    needs: D-m
+    strategy:
+      matrix:
+        include:
+          - arch: armv7
+            target: armv7-unknown-linux-musl
+
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Download m
+        uses: actions/download-artifact@v2
+        with:
+          name: m
+
+      - uses: uraimo/run-on-arch-action@v2
+        name: Run commands
+        id: runcmd
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ubuntu18.04
+          githubToken: ${{ github.token }}
+          dockerRunArgs: |
+            -v "$PWD:/ok"
+          run: |
+            uname -a
+            cd /ok
+            ls -lah
+            sh m
+            echo "Nice, let's try again"
+            sh m
+
+
+  F-release:
     name: Release!
-    if: ${{ github.event_name == 'release' }}
-    needs: [ D-test-os, D-test-container ]
+    needs: [ E-test-OS, E-test-container, E-test-arch ]
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
     steps:
       - name: Generate build number
         id: buildnumber
@@ -264,16 +434,16 @@ jobs:
         with:
           token: ${{ github.token }}
 
-      #      - name: Create Release
-      #        id: create_release
-      #        uses: actions/create-release@v1
-      #        env:
-      #          GITHUB_TOKEN: ${{ github.token }}
-      #        with:
-      #          tag_name: ${{ steps.buildnumber.outputs.build_number }}
-      #          release_name: Release ${{ steps.buildnumber.outputs.build_number }}
-      #          draft: false
-      #          prerelease: false
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          tag_name: ${{ steps.buildnumber.outputs.build_number }}
+          release_name: Release ${{ steps.buildnumber.outputs.build_number }}
+          draft: false
+          prerelease: false
 
       - name: Download m
         uses: actions/download-artifact@v2
@@ -284,7 +454,7 @@ jobs:
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token}}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./m
