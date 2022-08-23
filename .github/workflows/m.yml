@@ -19,6 +19,8 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
           - os: windows-latest
             target: x86_64-pc-windows-gnu
@@ -98,6 +100,8 @@ jobs:
     strategy:
       matrix:
         include:
+          - arch: armv7
+            target: armv7-unknown-linux-gnu
           - arch: armv7
             target: armv7-unknown-linux-musl
 
@@ -196,6 +200,8 @@ jobs:
       matrix:
         include:
           - os: ubuntu-18.04
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-18.04
             target: x86_64-unknown-linux-musl
             linker_flags: -Os
           - os: windows-latest
@@ -228,7 +234,7 @@ jobs:
         shell: bash
         run: |
           cd gg
-          if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
+          if [ "${{ matrix.target }}" == "x86_64-unknown-linux-musl" ]
           then
             sudo apt install musl-dev musl-tools
             export CC=musl-gcc
@@ -250,6 +256,9 @@ jobs:
     strategy:
       matrix:
         include:
+          - arch: armv7
+            target: armv7-unknown-linux-gnu
+            linker_flags: -Os
           - arch: armv7
             target: armv7-unknown-linux-musl
             linker_flags: -Os
@@ -291,7 +300,11 @@ jobs:
             du -a
             cd gg
             ls -lah
-            export CC=musl-gcc
+            if [ "${{ matrix.target }}" == "armv7-unknown-linux-musl" ]
+            then
+              sudo apt install musl-dev musl-tools
+              export CC=musl-gcc
+            fi
             mkdir build
             cd build
             cmake .. -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
