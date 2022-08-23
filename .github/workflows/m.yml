@@ -8,8 +8,7 @@ on:
 # C: Build gg (for each target)
 # D: Build m
 # E Test (for each os target)
-# F: Test (for each container)
-# G: Create release
+# F: Create release
 
 name: m!
 jobs:
@@ -18,7 +17,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-18.04
             target: x86_64-unknown-linux-gnu
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
