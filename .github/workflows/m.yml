@@ -201,14 +201,12 @@ jobs:
         include:
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-gnu
-          - os: ubuntu-18.04
+          - os: alpine
             target: x86_64-unknown-linux-musl
-            linker_flags: -Os
           - os: windows-latest
             target: x86_64-pc-windows-gnu
           - os: macos-latest
             target: x86_64-apple-darwin
-            linker_flags: -Os
 
     runs-on: ${{ matrix.os }}
 
@@ -239,7 +237,7 @@ jobs:
             sudo apt install musl-dev musl-tools
             export CC=musl-gcc
           fi
-          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
+          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
           find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
 
@@ -258,10 +256,8 @@ jobs:
         include:
           - arch: armv7
             target: armv7-unknown-linux-gnu
-            linker_flags: -Os
           - arch: armv7
             target: armv7-unknown-linux-musl
-            linker_flags: -Os
 
     runs-on: ubuntu-20.04
 
@@ -306,11 +302,8 @@ jobs:
             fi
             mkdir build
             cd build
-            cmake .. -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
+            cmake .. -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
             make
-            #cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
-            ls -lah
-            #cmake --build build --config Release
             find . -type f \( -name gg -o -name gg.exe \) -exec cp {} /artifacts/gg_${{ matrix.target }} \;
 
       - run: |
