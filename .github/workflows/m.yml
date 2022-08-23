@@ -278,6 +278,7 @@ jobs:
       - name: Makus
         run: |
           cd gg
+          apk add build-base cmake
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
           find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
