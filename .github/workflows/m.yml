@@ -302,7 +302,6 @@ jobs:
             ls -lah
             if [ "${{ matrix.target }}" == "armv7-unknown-linux-musl" ]
             then
-              sudo apt install musl-dev musl-tools
               export CC=musl-gcc
             fi
             mkdir build
