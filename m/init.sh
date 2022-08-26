@@ -1,4 +1,3 @@
-cd .cache/m || exit
 for gg in .cache/m/gg*; do
   chmod +x "$gg"
   # shellcheck disable=SC2086

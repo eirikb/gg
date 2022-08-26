@@ -347,7 +347,7 @@ jobs:
             done
           done
           # Prevent wine from trying to run (if installed on users PC)
-          mv .cache/m/gg_x86_64-pc-windows-gnu .cache/m/z_gg_x86_64-pc-windows-gnu
+          mv .cache/m/gg_x86_64-pc-windows-gnu .cache/m/gg_zz_x86_64-pc-windows-gnu
           cp _m/init.sh .cache/m/
           chmod +x .cache/m/init.sh
           tar -zpvcf m.tgz .cache
