@@ -4,6 +4,7 @@
 
 use std::env;
 use reqwest;
+use scraper::Html;
 
 #[tokio::main]
 async fn main() {
@@ -14,6 +15,7 @@ async fn main() {
                 println!("GO NODE");
                 let body = reqwest::get("https://nodejs.org/en/download/").await.unwrap().text().await.unwrap();
                 println!("{}", body);
+                let document = Html::parse_document(body.as_str());
             } else {
                 println!("It is {}", v);
             }
