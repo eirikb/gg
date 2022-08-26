@@ -375,9 +375,9 @@ jobs:
 
       - name: Run!
         run: |
-          sh m
+          sh m node
           echo "Nice, let's try again"
-          sh m
+          sh m node
 
 
   E-test-container:
@@ -396,9 +396,9 @@ jobs:
 
       - name: Run!
         run: |
-          sh m
+          sh m node
           echo "Nice, let's try again"
-          sh m
+          sh m node
 
 
   E-test-arch:
@@ -429,9 +429,9 @@ jobs:
             uname -a
             cd /ok
             ls -lah
-            sh m
+            sh m node
             echo "Nice, let's try again"
-            sh m
+            sh m node
 
 
   F-release:

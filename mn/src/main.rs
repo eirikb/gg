@@ -2,7 +2,20 @@
 
 // use clap::{App, SubCommand};
 
+use std::env;
+
 fn main() {
+    let args: Vec<String> = env::args().collect();
+    match args.get(1) {
+        Some(v) => {
+            if v == "node" {
+                println!("GO NODE");
+            } else {
+                println!("It is {}", v)
+            }
+        }
+        None => println!("Nope")
+    }
     // let app = App::new("m")
     //     .version("1.0")
     //     .author("Eirik Brandtzæg. <eirikb@eirikb.no>")
@@ -14,5 +27,4 @@ fn main() {
     // let matches = app.get_matches();
     //
     // let val = matches.value_of("node").unwrap_or("OK");
-    println!("Hello, world 3!");
 }
