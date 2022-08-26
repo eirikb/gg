@@ -3,18 +3,24 @@
 // use clap::{App, SubCommand};
 
 use std::env;
+use reqwest;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let args: Vec<String> = env::args().collect();
     match args.get(1) {
         Some(v) => {
             if v == "node" {
                 println!("GO NODE");
+                let body = reqwest::get("https://nodejs.org/en/download/").await.unwrap().text().await.unwrap();
+                println!("{}", body);
             } else {
-                println!("It is {}", v)
+                println!("It is {}", v);
             }
         }
-        None => println!("Nope")
+        None => {
+            println!("Nope");
+        }
     }
     // let app = App::new("m")
     //     .version("1.0")
