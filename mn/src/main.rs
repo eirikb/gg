@@ -6,16 +6,17 @@ use std::env;
 use reqwest;
 use scraper::Html;
 
-#[tokio::main]
-async fn main() {
+// #[tokio::main]
+fn main() {
+
     let args: Vec<String> = env::args().collect();
     match args.get(1) {
         Some(v) => {
             if v == "node" {
                 println!("GO NODE");
-                let body = reqwest::get("https://nodejs.org/en/download/").await.unwrap().text().await.unwrap();
-                println!("{}", body);
-                let document = Html::parse_document(body.as_str());
+                // let body = reqwest::get("https://nodejs.org/en/download/").await.unwrap().text().await.unwrap();
+                // println!("{}", body);
+                // let document = Html::parse_document(body.as_str());
             } else {
                 println!("It is {}", v);
             }
@@ -24,6 +25,7 @@ async fn main() {
             println!("Nope");
         }
     }
+    println!("CWD is {}", env::current_dir().unwrap().display())
     // let app = App::new("m")
     //     .version("1.0")
     //     .author("Eirik Brandtzæg. <eirikb@eirikb.no>")
