@@ -5,7 +5,8 @@ for gg in gg*; do
   if "./$gg" 2>/dev/null; then
     chmod +x mn
     echo "$gg" >system
-    ./mn "$@"
+    cd ../..
+    ./.cache/m/mn "$@"
     exit
   fi
 done
