@@ -19,8 +19,8 @@ jobs:
         include:
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-gnu
-          #          - os: ubuntu-latest
-          #            target: x86_64-unknown-linux-musl
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
           - os: windows-latest
             target: x86_64-pc-windows-gnu
           - os: macos-latest
@@ -51,54 +51,7 @@ jobs:
           fi
           
           rustup target add ${{ matrix.target }}
-          rustup toolchain install stable-${{ matrix.target }}
-          cargo build --release --target=${{ matrix.target}}
-           find . -type f -name mn.exe -exec cp {} ../mn \;
-           find . -type f -name mn -exec cp {} ../mn \;
-
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: mn_${{ matrix.target }}
-          path: mn
-
-
-  A-mn-container:
-    strategy:
-      matrix:
-        include:
-          - container: alpine
-            target: x86_64-unknown-linux-musl
-
-    runs-on: ubuntu-latest
-    container: ${{ matrix.container }}
-    steps:
-      - uses: actions/checkout@v2
-
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            mn2/target
-          key: container-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: cargo pls
-        run: |
-          mkdir -p mn2
-          mv mn/* mn2
-          rm -rf mn
-          cd mn2
-          if [ "${{ matrix.container }}" == "alpine" ]
-          then
-            apk add cargo
-          fi
-          
-          #rustup target add ${{ matrix.target }}
-          #rustup toolchain install stable-${{ matrix.target }}
-          cargo build --release
-          #--target=${{ matrix.target}}
+          cargo build --release --target=${{ matrix.target }}
           find . -type f -name mn.exe -exec cp {} ../mn \;
           find . -type f -name mn -exec cp {} ../mn \;
 
@@ -108,6 +61,52 @@ jobs:
         with:
           name: mn_${{ matrix.target }}
           path: mn
+
+
+  #  A-mn-container:
+  #    strategy:
+  #      matrix:
+  #        include:
+  #          - container: alpine
+  #            target: x86_64-unknown-linux-musl
+  #
+  #    runs-on: ubuntu-latest
+  #    container: ${{ matrix.container }}
+  #    steps:
+  #      - uses: actions/checkout@v2
+  #
+  #      - uses: actions/cache@v2
+  #        with:
+  #          path: |
+  #            ~/.cargo/registry
+  #            ~/.cargo/git
+  #            mn2/target
+  #          key: container-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+  #
+  #      - name: cargo pls
+  #        run: |
+  #          mkdir -p mn2
+  #          mv mn/* mn2
+  #          rm -rf mn
+  #          cd mn2
+  #          if [ "${{ matrix.container }}" == "alpine" ]
+  #          then
+  #            apk add cargo
+  #          fi
+  #
+  #          #rustup target add ${{ matrix.target }}
+  #          #rustup toolchain install stable-${{ matrix.target }}
+  #          cargo build --release
+  #          #--target=${{ matrix.target}}
+  #          find . -type f -name mn.exe -exec cp {} ../mn \;
+  #          find . -type f -name mn -exec cp {} ../mn \;
+  #
+  #
+  #      - name: Upload artifact
+  #        uses: actions/upload-artifact@v2
+  #        with:
+  #          name: mn_${{ matrix.target }}
+  #          path: mn
 
 
   A-mn-arch:
