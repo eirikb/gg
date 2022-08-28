@@ -85,7 +85,6 @@ jobs:
           key: container-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo pls
-        shell: bash
         run: |
           mkdir -p mn2
           mv mn/* mn2
