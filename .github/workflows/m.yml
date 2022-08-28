@@ -45,7 +45,7 @@ jobs:
           mv mn/* mn2
           rm -rf mn
           cd mn2
-          if [ "${{ matrix.os }}" == "ubuntu-latest" ]
+          if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
           then
             sudo apt install musl-tools
           fi
@@ -364,7 +364,7 @@ jobs:
     needs: D-m
     strategy:
       matrix:
-        os: [ ubuntu-18.04, ubuntu-20.04, macos-latest, windows-2019, windows-2022 ]
+        os: [ ubuntu-18.04, ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022, macOS-11, macOS-12 ]
 
     runs-on: ${{ matrix.os }}
     steps:
