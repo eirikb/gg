@@ -19,8 +19,8 @@ jobs:
         include:
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-gnu
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
+          #          - os: ubuntu-latest
+          #            target: x86_64-unknown-linux-musl
           - os: windows-latest
             target: x86_64-pc-windows-gnu
           - os: macos-latest
@@ -64,23 +64,71 @@ jobs:
           path: mn
 
 
+  A-mn-container:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-18.04
+            target: x86_64-unknown-linux-gnu
+          #          - os: ubuntu-latest
+          #            target: x86_64-unknown-linux-musl
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            mn2/target
+          key: container-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: cargo pls
+        shell: bash
+        run: |
+          mkdir -p mn2
+          mv mn/* mn2
+          rm -rf mn
+          cd mn2
+          if [ "${{ matrix.container }}" == "alpine" ]
+          then
+            apk add cargo
+          fi
+          
+          cargo build --release --target=${{ matrix.target}}
+           find . -type f -name mn.exe -exec cp {} ../mn \;
+           find . -type f -name mn -exec cp {} ../mn \;
+
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: mn_${{ matrix.target }}
+          path: mn
+
+
   A-mn-arch:
     strategy:
       matrix:
         include:
-          - arch: armv7
+          - container: alpine
             target: armv7-unknown-linux-gnu
-          - arch: armv7
-            target: armv7-unknown-linux-musl
 
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
     steps:
       - uses: actions/checkout@v2.1.0
 
       - uses: actions/cache@v2
         with:
           path: cachus
-          key: arch-cargo-x6-${{ hashFiles('**/Cargo.lock') }}
+          key: container-cargo-x1-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: uraimo/run-on-arch-action@v2
         name: Run commands
@@ -120,7 +168,7 @@ jobs:
 
 
   B-hash:
-    needs: [ A-mn-OS, A-mn-arch ]
+    needs: [ A-mn-OS, A-mn-container, A-mn-arch ]
     runs-on: ubuntu-20.04
     steps:
       - name: Download mn hash
@@ -364,7 +412,7 @@ jobs:
     needs: D-m
     strategy:
       matrix:
-        os: [ ubuntu-18.04, ubuntu-20.04, macos-latest, windows-2019, windows-2022 ]
+        os: [ ubuntu-18.04, ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022, macOS-11, macOS-12 ]
 
     runs-on: ${{ matrix.os }}
     steps:
