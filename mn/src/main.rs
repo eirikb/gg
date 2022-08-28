@@ -6,10 +6,13 @@ use std::env;
 
 use reqwest;
 use scraper::{Html, Selector};
+use std::fs;
 
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = env::args().collect();
+    let system = fs::read_to_string(".cache/m/system").unwrap_or(String::from("gg_x86_64-unknown-linux-musl"));
+
     async {
         match args.get(1) {
             Some(v) => {
