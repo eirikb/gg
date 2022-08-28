@@ -8,8 +8,8 @@
 // use scraper::{Html, Selector};
 // use std::fs;
 
-// #[tokio::main]
-fn main() {
+#[tokio::main]
+async fn main() {
     println!("Hello, world 5!");
     // let args: Vec<String> = env::args().collect();
     // let system = fs::read_to_string(".cache/m/system").unwrap_or(String::from("gg_x86_64-unknown-linux-musl"));
