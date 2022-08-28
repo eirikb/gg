@@ -165,7 +165,7 @@ jobs:
 
 
   B-hash:
-    needs: [ A-mn-OS, A-mn-container, A-mn-arch ]
+    needs: [ A-mn-OS, A-mn-arch ]
     runs-on: ubuntu-20.04
     steps:
       - name: Download mn hash
