@@ -71,7 +71,8 @@ jobs:
           - container: alpine
             target: x86_64-unknown-linux-musl
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
     steps:
       - uses: actions/checkout@v2
 
@@ -95,6 +96,8 @@ jobs:
             apk add cargo
           fi
           
+          #rustup target add ${{ matrix.target }}
+          #rustup toolchain install stable-${{ matrix.target }}
           cargo build --release --target=${{ matrix.target}}
            find . -type f -name mn.exe -exec cp {} ../mn \;
            find . -type f -name mn -exec cp {} ../mn \;
@@ -111,18 +114,19 @@ jobs:
     strategy:
       matrix:
         include:
-          - container: alpine
+          - arch: armv7
             target: armv7-unknown-linux-gnu
+          - arch: armv7
+            target: armv7-unknown-linux-musl
 
-    runs-on: ubuntu-latest
-    container: ${{ matrix.container }}
+    runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2.1.0
 
       - uses: actions/cache@v2
         with:
           path: cachus
-          key: container-cargo-x1-${{ hashFiles('**/Cargo.lock') }}
+          key: arch-cargo-x6-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: uraimo/run-on-arch-action@v2
         name: Run commands
