@@ -368,7 +368,7 @@ jobs:
 
   D-m:
     needs: [ C-gg-OS, C-gg-container, C-gg-arch ]
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - name: Source
         uses: actions/checkout@v2.1.0
@@ -378,6 +378,7 @@ jobs:
 
       - name: m
         run: |
+          sudo apt-get install dos2unix
           mv m _m
           mkdir -p .cache/m
           rm -rf gg
