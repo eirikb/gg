@@ -85,6 +85,7 @@ jobs:
           cd mn2
           if [ "${{ matrix.container }}" == "alpine" ]
           then
+            apk add build-base 
             apk add rustup
             rustup-init -y
             source $HOME/.cargo/env
