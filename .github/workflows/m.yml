@@ -415,6 +415,8 @@ jobs:
 
       - name: Run!
         run: |
+          file m.cmd
+          head m.cmd
           sh m.cmd node
           echo "Nice, let's try again"
           sh m.cmd node
