@@ -391,13 +391,13 @@ jobs:
           cp _m/init.sh .cache/m/
           chmod +x .cache/m/init.sh
           tar -zpvcf m.tgz .cache
-          cat _m/kick.sh m.tgz > m
+          cat _m/kick.bat _m/kick.sh m.tgz > m.cmd
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: m
-          path: m
+          name: m.cmd
+          path: m.cmd
 
 
   E-test-OS:
@@ -411,13 +411,33 @@ jobs:
       - name: Download m
         uses: actions/download-artifact@v2
         with:
-          name: m
+          name: m.cmd
 
       - name: Run!
         run: |
-          sh m node
+          sh m.cmd node
           echo "Nice, let's try again"
-          sh m node
+          sh m.cmd node
+  
+
+  E-test-batch:
+    needs: D-m
+    strategy:
+      matrix:
+        os: [ windows-2019, windows-2022 ]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Download m
+        uses: actions/download-artifact@v2
+        with:
+          name: m.cmd
+
+      - name: Run!
+        shell: cmd
+        run: |
+          .\m.cmd node
+          .\m.cmd node
 
 
   E-test-container:
@@ -432,13 +452,13 @@ jobs:
       - name: Download m
         uses: actions/download-artifact@v2
         with:
-          name: m
+          name: m.cmd
 
       - name: Run!
         run: |
-          sh m node
+          sh m.cmd node
           echo "Nice, let's try again"
-          sh m node
+          sh m.cmd node
 
 
   E-test-arch:
@@ -454,7 +474,7 @@ jobs:
       - name: Download m
         uses: actions/download-artifact@v2
         with:
-          name: m
+          name: m.cmd
 
       - uses: uraimo/run-on-arch-action@v2
         name: Run commands
@@ -469,14 +489,14 @@ jobs:
             uname -a
             cd /ok
             ls -lah
-            sh m node
+            sh m.cmd node
             echo "Nice, let's try again"
-            sh m node
+            sh m.cmd node
 
 
   F-release:
     name: Release!
-    needs: [ E-test-OS, E-test-container, E-test-arch ]
+    needs: [ E-test-OS, E-test-batch, E-test-container, E-test-arch ]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
@@ -500,7 +520,7 @@ jobs:
       - name: Download m
         uses: actions/download-artifact@v2
         with:
-          name: m
+          name: m.cmd
 
       - name: Upload Release Asset
         id: upload-release-asset
@@ -509,6 +529,6 @@ jobs:
           GITHUB_TOKEN: ${{ github.token}}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./m
-          asset_name: m
+          asset_path: ./m.cmd
+          asset_name: m.cmd
           asset_content_type: text/x-shellscript
