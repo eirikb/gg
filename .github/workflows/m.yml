@@ -390,6 +390,7 @@ jobs:
           # Prevent wine from trying to run (if installed on users PC)
           mv .cache/m/gg_x86_64-pc-windows-gnu .cache/m/gg_zz_x86_64-pc-windows-gnu
           cp _m/init.sh .cache/m/
+          cp _m/init.ps1 .cache/m/
           chmod +x .cache/m/init.sh
           tar -zpvcf m.tgz .cache
           unix2dos _m/kick.bat
