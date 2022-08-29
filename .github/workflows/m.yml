@@ -391,6 +391,7 @@ jobs:
           cp _m/init.sh .cache/m/
           chmod +x .cache/m/init.sh
           tar -zpvcf m.tgz .cache
+          unix2dos _m/kick.bat
           cat _m/kick.bat _m/kick.sh m.tgz > m.cmd
 
       - name: Upload artifact
