@@ -3,4 +3,4 @@ if [ -f ./.cache/m/init.sh ]; then
   exit
 fi
 
-tail -c +325 "$0" | tar -zpx && ./.cache/m/init.sh "$@"
+tail -c +326 m.cmd | tar -zpx && ./.cache/m/init.sh "$@"
