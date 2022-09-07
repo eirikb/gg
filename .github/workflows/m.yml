@@ -244,55 +244,8 @@ jobs:
           fi
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
-          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: gg_${{ matrix.target }}
-          path: gg_${{ matrix.target }}
-
-
-  C-gg-windows:
-    needs: B-hash
-
-    strategy:
-      matrix:
-        include:
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Download mn hash
-        uses: actions/download-artifact@v2
-        with:
-          name: hash
-          path: hash
-
-      - name: Hash
-        # ENV -> CMAKE -> Code very hard. This very easy
-        shell: bash
-        run: |
-          du -a
-          hash=$(cat hash/hash_mn_${{ matrix.target }})
-          echo "now hash is $hash"
-          echo "const char *hash = \"$hash\";" > gg/const.h
-
-      - name: Makus
-        shell: cmd
-        run: |
-          cd gg
-          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --config Release
-
-      - name: Makus
-        shell: bash
-        run: |
-          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
+          find . -type f -name gg -exec cp {} ../gg_${{ matrix.target }} \;
+          find . -type f -name gg.exe -exec cp {} ../gg_${{ matrix.target }}.exe \;
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
@@ -336,7 +289,8 @@ jobs:
           apk add build-base cmake
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
-          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
+          find . -type f -name gg -exec cp {} ../gg_${{ matrix.target }} \;
+          find . -type f -name gg.exe -exec cp {} ../gg_${{ matrix.target }}.exe \;
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
@@ -417,7 +371,7 @@ jobs:
 
 
   D-m:
-    needs: [ C-gg-OS, C-gg-container, C-gg-arch, C-gg-windows ]
+    needs: [ C-gg-OS, C-gg-container, C-gg-arch ]
     runs-on: ubuntu-latest
     steps:
       - name: Source
