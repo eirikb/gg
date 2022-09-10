@@ -1,4 +1,7 @@
-echo "Hello windows, I guess..."
+echo "Hello..."
 
-pwd
-
+cd .cache/m
+ls *gg*.exe | % {
+    & $_
+    & .\mn "$@"
+}
