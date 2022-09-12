@@ -122,7 +122,7 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: cachus
-          key: arch-cargo-x6-${{ hashFiles('**/Cargo.lock') }}
+          key: arch-cargo-x7-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: uraimo/run-on-arch-action@v2
         name: Run commands
@@ -426,22 +426,22 @@ jobs:
       - name: Download stage1 / stage2
         uses: actions/download-artifact@v2
 
-      - name: m
+      - name: gg.cmd
         run: |
           sudo apt-get install dos2unix
-          mv m _m
-          mkdir -p .cache/m
+          mv gg _gg
+          mkdir -p .cache/gg
           rm -rf stage1
           for dir in stage1*; do
             for file in "$dir"/*; do
-              cp "$file" .cache/m/
+              cp "$file" .cache/gg/
             done
           done
           # Prevent wine from trying to run (if installed on users PC)
-          mv .cache/m/stage1_x86_64-pc-windows-gnu .cache/m/stage1_zz_x86_64-pc-windows-gnu
-          cp _m/init.sh .cache/m/
-          cp _m/init.ps1 .cache/m/
-          chmod +x .cache/m/init.sh
+          mv .cache/gg/stage1_x86_64-pc-windows-gnu .cache/gg/stage1_zz_x86_64-pc-windows-gnu
+          cp _m/init.sh .cache/gg/
+          cp _m/init.ps1 .cache/gg/
+          chmod +x .cache/gg/init.sh
           tar -zpvcf m.tgz .cache
           unix2dos _m/kick.bat
           cat _m/kick.bat _m/kick.sh m.tgz > gg.cmd
