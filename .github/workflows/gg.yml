@@ -3,17 +3,17 @@ on:
   push:
 
 # Plan (tiers):
-# A: Build mn (for each target)
+# A: Build stage2 (for each target)
 # B: Hash (create hash for each target)
-# C: Build gg (for each target)
+# C: Build stage1 (for each target)
 # D: Build m
 # E Test (for each os target)
 # F: Create release
 
-name: m!
+name: gg.cmd
 jobs:
 
-  A-mn-OS:
+  A-stage3-OS:
     strategy:
       matrix:
         include:
@@ -35,31 +35,31 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            mn2/target
+            stage22/target
           key: OS-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo pls
         shell: bash
         run: |
-          mkdir -p mn2
-          mv mn/* mn2
-          rm -rf mn
-          cd mn2
+          mkdir -p stage22
+          mv stage2/* stage22
+          rm -rf stage2
+          cd stage22
           
           rustup target add ${{ matrix.target }}
           cargo build --release --target=${{ matrix.target }}
-          find . -type f -name mn.exe -exec cp {} ../mn \;
-          find . -type f -name mn -exec cp {} ../mn \;
+          find . -type f -name stage2.exe -exec cp {} ../stage2 \;
+          find . -type f -name stage2 -exec cp {} ../stage2 \;
 
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: mn_${{ matrix.target }}
-          path: mn
+          name: stage2_${{ matrix.target }}
+          path: stage2
 
 
-  A-mn-container:
+  A-stage2-container:
     strategy:
       matrix:
         include:
@@ -76,15 +76,15 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            mn2/target
+            stage22/target
           key: container-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo pls
         run: |
-          mkdir -p mn2
-          mv mn/* mn2
-          rm -rf mn
-          cd mn2
+          mkdir -p stage22
+          mv stage2/* stage22
+          rm -rf stage2
+          cd stage22
           if [ "${{ matrix.container }}" == "alpine" ]
           then
             apk add build-base 
@@ -95,18 +95,18 @@ jobs:
 
           cargo build --release --target=${{ matrix.target }}
           #--target=${{ matrix.target}}
-          find . -type f -name mn.exe -exec cp {} ../mn \;
-          find . -type f -name mn -exec cp {} ../mn \;
+          find . -type f -name stage2.exe -exec cp {} ../stage2 \;
+          find . -type f -name stage2 -exec cp {} ../stage2 \;
 
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: mn_${{ matrix.target }}
-          path: mn
+          name: stage2_${{ matrix.target }}
+          path: stage2
 
 
-  A-mn-arch:
+  A-stage2-arch:
     strategy:
       matrix:
         include:
@@ -141,31 +141,31 @@ jobs:
             apt-get -y install cargo
 
           run: |
-            cd mn
+            cd stage2
             cp -rp /cachus/* . || :
             CARGO_HOME=ok cargo build --release
             cp -rp target /cachus/
             cp -rp ok /cachus/
-            cp target/release/mn /artifacts/
+            cp target/release/stage2 /artifacts/
 
       - run: |
           sudo chown -R $(id -u):$(id -g) $PWD/artifacts
           sudo chown -R $(id -u):$(id -g) .
-          rm -rf mn
-          find $PWD/artifacts -type f -name mn -exec cp {} ./mn \;
+          rm -rf stage2
+          find $PWD/artifacts -type f -name stage2 -exec cp {} ./stage2 \;
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: mn_${{ matrix.target }}
-          path: mn
+          name: stage2_${{ matrix.target }}
+          path: stage2
 
 
   B-hash:
-    needs: [ A-mn-OS, A-mn-container, A-mn-arch ]
+    needs: [ A-stage2-OS, A-stage2-container, A-stage2-arch ]
     runs-on: ubuntu-20.04
     steps:
-      - name: Download mn hash
+      - name: Download stage2 hash
         uses: actions/download-artifact@v2
 
       - name: Rename to hash
@@ -175,10 +175,10 @@ jobs:
           du -a
           mkdir hash
           mkdir out
-          for dir in mn_*
+          for dir in stage2_*
           do
             echo dir is $dir
-            file=$dir/mn
+            file=$dir/stage2
             echo file is $file
             hash=$(sha512sum $file | awk '{ print $1 }')
             echo hash is $hash
@@ -200,7 +200,7 @@ jobs:
           source_folder: out
 
 
-  C-gg-OS:
+  C-stage1-OS:
     needs: B-hash
 
     strategy:
@@ -218,7 +218,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Download mn hash
+      - name: Download stage2 hash
         uses: actions/download-artifact@v2
         with:
           name: hash
@@ -229,14 +229,14 @@ jobs:
         shell: bash
         run: |
           du -a
-          hash=$(cat hash/hash_mn_${{ matrix.target }})
+          hash=$(cat hash/hash_stage2_${{ matrix.target }})
           echo "now hash is $hash"
-          echo "const char *hash = \"$hash\";" > gg/const.h
+          echo "const char *hash = \"$hash\";" > stage1/const.h
 
       - name: Makus
         shell: bash
         run: |
-          cd gg
+          cd stage1
           if [ "${{ matrix.target }}" == "x86_64-unknown-linux-musl" ]
           then
             sudo apt install musl-dev musl-tools
@@ -244,16 +244,16 @@ jobs:
           fi
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
-          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
+          find . -type f \( -name stage1 -o -name stage1.exe \) -exec cp {} ../stage1_${{ matrix.target }} \;
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: gg_${{ matrix.target }}
-          path: gg_${{ matrix.target }}
+          name: stage1_${{ matrix.target }}
+          path: stage1_${{ matrix.target }}
 
 
-  C-gg-windows:
+  C-stage1-windows:
     needs: B-hash
 
     strategy:
@@ -267,7 +267,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Download mn hash
+      - name: Download stage2 hash
         uses: actions/download-artifact@v2
         with:
           name: hash
@@ -278,30 +278,30 @@ jobs:
         shell: bash
         run: |
           du -a
-          hash=$(cat hash/hash_mn_${{ matrix.target }})
+          hash=$(cat hash/hash_stage2_${{ matrix.target }})
           echo "now hash is $hash"
-          echo "const char *hash = \"$hash\";" > gg/const.h
+          echo "const char *hash = \"$hash\";" > stage1/const.h
 
       - name: Makus
         shell: cmd
         run: |
-          cd gg
+          cd stage1
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
 
       - name: Makus
         shell: bash
         run: |
-          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
+          find . -type f \( -name stage1 -o -name stage1.exe \) -exec cp {} ../stage1_${{ matrix.target }} \;
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: gg_${{ matrix.target }}
-          path: gg_${{ matrix.target }}
+          name: stage1_${{ matrix.target }}
+          path: stage1_${{ matrix.target }}
 
 
-  C-gg-container:
+  C-stage1-container:
     needs: B-hash
 
     strategy:
@@ -316,7 +316,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Download mn hash
+      - name: Download stage2 hash
         uses: actions/download-artifact@v2
         with:
           name: hash
@@ -326,26 +326,26 @@ jobs:
         # ENV -> CMAKE -> Code very hard. This very easy
         run: |
           du -a
-          hash=$(cat hash/hash_mn_${{ matrix.target }})
+          hash=$(cat hash/hash_stage2_${{ matrix.target }})
           echo "now hash is $hash"
-          echo "const char *hash = \"$hash\";" > gg/const.h
+          echo "const char *hash = \"$hash\";" > stage1/const.h
 
       - name: Makus
         run: |
-          cd gg
+          cd stage1
           apk add build-base cmake
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
-          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
+          find . -type f \( -name stage1 -o -name stage1.exe \) -exec cp {} ../stage1_${{ matrix.target }} \;
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: gg_${{ matrix.target }}
-          path: gg_${{ matrix.target }}
+          name: stage1_${{ matrix.target }}
+          path: stage1_${{ matrix.target }}
 
 
-  C-gg-arch:
+  C-stage1-arch:
     needs: B-hash
 
     strategy:
@@ -361,7 +361,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Download mn hash
+      - name: Download stage2 hash
         uses: actions/download-artifact@v2
         with:
           name: hash
@@ -387,11 +387,11 @@ jobs:
             set -x
             cd /yes
             ls -lah
-            hash=$(cat hash/hash_mn_${{ matrix.target }})
+            hash=$(cat hash/hash_stage2_${{ matrix.target }})
             echo "now hash is $hash"
-            echo "const char *hash = \"$hash\";" > gg/const.h
+            echo "const char *hash = \"$hash\";" > stage1/const.h
             du -a
-            cd gg
+            cd stage1
             ls -lah
             if [ "${{ matrix.target }}" == "armv7-unknown-linux-musl" ]
             then
@@ -401,7 +401,7 @@ jobs:
             cd build
             cmake .. -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
             make
-            find . -type f \( -name gg -o -name gg.exe \) -exec cp {} /artifacts/gg_${{ matrix.target }} \;
+            find . -type f \( -name stage1 -o -name stage1.exe \) -exec cp {} /artifacts/stage1_${{ matrix.target }} \;
 
       - run: |
           ls -lah
@@ -411,19 +411,19 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: gg_${{ matrix.target }}
-          path: gg_${{ matrix.target }}
+          name: stage1_${{ matrix.target }}
+          path: stage1_${{ matrix.target }}
 
 
 
-  D-m:
-    needs: [ C-gg-OS, C-gg-container, C-gg-arch, C-gg-windows ]
+  D-stage0:
+    needs: [ C-stage1-OS, C-stage1-container, C-stage1-arch, C-stage1-windows ]
     runs-on: ubuntu-latest
     steps:
       - name: Source
         uses: actions/checkout@v2.1.0
 
-      - name: Download gg / mn
+      - name: Download stage1 / stage2
         uses: actions/download-artifact@v2
 
       - name: m
@@ -431,26 +431,26 @@ jobs:
           sudo apt-get install dos2unix
           mv m _m
           mkdir -p .cache/m
-          rm -rf gg
-          for dir in gg*; do
+          rm -rf stage1
+          for dir in stage1*; do
             for file in "$dir"/*; do
               cp "$file" .cache/m/
             done
           done
           # Prevent wine from trying to run (if installed on users PC)
-          mv .cache/m/gg_x86_64-pc-windows-gnu .cache/m/gg_zz_x86_64-pc-windows-gnu
+          mv .cache/m/stage1_x86_64-pc-windows-gnu .cache/m/stage1_zz_x86_64-pc-windows-gnu
           cp _m/init.sh .cache/m/
           cp _m/init.ps1 .cache/m/
           chmod +x .cache/m/init.sh
           tar -zpvcf m.tgz .cache
           unix2dos _m/kick.bat
-          cat _m/kick.bat _m/kick.sh m.tgz > m.cmd
+          cat _m/kick.bat _m/kick.sh m.tgz > gg.cmd
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: m.cmd
-          path: m.cmd
+          name: gg.cmd
+          path: gg.cmd
 
 
   E-test-OS:
@@ -464,15 +464,15 @@ jobs:
       - name: Download m
         uses: actions/download-artifact@v2
         with:
-          name: m.cmd
+          name: gg.cmd
 
       - name: Run!
         run: |
-          file m.cmd
-          head m.cmd
-          sh m.cmd node
+          file gg.cmd
+          head gg.cmd
+          sh gg.cmd node
           echo "Nice, let's try again"
-          sh m.cmd node
+          sh gg.cmd node
   
 
   E-test-batch:
@@ -486,13 +486,13 @@ jobs:
       - name: Download m
         uses: actions/download-artifact@v2
         with:
-          name: m.cmd
+          name: gg.cmd
 
       - name: Run!
         shell: cmd
         run: |
-          .\m.cmd node
-          .\m.cmd node
+          .\gg.cmd node
+          .\gg.cmd node
 
 
   E-test-container:
@@ -507,13 +507,13 @@ jobs:
       - name: Download m
         uses: actions/download-artifact@v2
         with:
-          name: m.cmd
+          name: gg.cmd
 
       - name: Run!
         run: |
-          sh m.cmd node
+          sh gg.cmd node
           echo "Nice, let's try again"
-          sh m.cmd node
+          sh gg.cmd node
 
 
   E-test-arch:
@@ -529,7 +529,7 @@ jobs:
       - name: Download m
         uses: actions/download-artifact@v2
         with:
-          name: m.cmd
+          name: gg.cmd
 
       - uses: uraimo/run-on-arch-action@v2
         name: Run commands
@@ -544,9 +544,9 @@ jobs:
             uname -a
             cd /ok
             ls -lah
-            sh m.cmd node
+            sh gg.cmd node
             echo "Nice, let's try again"
-            sh m.cmd node
+            sh gg.cmd node
 
 
   F-release:
@@ -575,7 +575,7 @@ jobs:
       - name: Download m
         uses: actions/download-artifact@v2
         with:
-          name: m.cmd
+          name: gg.cmd
 
       - name: Upload Release Asset
         id: upload-release-asset
@@ -584,6 +584,6 @@ jobs:
           GITHUB_TOKEN: ${{ github.token}}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./m.cmd
-          asset_name: m.cmd
+          asset_path: ./gg.cmd
+          asset_name: gg.cmd
           asset_content_type: text/x-shellscript
