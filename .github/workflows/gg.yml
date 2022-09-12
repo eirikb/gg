@@ -435,7 +435,7 @@ jobs:
           mv stage0 _stage0
           mkdir -p .cache/gg
           rm -rf stage0
-          for dir in stage0*; do
+          for dir in stage1*; do
             for file in "$dir"/*; do
               cp "$file" .cache/gg/
             done
