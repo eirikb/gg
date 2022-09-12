@@ -432,22 +432,24 @@ jobs:
           du -a
           echo bah
           ls -lah
-          mv stage1 _stage1
+          mv stage0 _stage0
           mkdir -p .cache/gg
-          rm -rf stage1
-          for dir in stage1*; do
+          rm -rf stage0
+          for dir in stage0*; do
             for file in "$dir"/*; do
               cp "$file" .cache/gg/
             done
           done
+          du -a
           # Prevent wine from trying to run (if installed on users PC)
           mv .cache/gg/stage1_x86_64-pc-windows-gnu .cache/gg/stage1_zz_x86_64-pc-windows-gnu
-          cp _m/init.sh .cache/gg/
-          cp _m/init.ps1 .cache/gg/
+          du -a
+          cp _stage0/init.sh .cache/gg/
+          cp _stage0/init.ps1 .cache/gg/
           chmod +x .cache/gg/init.sh
           tar -zpvcf m.tgz .cache
-          unix2dos _m/kick.bat
-          cat _m/kick.bat _m/kick.sh m.tgz > gg.cmd
+          unix2dos _stage0/kick.bat
+          cat _stage0/kick.bat _stage0/kick.sh m.tgz > gg.cmd
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
