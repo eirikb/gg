@@ -454,7 +454,7 @@ jobs:
 
 
   E-test-OS:
-    needs: D-m
+    needs: D-stage0
     strategy:
       matrix:
         os: [ ubuntu-18.04, ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022, macOS-11, macOS-12 ]
@@ -476,7 +476,7 @@ jobs:
   
 
   E-test-batch:
-    needs: D-m
+    needs: D-stage0
     strategy:
       matrix:
         os: [ windows-2019, windows-2022 ]
@@ -496,7 +496,7 @@ jobs:
 
 
   E-test-container:
-    needs: D-m
+    needs: D-stage0
     strategy:
       matrix:
         container: [ ubuntu, debian, alpine, archlinux ]
@@ -517,7 +517,7 @@ jobs:
 
 
   E-test-arch:
-    needs: D-m
+    needs: D-stage0
     strategy:
       matrix:
         include:
