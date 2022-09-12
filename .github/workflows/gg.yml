@@ -429,7 +429,10 @@ jobs:
       - name: gg.cmd
         run: |
           sudo apt-get install dos2unix
-          mv gg _gg
+          du -a
+          echo bah
+          ls -lah
+          mv stage1 _stage1
           mkdir -p .cache/gg
           rm -rf stage1
           for dir in stage1*; do
