@@ -1,7 +1,7 @@
 echo "Hello..."
 
 cd .cache\m
-Get-Item gg* | % {
+Get-Item stage1* | % {
     $name = $_.Name + ".exe"
     if (!$_.Name.EndsWith(".exe")) {
         Write-Host "re to the name"

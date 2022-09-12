@@ -1,11 +1,11 @@
 cd .cache/m || exit
-for gg in gg*; do
-  chmod +x "$gg"
+for stage1 in stage1*; do
+  chmod +x "$stage1"
   # shellcheck disable=SC2086
-  if "./$gg" 2>/dev/null; then
-    echo "gg is $gg"
+  if "./$stage1" 2>/dev/null; then
+    echo "stage1 is $stage1"
     chmod +x mn
-    echo "$gg" >system
+    echo "$stage1" >system
     ls -lah
     echo "system?"
     cat system
