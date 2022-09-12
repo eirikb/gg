@@ -1,11 +1,26 @@
 cd .cache/m || exit
-for gg in gg*
-do
+for gg in gg*; do
   chmod +x "$gg"
   # shellcheck disable=SC2086
-  if "./$gg" 2> /dev/null; then
+  if "./$gg" 2>/dev/null; then
+    echo "gg is $gg"
     chmod +x mn
-    ./mn -- "$USER_PWD" $1
+    echo "$gg" >system
+    ls -lah
+    echo "system?"
+    cat system
+    ldd mn
+    file mn
+    ./mn "$@"
+    echo 1
+    pwd
+    cd ..
+    echo 1
+    pwd
+    cd ..
+    echo 1
+    pwd
+    ./.cache/m/mn "$@"
     exit
   fi
 done

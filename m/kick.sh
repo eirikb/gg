@@ -1,7 +1,7 @@
-#!/bin/bash
-if [ -f ./.cache/m/mn ]; then
-  ./.cache/m/mn
+if [ -f ./.cache/m/init.sh ]; then
+  ./.cache/m/init.sh "$@"
   exit
 fi
-tail -c +128 "$0" | tar -zpx  && ./.cache/m/init.sh;
-exit;
+
+tail -c +362 m.cmd | tar -zpx && ./.cache/m/init.sh "$@"
+exit

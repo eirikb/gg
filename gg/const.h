@@ -1,3 +1,5 @@
 // This is just a random previously built hash. This file will be re-generated
 // by GitHub Actions
-const char *hash = "4692ff5c3d0d30cdda320e94b9bfcaae145d8d1afe56d22a0170c300a787d46f81a3b9aaef6b2defe456ca25b4267ebfe37354f749de53164f517cb44be31fc8";
+const char *hash =
+    "8c06526faaabeafb75a282247a8438dbbed5fd85726d80acea7b201487424e6af636e58c8d"
+    "f2d3aef52fa21111581d5c824ad2f028cf291532ddc3c64c7d4b18";

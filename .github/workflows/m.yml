@@ -8,8 +8,7 @@ on:
 # C: Build gg (for each target)
 # D: Build m
 # E Test (for each os target)
-# F: Test (for each container)
-# G: Create release
+# F: Create release
 
 name: m!
 jobs:
@@ -18,10 +17,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
+          - os: ubuntu-18.04
+            target: x86_64-unknown-linux-gnu
           - os: windows-latest
             target: x86_64-pc-windows-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
           - os: macos-latest
             target: x86_64-apple-darwin
 
@@ -44,16 +45,11 @@ jobs:
           mv mn/* mn2
           rm -rf mn
           cd mn2
-          if [ "${{ matrix.os }}" == "ubuntu-latest" ]
-          then
-            sudo apt install musl-tools
-          fi
           
           rustup target add ${{ matrix.target }}
-          rustup toolchain install stable-${{ matrix.target }}
-          cargo build --release --target=${{ matrix.target}}
-           find . -type f -name mn.exe -exec cp {} ../mn \;
-           find . -type f -name mn -exec cp {} ../mn \;
+          cargo build --release --target=${{ matrix.target }}
+          find . -type f -name mn.exe -exec cp {} ../mn \;
+          find . -type f -name mn -exec cp {} ../mn \;
 
 
       - name: Upload artifact
@@ -62,42 +58,60 @@ jobs:
           name: mn_${{ matrix.target }}
           path: mn
 
-  #      - name: Hash!
-  #        shell: bash
-  #        run: |
-  #          gcc gg/print_hash.c -o print_hash
-  #          ./print_hash mn > hash
-  #
-  #      - name: Upload artifact
-  #        uses: actions/upload-artifact@v2
-  #        with:
-  #          name: mn_${{ matrix.target }}
-  #          path: mn
-  #
-  #      - name: Upload artifact
-  #        uses: actions/upload-artifact@v2
-  #        with:
-  #          name: hash_${{ matrix.target }}
-  #          path: hash
-  #
-  #      - name: Rename to hash
-  #        shell: bash
-  #        run: |
-  #          hash=$(cat hash)
-  #          echo hash is "$hash"
-  #          mkdir out
-  #          mv mn "out/$hash"
-  #
-  #      - uses: LanceMcCarthy/Action-AzureBlobUpload@v1.9.0
-  #        with:
-  #          connection_string: ${{ secrets.ConnectionString }}
-  #          container_name: poc
-  #          source_folder: out
+
+  A-mn-container:
+    strategy:
+      matrix:
+        include:
+          - container: alpine
+            target: x86_64-unknown-linux-musl
+
+    runs-on: ubuntu-latest
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            mn2/target
+          key: container-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: cargo pls
+        run: |
+          mkdir -p mn2
+          mv mn/* mn2
+          rm -rf mn
+          cd mn2
+          if [ "${{ matrix.container }}" == "alpine" ]
+          then
+            apk add build-base 
+            apk add rustup
+            rustup-init -y
+            source $HOME/.cargo/env
+          fi
+
+          cargo build --release --target=${{ matrix.target }}
+          #--target=${{ matrix.target}}
+          find . -type f -name mn.exe -exec cp {} ../mn \;
+          find . -type f -name mn -exec cp {} ../mn \;
+
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: mn_${{ matrix.target }}
+          path: mn
+
 
   A-mn-arch:
     strategy:
       matrix:
         include:
+          - arch: armv7
+            target: armv7-unknown-linux-gnu
           - arch: armv7
             target: armv7-unknown-linux-musl
 
@@ -148,12 +162,9 @@ jobs:
 
 
   B-hash:
-    needs: [ A-mn-OS, A-mn-arch ]
+    needs: [ A-mn-OS, A-mn-container, A-mn-arch ]
     runs-on: ubuntu-20.04
     steps:
-      #      - name: Hash!
-      #        shell: bash
-      #        run: gcc gg/print_hash.c -o print_hash
       - name: Download mn hash
         uses: actions/download-artifact@v2
 
@@ -196,13 +207,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-18.04
-            target: x86_64-unknown-linux-musl
-            linker_flags: -static -Os
+            target: x86_64-unknown-linux-gnu
           - os: windows-latest
             target: x86_64-pc-windows-gnu
           - os: macos-latest
             target: x86_64-apple-darwin
-            linker_flags: -Os
 
     runs-on: ${{ matrix.os }}
 
@@ -228,12 +237,104 @@ jobs:
         shell: bash
         run: |
           cd gg
-          if [ "${{ matrix.os }}" == "ubuntu-18.04" ]
+          if [ "${{ matrix.target }}" == "x86_64-unknown-linux-musl" ]
           then
             sudo apt install musl-dev musl-tools
             export CC=musl-gcc
           fi
-          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
+          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: gg_${{ matrix.target }}
+          path: gg_${{ matrix.target }}
+
+
+  C-gg-windows:
+    needs: B-hash
+
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download mn hash
+        uses: actions/download-artifact@v2
+        with:
+          name: hash
+          path: hash
+
+      - name: Hash
+        # ENV -> CMAKE -> Code very hard. This very easy
+        shell: bash
+        run: |
+          du -a
+          hash=$(cat hash/hash_mn_${{ matrix.target }})
+          echo "now hash is $hash"
+          echo "const char *hash = \"$hash\";" > gg/const.h
+
+      - name: Makus
+        shell: cmd
+        run: |
+          cd gg
+          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
+
+      - name: Makus
+        shell: bash
+        run: |
+          find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: gg_${{ matrix.target }}
+          path: gg_${{ matrix.target }}
+
+
+  C-gg-container:
+    needs: B-hash
+
+    strategy:
+      matrix:
+        include:
+          - container: alpine
+            target: x86_64-unknown-linux-musl
+
+    runs-on: ubuntu-20.04
+    container: ${{ matrix.container }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Download mn hash
+        uses: actions/download-artifact@v2
+        with:
+          name: hash
+          path: hash
+
+      - name: Hash
+        # ENV -> CMAKE -> Code very hard. This very easy
+        run: |
+          du -a
+          hash=$(cat hash/hash_mn_${{ matrix.target }})
+          echo "now hash is $hash"
+          echo "const char *hash = \"$hash\";" > gg/const.h
+
+      - name: Makus
+        run: |
+          cd gg
+          apk add build-base cmake
+          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
           find . -type f \( -name gg -o -name gg.exe \) -exec cp {} ../gg_${{ matrix.target }} \;
 
@@ -251,8 +352,9 @@ jobs:
       matrix:
         include:
           - arch: armv7
+            target: armv7-unknown-linux-gnu
+          - arch: armv7
             target: armv7-unknown-linux-musl
-            linker_flags: -static -Os
 
     runs-on: ubuntu-20.04
 
@@ -291,14 +393,14 @@ jobs:
             du -a
             cd gg
             ls -lah
-            export CC=musl-gcc
+            if [ "${{ matrix.target }}" == "armv7-unknown-linux-musl" ]
+            then
+              export CC=musl-gcc
+            fi
             mkdir build
             cd build
-            cmake .. -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
+            cmake .. -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
             make
-            #cmake -B build -DCMAKE_EXE_LINKER_FLAGS='${{ matrix.linker_flags }}' -DCMAKE_BUILD_TYPE=Release
-            ls -lah
-            #cmake --build build --config Release
             find . -type f \( -name gg -o -name gg.exe \) -exec cp {} /artifacts/gg_${{ matrix.target }} \;
 
       - run: |
@@ -315,8 +417,8 @@ jobs:
 
 
   D-m:
-    needs: [ C-gg-OS, C-gg-arch ]
-    runs-on: ubuntu-18.04
+    needs: [ C-gg-OS, C-gg-container, C-gg-arch, C-gg-windows ]
+    runs-on: ubuntu-latest
     steps:
       - name: Source
         uses: actions/checkout@v2.1.0
@@ -326,6 +428,7 @@ jobs:
 
       - name: m
         run: |
+          sudo apt-get install dos2unix
           mv m _m
           mkdir -p .cache/m
           rm -rf gg
@@ -334,36 +437,62 @@ jobs:
               cp "$file" .cache/m/
             done
           done
+          # Prevent wine from trying to run (if installed on users PC)
+          mv .cache/m/gg_x86_64-pc-windows-gnu .cache/m/gg_zz_x86_64-pc-windows-gnu
           cp _m/init.sh .cache/m/
+          cp _m/init.ps1 .cache/m/
           chmod +x .cache/m/init.sh
           tar -zpvcf m.tgz .cache
-          cat _m/kick.sh m.tgz > m
+          unix2dos _m/kick.bat
+          cat _m/kick.bat _m/kick.sh m.tgz > m.cmd
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: m
-          path: m
+          name: m.cmd
+          path: m.cmd
 
 
   E-test-OS:
     needs: D-m
     strategy:
       matrix:
-        os: [ ubuntu-18.04, ubuntu-20.04, macos-latest, windows-2019, windows-2022 ]
+        os: [ ubuntu-18.04, ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022, macOS-11, macOS-12 ]
 
     runs-on: ${{ matrix.os }}
     steps:
       - name: Download m
         uses: actions/download-artifact@v2
         with:
-          name: m
+          name: m.cmd
 
       - name: Run!
         run: |
-          sh m
+          file m.cmd
+          head m.cmd
+          sh m.cmd node
           echo "Nice, let's try again"
-          sh m
+          sh m.cmd node
+  
+
+  E-test-batch:
+    needs: D-m
+    strategy:
+      matrix:
+        os: [ windows-2019, windows-2022 ]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Download m
+        uses: actions/download-artifact@v2
+        with:
+          name: m.cmd
+
+      - name: Run!
+        shell: cmd
+        run: |
+          .\m.cmd node
+          .\m.cmd node
 
 
   E-test-container:
@@ -378,13 +507,13 @@ jobs:
       - name: Download m
         uses: actions/download-artifact@v2
         with:
-          name: m
+          name: m.cmd
 
       - name: Run!
         run: |
-          sh m
+          sh m.cmd node
           echo "Nice, let's try again"
-          sh m
+          sh m.cmd node
 
 
   E-test-arch:
@@ -400,7 +529,7 @@ jobs:
       - name: Download m
         uses: actions/download-artifact@v2
         with:
-          name: m
+          name: m.cmd
 
       - uses: uraimo/run-on-arch-action@v2
         name: Run commands
@@ -415,14 +544,14 @@ jobs:
             uname -a
             cd /ok
             ls -lah
-            sh m
+            sh m.cmd node
             echo "Nice, let's try again"
-            sh m
+            sh m.cmd node
 
 
   F-release:
     name: Release!
-    needs: [ E-test-OS, E-test-container, E-test-arch ]
+    needs: [ E-test-OS, E-test-batch, E-test-container, E-test-arch ]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
@@ -446,7 +575,7 @@ jobs:
       - name: Download m
         uses: actions/download-artifact@v2
         with:
-          name: m
+          name: m.cmd
 
       - name: Upload Release Asset
         id: upload-release-asset
@@ -455,6 +584,6 @@ jobs:
           GITHUB_TOKEN: ${{ github.token}}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./m
-          asset_name: m
+          asset_path: ./m.cmd
+          asset_name: m.cmd
           asset_content_type: text/x-shellscript
