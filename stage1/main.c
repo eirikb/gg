@@ -37,7 +37,7 @@ int main() {
     return -1;
   }
 
-  FILE *f = fopen("mn", "w");
+  FILE *f = fopen("stage2", "w");
   if (f == NULL) {
     printf("Error opening file!\n");
     exit(1);
@@ -86,7 +86,7 @@ int main() {
 
   printf("\nFile downloaded, checking hash...\n");
   char newHash[HASH_SIZE];
-  hashForFile("mn", newHash);
+  hashForFile("stage2", newHash);
   printf("Hash expected ::%s::\n", hash);
   printf("Hash from file: ::%s::\n", newHash);
   printf("AND IT IS %d\n", strcmp(hash, newHash));

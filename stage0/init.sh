@@ -1,29 +1,21 @@
-cd .cache/gg || exit
-for stage1 in stage1*; do
-  chmod +x "$stage1"
-  # shellcheck disable=SC2086
-  if "./$stage1" 2>/dev/null; then
-    echo "stage1 is $stage1"
-    chmod +x mn
-    echo "$stage1" >system
-    ls -lah
-    echo "system?"
-    cat system
-    ldd mn
-    file mn
-    ./mn "$@"
-    echo 1
-    pwd
-    cd ..
-    echo 1
-    pwd
-    cd ..
-    echo 1
-    pwd
-    ./.cache/gg/mn "$@"
-    exit
-  fi
-done
+if [ ! -f .cache/gg/stage2 ]; then
+  cd .cache/gg || exit
+  for stage1 in stage1*; do
+    chmod +x "$stage1"
+    # shellcheck disable=SC2086
+    if "./$stage1" 2>/dev/null; then
+      echo "$stage1" >system
+      break
+    fi
+  done
+fi
+
+if [ -f ./.cache/gg/stage2 ]; then
+  echo "has stage2!"
+  chmod +x stage2
+  ./.cache/gg/stage2
+  exit $?
+fi
 
 echo "Your system is not supported"
 exit 1

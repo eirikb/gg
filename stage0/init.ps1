@@ -7,10 +7,10 @@ Get-Item stage1* | % {
         Write-Host "re to the name"
         cp $_.Name $name
         & $name
-        & .\mn "$@"
+        & .\stage2 "$@"
     } else {
         Write-Host $_.Name
         & $_.Name
-        & .\mn "$@"
+        & .\stage2 "$@"
     }
 }
