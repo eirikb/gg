@@ -1,4 +1,4 @@
-cd .cache/m || exit
+cd .cache/gg || exit
 for stage1 in stage1*; do
   chmod +x "$stage1"
   # shellcheck disable=SC2086
@@ -20,7 +20,7 @@ for stage1 in stage1*; do
     cd ..
     echo 1
     pwd
-    ./.cache/m/mn "$@"
+    ./.cache/gg/mn "$@"
     exit
   fi
 done

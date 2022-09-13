@@ -1,6 +1,6 @@
 echo "Hello..."
 
-cd .cache\m
+cd .cache\gg
 Get-Item stage1* | % {
     $name = $_.Name + ".exe"
     if (!$_.Name.EndsWith(".exe")) {
