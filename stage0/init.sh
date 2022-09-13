@@ -5,6 +5,7 @@ if [ ! -f .cache/gg/stage2 ]; then
     # shellcheck disable=SC2086
     if "./$stage1" 2>/dev/null; then
       echo "$stage1" >system
+      cd ../..
       break
     fi
   done
