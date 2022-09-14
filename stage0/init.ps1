@@ -6,11 +6,13 @@ Get-Item stage1* | % {
     if (!$_.Name.EndsWith(".exe")) {
         Write-Host "re to the name"
         cp $_.Name $name
-        & $name
-        & .\stage2 "$@"
+        & .\$name
+        cd ../..
+        & .cache\gg\stage2 $args
     } else {
         Write-Host $_.Name
-        & $_.Name
-        & .\stage2 "$@"
+        & .\$_.Name
+        cd ../..
+        & .\cache\gg\stage2 $args
     }
 }
