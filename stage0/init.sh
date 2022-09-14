@@ -14,7 +14,7 @@ fi
 if [ -f ./.cache/gg/stage2 ]; then
   echo "has stage2!"
   chmod +x ./.cache/gg/stage2
-  ./.cache/gg/stage2
+  ./.cache/gg/stage2 "$@"
   exit $?
 fi
 
