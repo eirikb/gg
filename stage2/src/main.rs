@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, fs};
 
 use reqwest;
 use scraper::{Html, Selector};
@@ -6,6 +6,9 @@ use scraper::{Html, Selector};
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = env::args().collect();
+
+    let system = fs::read_to_string(".cache/gg/system").unwrap_or(String::from("linux")).trim().to_string();
+    println!("System is {:?}", system);
 
     async {
         match args.get(1) {
