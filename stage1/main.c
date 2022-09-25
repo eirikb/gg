@@ -9,16 +9,16 @@
 #include <unistd.h>
 
 /**
- * Downloads http://eirikbm.blob.core.windows.net/poc/. That's it.
+ * Downloads http://gg.eirikb.no/. That's it.
  * Using HTTP, not HTTPS. Hard coded checksum.
  **/
 
 int main() {
   const long bufferSize = 65536;
-  const char *host = "eirikbm.blob.core.windows.net";
+  const char *host = "gg.eirikb.no";
 
   char path[1000];
-  snprintf(path, 1000, "/poc/%s", hash);
+  snprintf(path, 1000, "/%s", hash);
 
   printf("Download path: %s\n", path);
   printf("Connecting...\n");
@@ -37,7 +37,7 @@ int main() {
     return -1;
   }
 
-  FILE *f = fopen("mn", "w");
+  FILE *f = fopen("stage2", "w");
   if (f == NULL) {
     printf("Error opening file!\n");
     exit(1);
@@ -86,7 +86,7 @@ int main() {
 
   printf("\nFile downloaded, checking hash...\n");
   char newHash[HASH_SIZE];
-  hashForFile("mn", newHash);
+  hashForFile("stage2", newHash);
   printf("Hash expected ::%s::\n", hash);
   printf("Hash from file: ::%s::\n", newHash);
   printf("AND IT IS %d\n", strcmp(hash, newHash));
