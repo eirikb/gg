@@ -171,21 +171,15 @@ jobs:
       - name: Rename to hash
         shell: bash
         run: |
-          ls -lah
-          du -a
           mkdir hash
           mkdir out
           for dir in stage2_*
           do
-            echo dir is $dir
             file=$dir/stage2
-            echo file is $file
             hash=$(sha512sum $file | awk '{ print $1 }')
-            echo hash is $hash
             cp $file out/$hash
             echo $hash > hash/hash_$dir
           done
-          du -a
 
       - name: Upload hash artifact
         uses: actions/upload-artifact@v2
@@ -230,7 +224,6 @@ jobs:
         # ENV -> CMAKE -> Code very hard. This very easy
         shell: bash
         run: |
-          du -a
           hash=$(cat hash/hash_stage2_${{ matrix.target }})
           echo "now hash is $hash"
           echo "const char *hash = \"$hash\";" > stage1/const.h
@@ -247,60 +240,13 @@ jobs:
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
           find . -type f \( -name stage1 -o -name stage1.exe \) -exec cp {} ../stage1_${{ matrix.target }} \;
+          strip ../stage1_${{ matrix.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: stage1_${{ matrix.target }}
           path: stage1_${{ matrix.target }}
-
-
-  #  C-stage1-windows:
-  #    needs: B-hash
-  #
-  #    strategy:
-  #      matrix:
-  #        include:
-  #          - os: windows-latest
-  #            target: x86_64-pc-windows-msvc
-  #
-  #    runs-on: ${{ matrix.os }}
-  #
-  #    steps:
-  #      - uses: actions/checkout@v2
-  #
-  #      - name: Download stage2 hash
-  #        uses: actions/download-artifact@v2
-  #        with:
-  #          name: hash
-  #          path: hash
-  #
-  #      - name: Hash
-  #        # ENV -> CMAKE -> Code very hard. This very easy
-  #        shell: bash
-  #        run: |
-  #          du -a
-  #          hash=$(cat hash/hash_stage2_${{ matrix.target }})
-  #          echo "now hash is $hash"
-  #          echo "const char *hash = \"$hash\";" > stage1/const.h
-  #
-  #      - name: Makus
-  #        shell: cmd
-  #        run: |
-  #          cd stage1
-  #          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
-  #          cmake --build build --config Release
-  #
-  #      - name: Makus
-  #        shell: bash
-  #        run: |
-  #          find . -type f \( -name stage1 -o -name stage1.exe \) -exec cp {} ../stage1_${{ matrix.target }} \;
-  #
-  #      - name: Upload artifact
-  #        uses: actions/upload-artifact@v2
-  #        with:
-  #          name: stage1_${{ matrix.target }}
-  #          path: stage1_${{ matrix.target }}
 
 
   C-stage1-container:
@@ -327,7 +273,6 @@ jobs:
       - name: Hash
         # ENV -> CMAKE -> Code very hard. This very easy
         run: |
-          du -a
           hash=$(cat hash/hash_stage2_${{ matrix.target }})
           echo "now hash is $hash"
           echo "const char *hash = \"$hash\";" > stage1/const.h
@@ -339,6 +284,7 @@ jobs:
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
           find . -type f \( -name stage1 -o -name stage1.exe \) -exec cp {} ../stage1_${{ matrix.target }} \;
+          strip ../stage1_${{ matrix.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
@@ -388,13 +334,10 @@ jobs:
           run: |
             set -x
             cd /yes
-            ls -lah
             hash=$(cat hash/hash_stage2_${{ matrix.target }})
             echo "now hash is $hash"
             echo "const char *hash = \"$hash\";" > stage1/const.h
-            du -a
             cd stage1
-            ls -lah
             if [ "${{ matrix.target }}" == "armv7-unknown-linux-musl" ]
             then
               export CC=musl-gcc
@@ -404,10 +347,9 @@ jobs:
             cmake .. -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
             make
             find . -type f \( -name stage1 -o -name stage1.exe \) -exec cp {} /artifacts/stage1_${{ matrix.target }} \;
+            strip /artifacts/stage1_${{ matrix.target }}
 
       - run: |
-          ls -lah
-          ls -lah artifacts
           cp artifacts/* ./
 
       - name: Upload artifact
@@ -431,25 +373,19 @@ jobs:
       - name: gg.cmd
         run: |
           sudo apt-get install dos2unix
-          du -a
-          echo bah
-          ls -lah
           mv stage0 _stage0
           rm -rf .cache/gg
           mkdir -p .cache/gg
           rm -rf stage0
           for dir in stage1*; do
-          echo "dir is $dir"
-          for file in "$dir"/*; do
-          echo "file is $file"
-           cp "$file" .cache/gg/
+            echo "dir is $dir"
+            for file in "$dir"/*; do
+              echo "file is $file"
+              cp "$file" .cache/gg/
+            done
           done
-          done
-          du -a
           # Prevent wine from trying to run (if installed on users PC)
-          #          mv .cache/gg/stage1_x86_64-pc-windows-gnu .cache/gg/stage1_zz_x86_64-pc-windows-gnu
           mv .cache/gg/stage1_x86_64-pc-windows-msvc .cache/gg/stage1_zz_x86_64-pc-windows-msvc
-          du -a
           cp _stage0/init.sh .cache/gg/
           cp _stage0/init.ps1 .cache/gg/
           chmod +x .cache/gg/init.sh
@@ -554,7 +490,6 @@ jobs:
           run: |
             uname -a
             cd /ok
-            ls -lah
             sh gg.cmd node
             echo "Nice, let's try again"
             sh gg.cmd node
