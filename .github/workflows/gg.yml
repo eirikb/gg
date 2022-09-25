@@ -20,8 +20,8 @@ jobs:
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-gnu
           - os: windows-latest
-#            target: x86_64-pc-windows-gnu
-#          - os: windows-latest
+            #            target: x86_64-pc-windows-gnu
+            #          - os: windows-latest
             target: x86_64-pc-windows-msvc
           - os: macos-latest
             target: x86_64-apple-darwin
@@ -208,8 +208,8 @@ jobs:
         include:
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-gnu
-#          - os: windows-latest
-#            target: x86_64-pc-windows-gnu
+          #          - os: windows-latest
+          #            target: x86_64-pc-windows-gnu
           - os: windows-latest
             target: x86_64-pc-windows-msvc
           - os: macos-latest
@@ -255,52 +255,52 @@ jobs:
           path: stage1_${{ matrix.target }}
 
 
-#  C-stage1-windows:
-#    needs: B-hash
-#
-#    strategy:
-#      matrix:
-#        include:
-#          - os: windows-latest
-#            target: x86_64-pc-windows-msvc
-#
-#    runs-on: ${{ matrix.os }}
-#
-#    steps:
-#      - uses: actions/checkout@v2
-#
-#      - name: Download stage2 hash
-#        uses: actions/download-artifact@v2
-#        with:
-#          name: hash
-#          path: hash
-#
-#      - name: Hash
-#        # ENV -> CMAKE -> Code very hard. This very easy
-#        shell: bash
-#        run: |
-#          du -a
-#          hash=$(cat hash/hash_stage2_${{ matrix.target }})
-#          echo "now hash is $hash"
-#          echo "const char *hash = \"$hash\";" > stage1/const.h
-#
-#      - name: Makus
-#        shell: cmd
-#        run: |
-#          cd stage1
-#          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
-#          cmake --build build --config Release
-#
-#      - name: Makus
-#        shell: bash
-#        run: |
-#          find . -type f \( -name stage1 -o -name stage1.exe \) -exec cp {} ../stage1_${{ matrix.target }} \;
-#
-#      - name: Upload artifact
-#        uses: actions/upload-artifact@v2
-#        with:
-#          name: stage1_${{ matrix.target }}
-#          path: stage1_${{ matrix.target }}
+  #  C-stage1-windows:
+  #    needs: B-hash
+  #
+  #    strategy:
+  #      matrix:
+  #        include:
+  #          - os: windows-latest
+  #            target: x86_64-pc-windows-msvc
+  #
+  #    runs-on: ${{ matrix.os }}
+  #
+  #    steps:
+  #      - uses: actions/checkout@v2
+  #
+  #      - name: Download stage2 hash
+  #        uses: actions/download-artifact@v2
+  #        with:
+  #          name: hash
+  #          path: hash
+  #
+  #      - name: Hash
+  #        # ENV -> CMAKE -> Code very hard. This very easy
+  #        shell: bash
+  #        run: |
+  #          du -a
+  #          hash=$(cat hash/hash_stage2_${{ matrix.target }})
+  #          echo "now hash is $hash"
+  #          echo "const char *hash = \"$hash\";" > stage1/const.h
+  #
+  #      - name: Makus
+  #        shell: cmd
+  #        run: |
+  #          cd stage1
+  #          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
+  #          cmake --build build --config Release
+  #
+  #      - name: Makus
+  #        shell: bash
+  #        run: |
+  #          find . -type f \( -name stage1 -o -name stage1.exe \) -exec cp {} ../stage1_${{ matrix.target }} \;
+  #
+  #      - name: Upload artifact
+  #        uses: actions/upload-artifact@v2
+  #        with:
+  #          name: stage1_${{ matrix.target }}
+  #          path: stage1_${{ matrix.target }}
 
 
   C-stage1-container:
@@ -438,13 +438,13 @@ jobs:
           mkdir -p .cache/gg
           rm -rf stage0
           for dir in stage1*; do
-            for file in "$dir"/*; do
-              cp "$file" .cache/gg/
-            done
+          for file in "$dir"/*; do
+           cp "$file" .cache/gg/
+          done
           done
           du -a
           # Prevent wine from trying to run (if installed on users PC)
-#          mv .cache/gg/stage1_x86_64-pc-windows-gnu .cache/gg/stage1_zz_x86_64-pc-windows-gnu
+          #          mv .cache/gg/stage1_x86_64-pc-windows-gnu .cache/gg/stage1_zz_x86_64-pc-windows-gnu
           mv .cache/gg/stage1_x86_64-pc-windows-msvc .cache/gg/stage1_zz_x86_64-pc-windows-msvc
           du -a
           cp _stage0/init.sh .cache/gg/
