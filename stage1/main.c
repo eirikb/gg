@@ -18,7 +18,7 @@ int main() {
   const char *host = "gg.eirikb.no";
 
   char path[1000];
-  snprintf(path, 1000, "/poc/%s", hash);
+  snprintf(path, 1000, "/%s", hash);
 
   printf("Download path: %s\n", path);
   printf("Connecting...\n");

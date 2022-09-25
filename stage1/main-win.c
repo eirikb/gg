@@ -16,7 +16,7 @@ int __cdecl main() {
   SOCKET ConnectSocket = INVALID_SOCKET;
   struct addrinfo *result = NULL, *ptr = NULL, hints;
   char path[1000];
-  snprintf(path, 1000, "/poc/%s", hash);
+  snprintf(path, 1000, "/%s", hash);
   const char *host = "gg.eirikb.no";
   char header[1024];
   snprintf(header, sizeof(header), "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", path,
