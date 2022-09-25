@@ -17,7 +17,7 @@ int __cdecl main() {
   struct addrinfo *result = NULL, *ptr = NULL, hints;
   char path[1000];
   snprintf(path, 1000, "/poc/%s", hash);
-  const char *host = "eirikbm.blob.core.windows.net";
+  const char *host = "gg.eirikb.no";
   char header[1024];
   snprintf(header, sizeof(header), "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", path,
            host);

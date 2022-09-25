@@ -9,13 +9,13 @@
 #include <unistd.h>
 
 /**
- * Downloads http://eirikbm.blob.core.windows.net/poc/. That's it.
+ * Downloads http://gg.eirikb.no/. That's it.
  * Using HTTP, not HTTPS. Hard coded checksum.
  **/
 
 int main() {
   const long bufferSize = 65536;
-  const char *host = "eirikbm.blob.core.windows.net";
+  const char *host = "gg.eirikb.no";
 
   char path[1000];
   snprintf(path, 1000, "/poc/%s", hash);
