@@ -20,8 +20,8 @@ jobs:
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-gnu
           - os: windows-latest
-            target: x86_64-pc-windows-gnu
-          - os: windows-latest
+#            target: x86_64-pc-windows-gnu
+#          - os: windows-latest
             target: x86_64-pc-windows-msvc
           - os: macos-latest
             target: x86_64-apple-darwin
@@ -208,8 +208,8 @@ jobs:
         include:
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-gnu
-          - os: windows-latest
-            target: x86_64-pc-windows-gnu
+#          - os: windows-latest
+#            target: x86_64-pc-windows-gnu
           - os: windows-latest
             target: x86_64-pc-windows-msvc
           - os: macos-latest
@@ -444,7 +444,7 @@ jobs:
           done
           du -a
           # Prevent wine from trying to run (if installed on users PC)
-          mv .cache/gg/stage1_x86_64-pc-windows-gnu .cache/gg/stage1_zz_x86_64-pc-windows-gnu
+#          mv .cache/gg/stage1_x86_64-pc-windows-gnu .cache/gg/stage1_zz_x86_64-pc-windows-gnu
           mv .cache/gg/stage1_x86_64-pc-windows-msvc .cache/gg/stage1_zz_x86_64-pc-windows-msvc
           du -a
           cp _stage0/init.sh .cache/gg/
