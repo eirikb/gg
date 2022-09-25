@@ -36,7 +36,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             stage22/target
-          key: OS-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: cache1-OS-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo pls
         shell: bash
@@ -77,7 +77,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             stage22/target
-          key: container-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: cache1-container-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo pls
         run: |
@@ -122,7 +122,7 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: cachus
-          key: arch-cargo-x7-${{ hashFiles('**/Cargo.lock') }}
+          key: cache1-arch-cargo-x7-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: uraimo/run-on-arch-action@v2
         name: Run commands
