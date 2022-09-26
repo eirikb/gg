@@ -2,6 +2,9 @@ use std::{env, fs};
 
 use reqwest;
 use scraper::{Html, Selector};
+use crate::target::target::parse_target;
+
+mod target;
 
 #[tokio::main]
 async fn main() {
@@ -9,6 +12,12 @@ async fn main() {
 
     let system = fs::read_to_string(".cache/gg/system").unwrap_or(String::from("linux")).trim().to_string();
     println!("System is {:?}", system);
+    let target = parse_target(&system);
+    if target.arch == target::target::Arch::X86_64 {
+        println!("X86!");
+    } else {
+        println!("Not x86");
+    }
 
     async {
         match args.get(1) {
