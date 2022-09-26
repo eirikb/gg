@@ -1,8 +1,10 @@
 pub mod target {
     #[derive(PartialEq)]
+    #[derive(strum_macros::Display)]
     pub enum Arch { X86_64, Armv7 }
 
     #[derive(PartialEq)]
+    #[derive(strum_macros::Display)]
     pub enum Os { Windows, Linux, Mac }
 
     pub struct Target {
@@ -14,7 +16,7 @@ pub mod target {
         let parts = input.split("-").collect::<Vec<_>>();
         return Target {
             arch: match parts[0] {
-                "x86_64" => Arch::X86_64,
+                x if x.contains("x86_64") => Arch::X86_64,
                 _ => Arch::Armv7
             },
             os: match input.to_lowercase() {
