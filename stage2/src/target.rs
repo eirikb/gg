@@ -5,6 +5,7 @@ pub enum Arch { X86_64, Armv7 }
 
 #[derive(PartialEq)]
 #[derive(strum_macros::Display)]
+#[derive(Debug)]
 pub enum Os { Windows, Linux, Mac }
 
 pub struct Target {
@@ -35,42 +36,42 @@ mod tests {
     #[test]
     fn x86_64_linux_gnu() {
         let target = parse_target("x86_64-unknown-linux-gnu");
-        assert_eq!(Arch::X86_64, target.arch);
-        // assert_eq!(Os::Linux, target.os);
+        assert_eq!(Arch::Armv7, target.arch);
+        assert_eq!(Os::Linux, target.os);
     }
-    //
-    // #[test]
-    // fn x86_64_windows() {
-    //     let target = parse_target("x86_64-pc-windows-msvc");
-    //     assert_eq!(Arch::X86_64, target.arch);
-    //     assert_eq!(Os::Windows, target.os);
-    // }
-    //
-    // #[test]
-    // fn x86_64_apple_darwin() {
-    //     let target = parse_target("x86_64-apple-darwin");
-    //     assert_eq!(Arch::X86_64, target.arch);
-    //     assert_eq!(Os::Mac, target.os);
-    // }
-    //
-    // #[test]
-    // fn x86_64_unknown_linux_musl() {
-    //     let target = parse_target("x86_64-unknown-linux-musl");
-    //     assert_eq!(Arch::X86_64, target.arch);
-    //     assert_eq!(Os::Linux, target.os);
-    // }
-    //
-    // #[test]
-    // fn armv7_unknown_linux_gnu() {
-    //     let target = parse_target("armv7-unknown-linux-gnu");
-    //     assert_eq!(Arch::Armv7, target.arch);
-    //     assert_eq!(Os::Linux, target.os);
-    // }
-    //
-    // #[test]
-    // fn armv7_unknown_linux_musl() {
-    //     let target = parse_target("armv7-unknown-linux-gnu");
-    //     assert_eq!(Arch::Armv7, target.arch);
-    //     assert_eq!(Os::Linux, target.os);
-    // }
+
+    #[test]
+    fn x86_64_windows() {
+        let target = parse_target("x86_64-pc-windows-msvc");
+        assert_eq!(Arch::X86_64, target.arch);
+        assert_eq!(Os::Windows, target.os);
+    }
+
+    #[test]
+    fn x86_64_apple_darwin() {
+        let target = parse_target("x86_64-apple-darwin");
+        assert_eq!(Arch::X86_64, target.arch);
+        assert_eq!(Os::Mac, target.os);
+    }
+
+    #[test]
+    fn x86_64_unknown_linux_musl() {
+        let target = parse_target("x86_64-unknown-linux-musl");
+        assert_eq!(Arch::X86_64, target.arch);
+        assert_eq!(Os::Linux, target.os);
+    }
+
+    #[test]
+    fn armv7_unknown_linux_gnu() {
+        let target = parse_target("armv7-unknown-linux-gnu");
+        assert_eq!(Arch::Armv7, target.arch);
+        assert_eq!(Os::Linux, target.os);
+    }
+
+    #[test]
+    fn armv7_unknown_linux_musl() {
+        let target = parse_target("armv7-unknown-linux-gnu");
+        assert_eq!(Arch::Armv7, target.arch);
+        assert_eq!(Os::Linux, target.os);
+    }
 }
