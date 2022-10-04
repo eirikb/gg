@@ -10,4 +10,7 @@ tokio = { version = "1.20.1", features = ["full"] }
 scraper = { version = "0.13.0" }
 strum = "0.24"
 strum_macros = "0.24"
+lzma-rs = "0.2.0"
+tar = "0.4.38"
+async-compression = "0.3.14"
 #clap = "3.2.17"
