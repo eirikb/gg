@@ -502,41 +502,42 @@ jobs:
 #            sh gg.cmd node
 
 
-  F-release:
-    name: Release!
-    needs: [ E-test-OS, E-test-batch, E-test-container, E-test-arch ]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Generate build number
-        id: buildnumber
-        uses: einaregilsson/build-number@v3
-        with:
-          token: ${{ github.token }}
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          tag_name: ${{ steps.buildnumber.outputs.build_number }}
-          release_name: Release ${{ steps.buildnumber.outputs.build_number }}
-          draft: false
-          prerelease: false
-
-      - name: Download m
-        uses: actions/download-artifact@v2
-        with:
-          name: gg.cmd
-
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token}}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./gg.cmd
-          asset_name: gg.cmd
-          asset_content_type: text/x-shellscript
+# TODO:
+#  F-release:
+#    name: Release!
+#    needs: [ E-test-OS, E-test-batch, E-test-container, E-test-arch ]
+#    runs-on: ubuntu-latest
+#    if: github.ref == 'refs/heads/main'
+#    steps:
+#      - name: Generate build number
+#        id: buildnumber
+#        uses: einaregilsson/build-number@v3
+#        with:
+#          token: ${{ github.token }}
+#
+#      - name: Create Release
+#        id: create_release
+#        uses: actions/create-release@v1
+#        env:
+#          GITHUB_TOKEN: ${{ github.token }}
+#        with:
+#          tag_name: ${{ steps.buildnumber.outputs.build_number }}
+#          release_name: Release ${{ steps.buildnumber.outputs.build_number }}
+#          draft: false
+#          prerelease: false
+#
+#      - name: Download m
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: gg.cmd
+#
+#      - name: Upload Release Asset
+#        id: upload-release-asset
+#        uses: actions/upload-release-asset@v1
+#        env:
+#          GITHUB_TOKEN: ${{ github.token}}
+#        with:
+#          upload_url: ${{ steps.create_release.outputs.upload_url }}
+#          asset_path: ./gg.cmd
+#          asset_name: gg.cmd
+#          asset_content_type: text/x-shellscript
