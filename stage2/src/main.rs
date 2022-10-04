@@ -7,9 +7,8 @@ use reqwest;
 use reqwest::Url;
 use scraper::{Html, Selector};
 
-use crate::target::target::parse_target;
-
 mod target;
+mod bloody_indiana_jones;
 
 #[tokio::main]
 async fn main() {
@@ -17,7 +16,7 @@ async fn main() {
 
     let system = fs::read_to_string(".cache/gg/system").unwrap_or(String::from("linux")).trim().to_string();
     println!("System is {:?}", system);
-    let target = parse_target(&system);
+    let target = target::parse_target(&system);
     println!("target arch {} os {}", target.arch, target.os);
 
     async {
