@@ -5,12 +5,14 @@ authors = ["Eirik Brandtzæg <eirikb@eirikb.no>"]
 edition = "2018"
 
 [dependencies]
-reqwest = { version = "0.11.11", default-features = false, features = ["json", "rustls-tls"] }
+reqwest = { version = "0.11.11", default-features = false, features = ["json", "rustls-tls", "stream", ] }
 tokio = { version = "1.20.1", features = ["full"] }
 scraper = { version = "0.13.0" }
 strum = "0.24"
 strum_macros = "0.24"
-lzma-rs = "0.2.0"
 tar = "0.4.38"
-async-compression = "0.3.14"
+futures = "0.3.24"
+futures-io = "0.3.24"
+tokio-util = { version = "0.7.4", features = ["compat"] }
+async-compression = { version = "0.3.14", features = ["all"] }
 #clap = "3.2.17"
