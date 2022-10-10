@@ -9,14 +9,17 @@ use node::get_node_url;
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
 
 async fn run(url: &String, path: &String) {
-    download_unpack_and_all_that_stuff(&url).await;
-    if !Path::new(".cache/node").exists() {
-        println!("Node not found, installing...");
-        download_unpack_and_all_that_stuff(&url).await;
+    let cache_path = String::from(".cache/") + path;
+    if !Path::new(&cache_path).exists() {
+        println!("{path} not found, installing...");
+        download_unpack_and_all_that_stuff(&url, &cache_path).await;
     }
-    let dir = std::fs::read_dir(".cache/node").unwrap().next()
-        .expect("node folder not found").expect("");
+    let dir = std::fs::read_dir(&cache_path).unwrap().next()
+        .expect("{path} folder not found").expect("");
     println!("Dir is {}", dir.path().to_str().unwrap());
+
+    // let bin = Path::new(".cache").join(path).join("bin").join(path).to_str().unwrap();
+    // println!("bin is {bin}");
 }
 
 #[tokio::main]

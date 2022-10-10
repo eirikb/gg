@@ -1,7 +1,7 @@
 use std::fs::{create_dir_all, File};
 use std::path::Path;
 
-pub async fn download_unpack_and_all_that_stuff(url: &String) {
+pub async fn download_unpack_and_all_that_stuff(url: &String, path: &String) {
     println!("Downloading {url}");
     let res = reqwest::get(url).await
         .expect("Unable to download");
@@ -28,7 +28,7 @@ pub async fn download_unpack_and_all_that_stuff(url: &String) {
     let file_path_decomp = Path::new(&format!(".cache/gg/downloads/{file_name}")).with_extension("").to_str().unwrap().to_string();
     println!("Untar {file_path_decomp}");
     let mut archive = tar::Archive::new(std::io::BufReader::new(std::fs::File::open(file_path_decomp).unwrap()));
-    archive.unpack(".cache/gg/node/").expect("Unable to extract");
+    archive.unpack(path).expect("Unable to extract");
 }
 
 #[cfg(test)]
@@ -38,6 +38,6 @@ mod test {
     #[tokio::test]
     async fn ok() {
         let url = String::from("https://nodejs.org/dist/v16.17.1/node-v16.17.1-linux-x64.tar.xz");
-        download_unpack_and_all_that_stuff(&url).await;
+        download_unpack_and_all_that_stuff(&url, &String::from("node")).await;
     }
 }
