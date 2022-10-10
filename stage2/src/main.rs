@@ -1,23 +1,29 @@
-use std::{env, fs, io};
-use std::fs::{create_dir, File};
-use std::io::{Read, Write};
+use std::{env, fs};
 use std::path::Path;
-
-use reqwest;
-use reqwest::Url;
-use scraper::{Html, Selector};
-use crate::bloody_indiana_jones::download_unpack_and_all_that_stuff;
-use crate::node::get_node_url;
 
 mod target;
 mod bloody_indiana_jones;
 mod node;
 
+use node::get_node_url;
+use bloody_indiana_jones::download_unpack_and_all_that_stuff;
+
+async fn run(url: &String, path: &String) {
+    download_unpack_and_all_that_stuff(&url).await;
+    if !Path::new(".cache/node").exists() {
+        println!("Node not found, installing...");
+        download_unpack_and_all_that_stuff(&url).await;
+    }
+    let dir = std::fs::read_dir(".cache/node").unwrap().next()
+        .expect("node folder not found").expect("");
+    println!("Dir is {}", dir.path().to_str().unwrap());
+}
+
 #[tokio::main]
 async fn main() {
     let args: Vec<String> = env::args().collect();
 
-    let system = fs::read_to_string(".cache/gg/system").unwrap_or(String::from("linux")).trim().to_string();
+    let system = fs::read_to_string(".cache/gg/system").unwrap_or(String::from("x86_64-linux")).trim().to_string();
     println!("System is {:?}", system);
     let target = target::parse_target(&system);
     println!("target arch {} os {}", target.arch, target.os);
@@ -28,7 +34,7 @@ async fn main() {
                 if v == "node" {
                     let node_url = get_node_url(&target).await;
                     println!("Node download url: {}", node_url);
-                    download_unpack_and_all_that_stuff(&node_url).await;
+                    run(&node_url, &String::from("node")).await;
                     println!("DONE!");
                 } else {
                     println!("It is {}", v);

@@ -1,4 +1,3 @@
-use reqwest::Url;
 use scraper::{Html, Selector};
 
 use super::target;
@@ -74,19 +73,19 @@ mod test {
 
     #[test]
     fn test_pick_node_url_linux_x86() {
-        let node_url = pick_node_url(&Target { arch: target::Arch::X86_64, os: target::Os::Linux}, get_node_urls());
+        let node_url = pick_node_url(&Target { arch: target::Arch::X86_64, os: target::Os::Linux }, get_node_urls());
         assert_eq!("https://nodejs.org/dist/v16.17.1/node-v16.17.1-linux-x64.tar.xz", node_url);
     }
 
     #[test]
     fn test_pick_node_url_mac_x86() {
-        let node_url = pick_node_url(&Target { arch: target::Arch::X86_64, os: target::Os::Mac}, get_node_urls());
+        let node_url = pick_node_url(&Target { arch: target::Arch::X86_64, os: target::Os::Mac }, get_node_urls());
         assert_eq!("https://nodejs.org/dist/v16.17.1/node-v16.17.1-darwin-x64.tar.gz", node_url);
     }
 
     #[test]
     fn test_pick_node_url_linux_armv7() {
-        let node_url = pick_node_url(&Target { arch: target::Arch::Armv7, os: target::Os::Linux}, get_node_urls());
+        let node_url = pick_node_url(&Target { arch: target::Arch::Armv7, os: target::Os::Linux }, get_node_urls());
         assert_eq!("https://nodejs.org/dist/v16.17.1/node-v16.17.1-linux-armv7l.tar.xz", node_url);
     }
 }
