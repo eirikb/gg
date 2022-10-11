@@ -1,5 +1,5 @@
 use std::fs::{create_dir_all, File};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub async fn download_unpack_and_all_that_stuff(url: &String, path: &String) {
     println!("Downloading {url}");
@@ -38,10 +38,8 @@ pub async fn download_unpack_and_all_that_stuff(url: &String, path: &String) {
             };
         }
         Some("zip") => {
-            // let mut decoder = async_compression::tokio::bufread::DeflateDecoder::new(file_buf_reader);
-            // decoder.
-            //     tokio
-            // ::io::copy(&mut decoder, &mut file_writer).await.unwrap();
+            let target_dir = PathBuf::from(".cache/node");
+            zip_extract::extract(std::fs::File::open(file_path).unwrap(), &target_dir, true).unwrap();
         }
         _ => ()
     }
