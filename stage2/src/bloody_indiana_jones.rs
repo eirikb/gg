@@ -1,7 +1,7 @@
 use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
 
-pub async fn download_unpack_and_all_that_stuff(url: &String, path: &String) {
+pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
     println!("Downloading {url}");
     let res = reqwest::get(url).await
         .expect("Unable to download");
