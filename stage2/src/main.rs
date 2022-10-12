@@ -1,6 +1,5 @@
 use std::{env, fs};
 use std::path::Path;
-use std::process::Stdio;
 
 mod target;
 mod bloody_indiana_jones;
@@ -18,8 +17,7 @@ fn try_run(path: &str, bin: &str) -> Option<()> {
                 println!("Ready to execute this");
                 println!("{:?}", bin_path);
                 std::process::Command::new(bin_path)
-                    .stdout(Stdio::inherit())
-                    .spawn().unwrap();
+                    .spawn().unwrap().wait().unwrap();
                 Some(())
             } else {
                 None
@@ -27,30 +25,7 @@ fn try_run(path: &str, bin: &str) -> Option<()> {
         }
         _ => None
     }
-    // let cache_path = String::from(".cache/") + path;
-    // let dir = std::fs::read_dir(&cache_path).ok()?.next()?.ok();
-    // match dir {
-    //     Some(dir) => {
-    //         println!("{:?}", dir.path().as_os_str());
-    //         if Path::new(dir.path().as_os_str()).join(path).join(bin).exists() {
-    //             Some(())
-    //         } else {
-    //             None
-    //         }
-    //     }
-    //     _ => None
-    // }
 }
-
-// async fn run(url: &String, path: &String) {
-//     if !Path::new(&cache_path).exists() {
-//         println!("{path} not found, installing...");
-//         download_unpack_and_all_that_stuff(&url, &cache_path).await;
-//     }
-//
-//     // let bin = Path::new(".cache").join(path).join("bin").join(path).to_str().unwrap();
-//     // println!("bin is {bin}");
-// }
 
 #[tokio::main]
 async fn main() {
