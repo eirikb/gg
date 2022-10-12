@@ -17,6 +17,7 @@ fn try_run(path: &str, bin: &str) -> Option<()> {
                 println!("Ready to execute this");
                 println!("{:?}", bin_path);
                 std::process::Command::new(bin_path)
+                    .args(env::args().skip(2))
                     .spawn().unwrap().wait().unwrap();
                 Some(())
             } else {
