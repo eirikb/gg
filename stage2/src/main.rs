@@ -47,7 +47,7 @@ async fn main() {
             Some(v) => {
                 if v == "node" {
                     let bin = match &target.os {
-                        target::Os::Windows => "bin/node.exe",
+                        target::Os::Windows => "node.exe",
                         _ => "bin/node"
                     };
                     match try_run("node", bin) {
