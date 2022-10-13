@@ -38,7 +38,7 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
             };
         }
         Some("zip") => {
-            let target_dir = PathBuf::from(".cache/node");
+            let target_dir = PathBuf::from(".cache/node/node");
             zip_extract::extract(std::fs::File::open(file_path).unwrap(), &target_dir, true).unwrap();
         }
         _ => ()
