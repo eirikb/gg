@@ -454,9 +454,11 @@ jobs:
 
       - name: Run!
         run: |
-          sh gg.cmd node -e 'console.log(1)'
-          echo "Nice, let's try again"
-          sh gg.cmd node -e 'console.log(1)'
+          if [ "${{ matrix.container }}" != "alpine" ]; then
+            sh gg.cmd node -e 'console.log(1)'
+            echo "Nice, let's try again"
+            sh gg.cmd node -e 'console.log(1)'
+          fi
 
 
   E-test-arch:
