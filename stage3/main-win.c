@@ -83,7 +83,7 @@ int __cdecl main() {
   }
 
   FILE *f;
-  fopen_s(&f, "stage2", "wb");
+  fopen_s(&f, "stage4", "wb");
   if (f == NULL) {
     printf("Error opening file!\n");
     return 1;
@@ -126,7 +126,7 @@ int __cdecl main() {
 
   printf("\nFile downloaded, checking hash...\n");
   char newHash[SHA512_BLOCK_LENGTH + 1];
-  hashForFile("stage2", newHash);
+  hashForFile("stage4", newHash);
   printf("Hash expected ::%s::\n", hash);
   printf("Hash from file: ::%s::\n", newHash);
   printf("AND IT IS %d\n", strcmp(hash, newHash));
