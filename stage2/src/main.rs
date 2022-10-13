@@ -9,6 +9,7 @@ use node::get_node_url;
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
 
 fn try_run(path: &str, bin: &str) -> Option<()> {
+    println!("Execute {bin} in {path}");
     let dir = Path::new(".cache").join(path).read_dir().ok()?.next()?;
     match dir {
         Ok(d) => {
@@ -21,10 +22,14 @@ fn try_run(path: &str, bin: &str) -> Option<()> {
                     .spawn().unwrap().wait().unwrap();
                 Some(())
             } else {
+                println!("Executable not found");
                 None
             }
         }
-        _ => None
+        _ => {
+            println!("Cache dir for {path} not found");
+            None
+        }
     }
 }
 
@@ -41,7 +46,11 @@ async fn main() {
         match args.get(1) {
             Some(v) => {
                 if v == "node" {
-                    match try_run("node", "bin/node") {
+                    let bin = match &target.os {
+                        target::Os::Windows => "bin/node.exe",
+                        _ => "bin/node"
+                    };
+                    match try_run("node", bin) {
                         Some(()) => {
                             println!("OK!");
                         }
@@ -50,8 +59,7 @@ async fn main() {
                             let node_url = get_node_url(&target).await;
                             println!("Node download url: {}", node_url);
                             download_unpack_and_all_that_stuff(&node_url, ".cache/node").await;
-                            try_run("node", "bin/node").unwrap();
-                            // try_run("node", "bin/node").unwrap();
+                            try_run("node", bin).expect("Unable to execute");
                         }
                     }
                     println!("DONE!");
