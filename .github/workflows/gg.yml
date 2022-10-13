@@ -20,8 +20,6 @@ jobs:
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-gnu
           - os: windows-latest
-            #            target: x86_64-pc-windows-gnu
-            #          - os: windows-latest
             target: x86_64-pc-windows-msvc
           - os: macos-latest
             target: x86_64-apple-darwin
@@ -202,8 +200,6 @@ jobs:
         include:
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-gnu
-          #          - os: windows-latest
-          #            target: x86_64-pc-windows-gnu
           - os: windows-latest
             target: x86_64-pc-windows-msvc
           - os: macos-latest
@@ -417,9 +413,9 @@ jobs:
         run: |
           file gg.cmd
           head gg.cmd
-          sh gg.cmd node
+          sh gg.cmd node -e 'console.log(1)'
           echo "Nice, let's try again"
-          sh gg.cmd node
+          sh gg.cmd node -e 'console.log(1)'
   
 
   E-test-batch:
@@ -438,8 +434,8 @@ jobs:
       - name: Run!
         shell: cmd
         run: |
-          .\gg.cmd node
-          .\gg.cmd node
+          .\gg.cmd node -e 'console.log(1)'
+          .\gg.cmd node -e 'console.log(1)'
 
 
   E-test-container:
@@ -458,9 +454,11 @@ jobs:
 
       - name: Run!
         run: |
-          sh gg.cmd node
-          echo "Nice, let's try again"
-          sh gg.cmd node
+          if [ "${{ matrix.container }}" != "alpine" ]; then
+            sh gg.cmd node -e 'console.log(1)'
+            echo "Nice, let's try again"
+            sh gg.cmd node -e 'console.log(1)'
+          fi
 
 
   E-test-arch:
@@ -490,9 +488,9 @@ jobs:
           run: |
             uname -a
             cd /ok
-            sh gg.cmd node
+            sh gg.cmd node -e 'console.log(1)'
             echo "Nice, let's try again"
-            sh gg.cmd node
+            sh gg.cmd node -e 'console.log(1)'
 
 
   F-release:
