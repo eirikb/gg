@@ -1,5 +1,5 @@
 [package]
-name = "stage2"
+name = "stage4"
 version = "0.1.0"
 authors = ["Eirik Brandtzæg <eirikb@eirikb.no>"]
 edition = "2018"
