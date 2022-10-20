@@ -306,15 +306,18 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-      - uses: actions/checkout@v2
+      - if: github.ref == 'refs/heads/main'
+        uses: actions/checkout@v2
 
-      - name: Download stage4 hash
+      - if: github.ref == 'refs/heads/main'
+        name: Download stage4 hash
         uses: actions/download-artifact@v2
         with:
           name: hash
           path: hash
 
-      - uses: uraimo/run-on-arch-action@v2
+      - if: github.ref == 'refs/heads/main'
+        uses: uraimo/run-on-arch-action@v2
         name: Run commands
         id: runcmd
         with:
@@ -348,10 +351,12 @@ jobs:
             find . -type f \( -name stage3 -o -name stage3.exe \) -exec cp {} /artifacts/stage3_${{ matrix.target }} \;
             strip /artifacts/stage3_${{ matrix.target }}
 
-      - run: |
+      - if: github.ref == 'refs/heads/main'
+        run: |
           cp artifacts/* ./
 
-      - name: Upload artifact
+      - if: github.ref == 'refs/heads/main'
+        name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: stage3_${{ matrix.target }}
