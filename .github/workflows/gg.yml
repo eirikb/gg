@@ -105,6 +105,7 @@ jobs:
 
 
   A-stage4-arch:
+    if: github.ref == 'refs/heads/main'
     strategy:
       matrix:
         include:
@@ -290,6 +291,7 @@ jobs:
 
 
   C-stage3-arch:
+    if: github.ref == 'refs/heads/main'
     needs: B-hash
 
     strategy:
@@ -463,6 +465,7 @@ jobs:
 
 
   E-test-arch:
+    if: github.ref == 'refs/heads/main'
     needs: D-stage1
     strategy:
       matrix:
