@@ -1,7 +1,7 @@
-if [ -f ./.cache/gg/init.sh ]; then
-  ./.cache/gg/init.sh "$@"
+if [ -f ./.cache/gg/stage2.sh ]; then
+  ./.cache/gg/stage2.sh "$@"
   exit
 fi
 
-tail -c +368 gg.cmd | tar -zpx && ./.cache/gg/init.sh "$@"
+tail -c +370 gg.cmd | tar -zpx && ./.cache/gg/stage2.sh "$@"
 exit
