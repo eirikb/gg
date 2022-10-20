@@ -105,15 +105,17 @@ jobs:
 
 
   A-stage4-arch:
-    if: github.ref == 'refs/heads/main'
     strategy:
       matrix:
         include:
           - arch: armv7
             target: armv7-unknown-linux-gnu
+            if: github.ref == 'refs/heads/main'
           - arch: armv7
             target: armv7-unknown-linux-musl
+            if: github.ref == 'refs/heads/main'
 
+    if: ${{ matrix.if }}
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2.1.0
