@@ -110,12 +110,9 @@ jobs:
         include:
           - arch: armv7
             target: armv7-unknown-linux-gnu
-            if: github.ref == 'refs/heads/main'
           - arch: armv7
             target: armv7-unknown-linux-musl
-            if: github.ref == 'refs/heads/main'
 
-    if: ${{ matrix.if }}
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2.1.0
@@ -126,6 +123,7 @@ jobs:
           key: cache1-arch-cargo-x7-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: uraimo/run-on-arch-action@v2
+        if: github.ref == 'refs/heads/main'
         name: Run commands
         id: runcmd
         with:
@@ -149,13 +147,15 @@ jobs:
             cp -rp ok /cachus/
             cp target/release/stage4 /artifacts/
 
-      - run: |
+      - if: github.ref == 'refs/heads/main'
+        run: |
           sudo chown -R $(id -u):$(id -g) $PWD/artifacts
           sudo chown -R $(id -u):$(id -g) .
           rm -rf stage4
           find $PWD/artifacts -type f -name stage4 -exec cp {} ./stage4 \;
 
-      - name: Upload artifact
+      - if: github.ref == 'refs/heads/main'
+        name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: stage4_${{ matrix.target }}
@@ -293,7 +293,6 @@ jobs:
 
 
   C-stage3-arch:
-    if: github.ref == 'refs/heads/main'
     needs: B-hash
 
     strategy:
