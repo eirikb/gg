@@ -383,12 +383,12 @@ jobs:
           done
           # Prevent wine from trying to run (if installed on users PC)
           mv .cache/gg/stage3_x86_64-pc-windows-msvc .cache/gg/stage3_zz_x86_64-pc-windows-msvc
-          cp _stage2/init.sh .cache/gg/
-          cp _stage2/init.ps1 .cache/gg/
-          chmod +x .cache/gg/init.sh
+          cp _stage2/stage2.sh .cache/gg/
+          cp _stage2/stage2.ps1 .cache/gg/
+          chmod +x .cache/gg/stage2.sh
           tar -zpvcf m.tgz .cache
-          unix2dos _stage1/kick.bat
-          cat _stage1/kick.bat _stage1/kick.sh m.tgz > gg.cmd
+          unix2dos _stage1/stage1.bat
+          cat _stage1/stage1.bat _stage1/stage1.sh m.tgz > gg.cmd
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
