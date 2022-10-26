@@ -9,7 +9,14 @@ use serde_json::Value;
 
 pub type Root = Vec<Root2>;
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Serialize, Debug, Clone, PartialEq, Deserialize)]
+#[serde(untagged)]
+pub enum LTS {
+    String(String),
+    Bool(bool),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Root2 {
     pub version: String,
@@ -21,7 +28,7 @@ pub struct Root2 {
     pub zlib: String,
     pub openssl: String,
     pub modules: String,
-    pub lts: bool,
+    pub lts: LTS,
     pub security: bool,
 }
 
@@ -31,10 +38,14 @@ pub async fn get_node_url(target: &target::Target) -> String {
         target::Variant::Musl => {
             let json = reqwest::get("https://unofficial-builds.nodejs.org/download/release/index.json").await.unwrap().text().await.unwrap();
             let root: Root = serde_json::from_str(json.as_str()).expect("JSON was not well-formatted");
-            let r = root.iter().filter(|r| r.lts && r.files.iter().any(|f| f.contains("musl"))).last().unwrap().clone();
+            let r = root.iter().rev().filter(|r|
+                match r.lts {
+                    LTS::String(_) => true,
+                    _ => false
+                } && r.files.iter().any(|f| f.contains("musl"))).last().unwrap().clone();
             let version = r.version;
             let file = r.files.iter().find(|f| f.contains("musl")).unwrap();
-            String::from(format!("https://unofficial-builds.nodejs.org/download/release/{version}/{file}.xz"))
+            String::from(format!("https://unofficial-builds.nodejs.org/download/release/{version}/node-{version}-{file}.tar.xz"))
         }
         _ => {
             let body = reqwest::get("https://nodejs.org/en/download/").await
