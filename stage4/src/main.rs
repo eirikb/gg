@@ -48,8 +48,8 @@ async fn main() {
                     let bin = match &target.os {
                         target::Os::Windows => match v.as_str() {
                             "node" => "node.exe",
-                            "npm" => "npm.exe",
-                            _ => "npx.exe",
+                            "npm" => "npm.cmd",
+                            _ => "npx.cmd",
                         },
                         _ => match v.as_str() {
                             "node" => "bin/node",
