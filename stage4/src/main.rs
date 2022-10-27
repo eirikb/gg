@@ -44,10 +44,18 @@ async fn main() {
     async {
         match args.get(1) {
             Some(v) => {
-                if v == "node" {
+                if v == "node" || v == "npm" || v == "npx" {
                     let bin = match &target.os {
-                        target::Os::Windows => "node.exe",
-                        _ => "bin/node"
+                        target::Os::Windows => match v.as_str() {
+                            "node" => "node.exe",
+                            "npm" => "npm.exe",
+                            _ => "npx.exe",
+                        },
+                        _ => match v.as_str() {
+                            "node" => "bin/node",
+                            "npm" => "bin/npm",
+                            _ => "bin/npx"
+                        }
                     };
                     match try_run("node", bin) {
                         Some(()) => {}
