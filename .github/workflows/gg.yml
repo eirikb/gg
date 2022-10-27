@@ -6,7 +6,7 @@ on:
 # A: Build stage4 (for each target)
 # B: Hash (create hash for each target)
 # C: Build stage3 (for each target)
-# D: Build m
+# D: Build gg
 # E Test (for each os target)
 # F: Create release
 
@@ -123,6 +123,7 @@ jobs:
           key: cache1-arch-cargo-x7-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: uraimo/run-on-arch-action@v2
+        if: github.ref == 'refs/heads/main'
         name: Run commands
         id: runcmd
         with:
@@ -146,13 +147,15 @@ jobs:
             cp -rp ok /cachus/
             cp target/release/stage4 /artifacts/
 
-      - run: |
+      - if: github.ref == 'refs/heads/main'
+        run: |
           sudo chown -R $(id -u):$(id -g) $PWD/artifacts
           sudo chown -R $(id -u):$(id -g) .
           rm -rf stage4
           find $PWD/artifacts -type f -name stage4 -exec cp {} ./stage4 \;
 
-      - name: Upload artifact
+      - if: github.ref == 'refs/heads/main'
+        name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: stage4_${{ matrix.target }}
@@ -303,15 +306,18 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-      - uses: actions/checkout@v2
+      - if: github.ref == 'refs/heads/main'
+        uses: actions/checkout@v2
 
-      - name: Download stage4 hash
+      - if: github.ref == 'refs/heads/main'
+        name: Download stage4 hash
         uses: actions/download-artifact@v2
         with:
           name: hash
           path: hash
 
-      - uses: uraimo/run-on-arch-action@v2
+      - if: github.ref == 'refs/heads/main'
+        uses: uraimo/run-on-arch-action@v2
         name: Run commands
         id: runcmd
         with:
@@ -345,10 +351,12 @@ jobs:
             find . -type f \( -name stage3 -o -name stage3.exe \) -exec cp {} /artifacts/stage3_${{ matrix.target }} \;
             strip /artifacts/stage3_${{ matrix.target }}
 
-      - run: |
+      - if: github.ref == 'refs/heads/main'
+        run: |
           cp artifacts/* ./
 
-      - name: Upload artifact
+      - if: github.ref == 'refs/heads/main'
+        name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: stage3_${{ matrix.target }}
@@ -383,12 +391,12 @@ jobs:
           done
           # Prevent wine from trying to run (if installed on users PC)
           mv .cache/gg/stage3_x86_64-pc-windows-msvc .cache/gg/stage3_zz_x86_64-pc-windows-msvc
-          cp _stage2/init.sh .cache/gg/
-          cp _stage2/init.ps1 .cache/gg/
-          chmod +x .cache/gg/init.sh
-          tar -zpvcf m.tgz .cache
-          unix2dos _stage1/kick.bat
-          cat _stage1/kick.bat _stage1/kick.sh m.tgz > gg.cmd
+          cp _stage2/stage2.sh .cache/gg/
+          cp _stage2/stage2.ps1 .cache/gg/
+          chmod +x .cache/gg/stage2.sh
+          tar -zpvcf gg.tgz .cache
+          unix2dos _stage1/stage1.bat
+          cat _stage1/stage1.bat _stage1/stage1.sh gg.tgz > gg.cmd
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
@@ -405,7 +413,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Download m
+      - name: Download gg
         uses: actions/download-artifact@v2
         with:
           name: gg.cmd
@@ -417,6 +425,9 @@ jobs:
           sh gg.cmd node -e 'console.log(1)'
           echo "Nice, let's try again"
           sh gg.cmd node -e 'console.log(1)'
+          sh gg.cmd node -v
+          sh gg.cmd npm -v
+          sh gg.cmd npx -v
   
 
   E-test-batch:
@@ -427,7 +438,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Download m
+      - name: Download gg
         uses: actions/download-artifact@v2
         with:
           name: gg.cmd
@@ -437,6 +448,9 @@ jobs:
         run: |
           .\gg.cmd node -e 'console.log(1)'
           .\gg.cmd node -e 'console.log(1)'
+          .\gg.cmd node -v
+          .\gg.cmd npm -v
+          .\gg.cmd npx -v
 
 
   E-test-container:
@@ -448,21 +462,26 @@ jobs:
     runs-on: ubuntu-latest
     container: ${{ matrix.container }}
     steps:
-      - name: Download m
+      - name: Download gg
         uses: actions/download-artifact@v2
         with:
           name: gg.cmd
 
       - name: Run!
         run: |
-          if [ "${{ matrix.container }}" != "alpine" ]; then
-            sh gg.cmd node -e 'console.log(1)'
-            echo "Nice, let's try again"
-            sh gg.cmd node -e 'console.log(1)'
+          if [ "${{ matrix.container }}" == "alpine" ]; then
+            apk add libstdc++
           fi
+          sh gg.cmd node -e 'console.log(1)'
+          echo "Nice, let's try again"
+          sh gg.cmd node -e 'console.log(1)'
+          sh gg.cmd node -v
+          sh gg.cmd npm -v
+          sh gg.cmd npx -v
 
 
   E-test-arch:
+    if: github.ref == 'refs/heads/main'
     needs: D-stage1
     strategy:
       matrix:
@@ -472,7 +491,7 @@ jobs:
 
     runs-on: ubuntu-20.04
     steps:
-      - name: Download m
+      - name: Download gg
         uses: actions/download-artifact@v2
         with:
           name: gg.cmd
@@ -492,6 +511,9 @@ jobs:
             sh gg.cmd node -e 'console.log(1)'
             echo "Nice, let's try again"
             sh gg.cmd node -e 'console.log(1)'
+            sh gg.cmd node -v
+            sh gg.cmd npm -v
+            sh gg.cmd npx -v
 
 
   F-release:
@@ -517,7 +539,7 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Download m
+      - name: Download gg
         uses: actions/download-artifact@v2
         with:
           name: gg.cmd

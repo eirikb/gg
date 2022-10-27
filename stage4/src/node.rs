@@ -1,27 +1,74 @@
+use futures::TryFutureExt;
 use scraper::{Html, Selector};
 
 use super::target;
 
+use serde::Deserialize;
+use serde::Serialize;
+use serde_json::Value;
+
+pub type Root = Vec<Root2>;
+
+#[derive(Serialize, Debug, Clone, PartialEq, Deserialize)]
+#[serde(untagged)]
+pub enum LTS {
+    String(String),
+    Bool(bool),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Root2 {
+    pub version: String,
+    pub date: String,
+    pub files: Vec<String>,
+    pub npm: String,
+    pub v8: String,
+    pub uv: String,
+    pub zlib: String,
+    pub openssl: String,
+    pub modules: String,
+    pub lts: LTS,
+    pub security: bool,
+}
+
+
 pub async fn get_node_url(target: &target::Target) -> String {
-    let body = reqwest::get("https://nodejs.org/en/download/").await
-        .expect("Unable to connect to nodejs.org").text().await
-        .expect("Unable to download nodejs list of versions");
+    match &target.variant {
+        target::Variant::Musl => {
+            let json = reqwest::get("https://unofficial-builds.nodejs.org/download/release/index.json").await.unwrap().text().await.unwrap();
+            let root: Root = serde_json::from_str(json.as_str()).expect("JSON was not well-formatted");
+            let r = root.iter().rev().filter(|r|
+                match r.lts {
+                    LTS::String(_) => true,
+                    _ => false
+                } && r.files.iter().any(|f| f.contains("musl"))).last().unwrap().clone();
+            let version = r.version;
+            let file = r.files.iter().find(|f| f.contains("musl")).unwrap();
+            String::from(format!("https://unofficial-builds.nodejs.org/download/release/{version}/node-{version}-{file}.tar.xz"))
+        }
+        _ => {
+            let body = reqwest::get("https://nodejs.org/en/download/").await
+                .expect("Unable to connect to nodejs.org").text().await
+                .expect("Unable to download nodejs list of versions");
 
-    let document = Html::parse_document(body.as_str());
-    let url_selector = Selector::parse(".download-matrix a")
-        .expect("Unable to find nodejs version to download");
+            let document = Html::parse_document(body.as_str());
+            let url_selector = Selector::parse(".download-matrix a")
+                .expect("Unable to find nodejs version to download");
 
-    let node_urls = document.select(&url_selector).map(|x| {
-        x.value().attr("href")
-            .expect("Unable to find link to nodejs download").to_string()
-    }).collect::<Vec<_>>();
+            let node_urls = document.select(&url_selector).map(|x| {
+                x.value().attr("href")
+                    .expect("Unable to find link to nodejs download").to_string()
+            }).collect::<Vec<_>>();
 
-    for x in &node_urls {
-        println!("{}", x);
+            for x in &node_urls {
+                println!("{}", x);
+            }
+            let node_url = pick_node_url(target, node_urls);
+            println!("URL is {node_url}");
+            node_url
+        }
     }
-    let node_url = pick_node_url(target, node_urls);
-    println!("URL is {node_url}");
-    node_url
 }
 
 fn pick_node_url(target: &target::Target, node_urls: Vec<String>) -> String {
@@ -43,7 +90,7 @@ fn pick_node_url(target: &target::Target, node_urls: Vec<String>) -> String {
 mod test {
     use crate::node::pick_node_url;
     use crate::target;
-    use crate::target::Target;
+    use crate::target::{Target, Variant};
 
     fn get_node_urls() -> Vec<String> {
         return vec![
@@ -67,25 +114,25 @@ mod test {
 
     #[test]
     fn test_pick_node_url_windows_x86() {
-        let node_url = pick_node_url(&Target { arch: target::Arch::X86_64, os: target::Os::Windows }, get_node_urls());
+        let node_url = pick_node_url(&Target { arch: target::Arch::X86_64, os: target::Os::Windows, variant: Variant::None }, get_node_urls());
         assert_eq!("https://nodejs.org/dist/v16.17.1/node-v16.17.1-win-x64.zip", node_url);
     }
 
     #[test]
     fn test_pick_node_url_linux_x86() {
-        let node_url = pick_node_url(&Target { arch: target::Arch::X86_64, os: target::Os::Linux }, get_node_urls());
+        let node_url = pick_node_url(&Target { arch: target::Arch::X86_64, os: target::Os::Linux, variant: Variant::None }, get_node_urls());
         assert_eq!("https://nodejs.org/dist/v16.17.1/node-v16.17.1-linux-x64.tar.xz", node_url);
     }
 
     #[test]
     fn test_pick_node_url_mac_x86() {
-        let node_url = pick_node_url(&Target { arch: target::Arch::X86_64, os: target::Os::Mac }, get_node_urls());
+        let node_url = pick_node_url(&Target { arch: target::Arch::X86_64, os: target::Os::Mac, variant: Variant::None }, get_node_urls());
         assert_eq!("https://nodejs.org/dist/v16.17.1/node-v16.17.1-darwin-x64.tar.gz", node_url);
     }
 
     #[test]
     fn test_pick_node_url_linux_armv7() {
-        let node_url = pick_node_url(&Target { arch: target::Arch::Armv7, os: target::Os::Linux }, get_node_urls());
+        let node_url = pick_node_url(&Target { arch: target::Arch::Armv7, os: target::Os::Linux, variant: Variant::None }, get_node_urls());
         assert_eq!("https://nodejs.org/dist/v16.17.1/node-v16.17.1-linux-armv7l.tar.xz", node_url);
     }
 }

@@ -8,9 +8,15 @@ pub enum Arch { X86_64, Armv7 }
 #[derive(Debug)]
 pub enum Os { Windows, Linux, Mac }
 
+#[derive(PartialEq)]
+#[derive(strum_macros::Display)]
+#[derive(Debug)]
+pub enum Variant { Musl, Gnu, Msvc, None }
+
 pub struct Target {
     pub arch: Arch,
     pub os: Os,
+    pub variant: Variant,
 }
 
 pub fn parse_target(input: &str) -> Target {
@@ -25,6 +31,12 @@ pub fn parse_target(input: &str) -> Target {
             x if x.contains("apple") => Os::Mac,
             _ => Os::Linux
         },
+        variant: match input.to_lowercase() {
+            x if x.contains("musl") => Variant::Musl,
+            x if x.contains("gnu") => Variant::Gnu,
+            x if x.contains("msvc") => Variant::Msvc,
+            _ => Variant::None
+        },
     };
 }
 
@@ -36,8 +48,9 @@ mod tests {
     #[test]
     fn x86_64_linux_gnu() {
         let target = parse_target("x86_64-unknown-linux-gnu");
-        assert_eq!(Arch::Armv7, target.arch);
+        assert_eq!(Arch::X86_64, target.arch);
         assert_eq!(Os::Linux, target.os);
+        assert_eq!(Variant::Gnu, target.variant);
     }
 
     #[test]
@@ -45,6 +58,7 @@ mod tests {
         let target = parse_target("x86_64-pc-windows-msvc");
         assert_eq!(Arch::X86_64, target.arch);
         assert_eq!(Os::Windows, target.os);
+        assert_eq!(Variant::Msvc, target.variant);
     }
 
     #[test]
@@ -52,6 +66,7 @@ mod tests {
         let target = parse_target("x86_64-apple-darwin");
         assert_eq!(Arch::X86_64, target.arch);
         assert_eq!(Os::Mac, target.os);
+        assert_eq!(Variant::None, target.variant);
     }
 
     #[test]
@@ -59,6 +74,7 @@ mod tests {
         let target = parse_target("x86_64-unknown-linux-musl");
         assert_eq!(Arch::X86_64, target.arch);
         assert_eq!(Os::Linux, target.os);
+        assert_eq!(Variant::Musl, target.variant);
     }
 
     #[test]
@@ -66,6 +82,7 @@ mod tests {
         let target = parse_target("armv7-unknown-linux-gnu");
         assert_eq!(Arch::Armv7, target.arch);
         assert_eq!(Os::Linux, target.os);
+        assert_eq!(Variant::Gnu, target.variant);
     }
 
     #[test]
@@ -73,5 +90,6 @@ mod tests {
         let target = parse_target("armv7-unknown-linux-gnu");
         assert_eq!(Arch::Armv7, target.arch);
         assert_eq!(Os::Linux, target.os);
+        assert_eq!(Variant::Gnu, target.variant);
     }
 }

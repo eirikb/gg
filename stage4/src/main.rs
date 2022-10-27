@@ -9,14 +9,13 @@ use node::get_node_url;
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
 
 fn try_run(path: &str, bin: &str) -> Option<()> {
-    println!("Execute {bin} in {path}");
+    println!("Find {bin} in {path}");
     let dir = Path::new(".cache").join(path).read_dir().ok()?.next()?;
     match dir {
         Ok(d) => {
             let bin_path = d.path().join(bin);
             if bin_path.exists() {
-                println!("Ready to execute this");
-                println!("{:?}", bin_path);
+                println!("Executing: {:?}", bin_path);
                 std::process::Command::new(bin_path)
                     .args(env::args().skip(2))
                     .spawn().unwrap().wait().unwrap();
@@ -51,9 +50,7 @@ async fn main() {
                         _ => "bin/node"
                     };
                     match try_run("node", bin) {
-                        Some(()) => {
-                            println!("OK!");
-                        }
+                        Some(()) => {}
                         None => {
                             println!("NO!");
                             let node_url = get_node_url(&target).await;
@@ -62,7 +59,6 @@ async fn main() {
                             try_run("node", bin).expect("Unable to execute");
                         }
                     }
-                    println!("DONE!");
                 } else {
                     println!("It is {}", v);
                 }
@@ -72,7 +68,7 @@ async fn main() {
             }
         }
     }.await;
-    println!("CWD is {}", env::current_dir().unwrap().display())
+    // println!("CWD is {}", env::current_dir().unwrap().display())
     // let app = App::new("m")
     //     .version("1.0")
     //     .author("Eirik Brandtzæg. <eirikb@eirikb.no>")
