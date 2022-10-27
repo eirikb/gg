@@ -13,10 +13,15 @@ fn try_run(path: &str, bin: &str) -> Option<()> {
     let dir = Path::new(".cache").join(path).read_dir().ok()?.next()?;
     match dir {
         Ok(d) => {
-            let bin_path = d.path().join(bin);
+            let dp = &d.path();
+            let bin_path = dp.join(bin);
             if bin_path.exists() {
                 println!("Executing: {:?}", bin_path);
-                std::process::Command::new(bin_path)
+                let bin_path_string = dp.to_str().unwrap_or("");
+                let path_string = &env::var("PATH").unwrap_or("".to_string());
+                println!("PATH: {bin_path_string}:{path_string}");
+                std::process::Command::new(&bin_path)
+                    .env("PATH", format!("{bin_path_string}:{path_string}"))
                     .args(env::args().skip(2))
                     .spawn().unwrap().wait().unwrap();
                 Some(())
@@ -39,7 +44,7 @@ async fn main() {
     let system = fs::read_to_string(".cache/gg/system").unwrap_or(String::from("x86_64-linux")).trim().to_string();
     println!("System is {:?}", system);
     let target = target::parse_target(&system);
-    println!("target arch {} os {}", target.arch, target.os);
+    dbg!(&target);
 
     async {
         match args.get(1) {
