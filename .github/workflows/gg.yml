@@ -6,7 +6,7 @@ on:
 # A: Build stage4 (for each target)
 # B: Hash (create hash for each target)
 # C: Build stage3 (for each target)
-# D: Build m
+# D: Build gg
 # E Test (for each os target)
 # F: Create release
 
@@ -394,9 +394,9 @@ jobs:
           cp _stage2/stage2.sh .cache/gg/
           cp _stage2/stage2.ps1 .cache/gg/
           chmod +x .cache/gg/stage2.sh
-          tar -zpvcf m.tgz .cache
+          tar -zpvcf gg.tgz .cache
           unix2dos _stage1/stage1.bat
-          cat _stage1/stage1.bat _stage1/stage1.sh m.tgz > gg.cmd
+          cat _stage1/stage1.bat _stage1/stage1.sh gg.tgz > gg.cmd
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
@@ -413,7 +413,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Download m
+      - name: Download gg
         uses: actions/download-artifact@v2
         with:
           name: gg.cmd
@@ -435,7 +435,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Download m
+      - name: Download gg
         uses: actions/download-artifact@v2
         with:
           name: gg.cmd
@@ -456,14 +456,14 @@ jobs:
     runs-on: ubuntu-latest
     container: ${{ matrix.container }}
     steps:
-      - name: Download m
+      - name: Download gg
         uses: actions/download-artifact@v2
         with:
           name: gg.cmd
 
       - name: Run!
         run: |
-          if [ "${{ matrix.container }}" != "alpine" ]; then
+          if [ "${{ matrix.container }}" == "alpine" ]; then
             apk add libstdc++
           fi
           sh gg.cmd node -e 'console.log(1)'
@@ -482,7 +482,7 @@ jobs:
 
     runs-on: ubuntu-20.04
     steps:
-      - name: Download m
+      - name: Download gg
         uses: actions/download-artifact@v2
         with:
           name: gg.cmd
@@ -527,7 +527,7 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Download m
+      - name: Download gg
         uses: actions/download-artifact@v2
         with:
           name: gg.cmd
