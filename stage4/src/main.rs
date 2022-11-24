@@ -5,10 +5,12 @@ mod target;
 mod bloody_indiana_jones;
 mod node;
 mod gradle;
+mod java;
 
 use node::get_node_url;
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
 use gradle::get_gradle_url;
+use java::get_java_download_url;
 
 fn try_run(path: &str, bin: &str) -> Option<()> {
     println!("Find {bin} in {path}");
@@ -90,6 +92,21 @@ async fn main() {
                             println!("Gradle download url: {}", gradle_url);
                             download_unpack_and_all_that_stuff(&gradle_url, ".cache/gradle").await;
                             try_run("gradle", bin).expect("Unable to execute");
+                        }
+                    }
+                } else if v == "java" {
+                    println!("Hey ho let us go Java!");
+                    let bin = match &target.os {
+                        target::Os::Windows => "java.exe",
+                        _ => "java"
+                    };
+                    match try_run("java", bin) {
+                        Some(()) => {}
+                        None => {
+                            let java_url = get_java_download_url(&target).await;
+                            println!("Java download url: {}", java_url);
+                            download_unpack_and_all_that_stuff(&java_url, ".cache/java").await;
+                            try_run("java", bin).expect("Unable to execute");
                         }
                     }
                 } else {
