@@ -19,6 +19,7 @@ fn try_run(path: &str, bin: &str) -> Option<()> {
         Ok(d) => {
             let dp = &d.path();
             let bin_path = dp.join(bin);
+            println!("{:?}", bin_path);
             if bin_path.exists() {
                 println!("Executing: {:?}", bin_path);
                 let buf = env::current_dir().unwrap();
@@ -97,8 +98,8 @@ async fn main() {
                 } else if v == "java" {
                     println!("Hey ho let us go Java!");
                     let bin = match &target.os {
-                        target::Os::Windows => "java.exe",
-                        _ => "java"
+                        target::Os::Windows => "bin/java.exe",
+                        _ => "bin/java"
                     };
                     match try_run("java", bin) {
                         Some(()) => {}
