@@ -40,7 +40,6 @@ pub struct Root2 {
 
 pub async fn get_java_download_url(target: &target::Target) -> String {
     let json = reqwest::get("https://www.azul.com/wp-admin/admin-ajax.php?action=bundles&endpoint=community&use_stage=false&include_fields=java_version,release_status,abi,arch,bundle_type,cpu_gen,ext,features,hw_bitness,javafx,latest,os,support_term").await.unwrap().text().await.unwrap();
-    println!("{}", json);
     let root: Root = serde_json::from_str(json.as_str()).expect("JSON was not well-formatted");
     let node = root.iter().find(|node| {
         let node_os = match node.os.as_str() {
