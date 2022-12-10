@@ -2,7 +2,7 @@ use scraper::{Html, Selector};
 
 use super::target;
 
-pub async fn get_gradle_url(target: &target::Target) -> String {
+pub async fn get_gradle_url(_target: &target::Target) -> String {
     let body = reqwest::get("https://services.gradle.org/distributions/gradle-6.9.3-bin.zip").await
         .expect("Unable to connect to gradle.org").text().await
         .expect("Unable to download gradle list of versions");

@@ -1,8 +1,7 @@
-use super::target;
-
 use serde::Deserialize;
 use serde::Serialize;
-use crate::target::{Arch, Os};
+
+use crate::target::{Arch, Os, Variant, Target};
 
 pub type Root = Vec<Root2>;
 
@@ -38,13 +37,13 @@ pub struct Root2 {
 }
 
 
-pub async fn get_java_download_url(target: &target::Target) -> String {
+pub async fn get_java_download_url(target: &Target) -> String {
     let json = reqwest::get("https://www.azul.com/wp-admin/admin-ajax.php?action=bundles&endpoint=community&use_stage=false&include_fields=java_version,release_status,abi,arch,bundle_type,cpu_gen,ext,features,hw_bitness,javafx,latest,os,support_term").await.unwrap().text().await.unwrap();
     let root: Root = serde_json::from_str(json.as_str()).expect("JSON was not well-formatted");
     let node = root.iter().find(|node| {
         let node_os = match node.os.as_str() {
             "windows" => Os::Windows,
-            "linux" => Os::Linux,
+            x if x.contains("linux") => Os::Linux,
             _ => Os::Mac,
         };
         let ext = match target.os {
@@ -56,8 +55,9 @@ pub async fn get_java_download_url(target: &target::Target) -> String {
             ("arm", "64") => Some(Arch::Armv7),
             _ => None
         };
+        let variant_check = target.variant != Variant::Musl || node.os.as_str().contains("musl");
         if node_arch.is_some() {
-            node_os == target.os && node_arch.unwrap() == target.arch && node.javafx && node.ext == ext
+            variant_check && node_os == target.os && node_arch.unwrap() == target.arch && node.ext == ext
         } else {
             false
         }
