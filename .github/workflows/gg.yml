@@ -379,6 +379,7 @@ jobs:
           sudo apt-get install dos2unix
           mv stage1 _stage1
           mv stage2 _stage2
+          mv stage3 _stage3
           rm -rf .cache/gg
           mkdir -p .cache/gg
           rm -rf stage1
