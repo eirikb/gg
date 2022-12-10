@@ -428,7 +428,8 @@ jobs:
           sh gg.cmd node -v
           sh gg.cmd npm -v
           sh gg.cmd npx -v
-  
+          sh gg.cmd java -version
+          sh gg.cmd java -version
 
   E-test-batch:
     needs: D-stage1
@@ -451,6 +452,8 @@ jobs:
           .\gg.cmd node -v
           .\gg.cmd npm -v
           .\gg.cmd npx -v
+          .\gg.cmd java -version
+          .\gg.cmd java -version
 
 
   E-test-container:
@@ -478,6 +481,8 @@ jobs:
           sh gg.cmd node -v
           sh gg.cmd npm -v
           sh gg.cmd npx -v
+          sh gg.cmd java -version
+          sh gg.cmd java -version
 
 
   E-test-arch:
@@ -514,6 +519,8 @@ jobs:
             sh gg.cmd node -v
             sh gg.cmd npm -v
             sh gg.cmd npx -v
+            sh gg.cmd java -version
+            sh gg.cmd java -version
 
 
   F-release:

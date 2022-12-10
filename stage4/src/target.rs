@@ -1,18 +1,16 @@
 #[derive(PartialEq)]
-#[derive(strum_macros::Display)]
 #[derive(Debug)]
 pub enum Arch { X86_64, Armv7 }
 
 #[derive(PartialEq)]
-#[derive(strum_macros::Display)]
 #[derive(Debug)]
 pub enum Os { Windows, Linux, Mac }
 
 #[derive(PartialEq)]
-#[derive(strum_macros::Display)]
 #[derive(Debug)]
 pub enum Variant { Musl, Gnu, Msvc, None }
 
+#[derive(Debug)]
 pub struct Target {
     pub arch: Arch,
     pub os: Os,

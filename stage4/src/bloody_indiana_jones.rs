@@ -38,8 +38,12 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
             };
         }
         Some("zip") => {
-            create_dir_all(".cache/node/node").expect("Unable to create download dir");
-            let target_dir = PathBuf::from(".cache/node/node");
+            println!("Path is {}", &path);
+            let part = path.split("/").last().unwrap_or("unknown");
+            let part_path = format!(".cache/{part}/{part}");
+            println!("path_path {}", &part_path);
+            create_dir_all(&part_path).expect("Unable to create download dir");
+            let target_dir = PathBuf::from(&part_path);
             zip_extract::extract(std::fs::File::open(file_path).unwrap(), &target_dir, true).unwrap();
         }
         _ => ()
