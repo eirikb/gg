@@ -1,7 +1,11 @@
+use std::path::PathBuf;
+
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::target::{Arch, Os, Variant, Target};
+use crate::download_unpack_and_all_that_stuff;
+use crate::executor::{prep_bin, try_run};
+use crate::target::{Arch, Os, Target, Variant};
 
 pub type Root = Vec<Root2>;
 
@@ -36,6 +40,32 @@ pub struct Root2 {
     pub url: String,
 }
 
+async fn prep(target: Target) -> () {
+    let java_url = get_java_download_url(&target).await;
+    println!("Java download url: {}", java_url);
+    download_unpack_and_all_that_stuff(&java_url, ".cache/java").await;
+}
+
+pub async fn prep_java(target: Target) -> Result<PathBuf, String> {
+    let bin = match &target.os {
+        Os::Windows => "bin/java.exe",
+        _ => "bin/java"
+    };
+    prep_bin(bin, "java", || Box::pin(prep(target))).await
+}
+
+pub async fn try_run_java(target: Target) -> Result<(), String> {
+    let bin_path = prep_java(target).await?.clone();
+    println!("path is {:?}", bin_path);
+    if bin_path.exists() {
+        return if try_run(bin_path.to_str().unwrap_or("")).unwrap() {
+            Ok(())
+        } else {
+            Err("Unable to execute".to_string())
+        };
+    }
+    Ok(())
+}
 
 pub async fn get_java_download_url(target: &Target) -> String {
     let json = reqwest::get("https://www.azul.com/wp-admin/admin-ajax.php?action=bundles&endpoint=community&use_stage=false&include_fields=java_version,release_status,abi,arch,bundle_type,cpu_gen,ext,features,hw_bitness,javafx,latest,os,support_term").await.unwrap().text().await.unwrap();

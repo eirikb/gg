@@ -1,48 +1,17 @@
 use std::{env, fs};
-use std::path::Path;
+
+use bloody_indiana_jones::download_unpack_and_all_that_stuff;
+
+use crate::gradle::try_run_gradle;
+use crate::java::{prep_java, try_run_java};
+use crate::node::try_run_node;
 
 mod target;
 mod bloody_indiana_jones;
 mod node;
 mod gradle;
 mod java;
-
-use node::get_node_url;
-use bloody_indiana_jones::download_unpack_and_all_that_stuff;
-use gradle::get_gradle_url;
-use java::get_java_download_url;
-
-fn try_run(path: &str, bin: &str) -> Option<()> {
-    println!("Find {bin} in {path}");
-    let dir = Path::new(".cache").join(path).read_dir().ok()?.next()?;
-    match dir {
-        Ok(d) => {
-            let dp = &d.path();
-            let bin_path = dp.join(bin);
-            println!("{:?}", bin_path);
-            if bin_path.exists() {
-                println!("Executing: {:?}", bin_path);
-                let buf = env::current_dir().unwrap();
-                let current = buf.to_str().unwrap();
-                let bin_path_string = dp.to_str().unwrap_or("");
-                let path_string = &env::var("PATH").unwrap_or("".to_string());
-                println!("PATH: {current}/{bin_path_string}/bin:{path_string}");
-                std::process::Command::new(&bin_path)
-                    .env("PATH", format!("{current}/{bin_path_string}/bin:{path_string}"))
-                    .args(env::args().skip(2))
-                    .spawn().unwrap().wait().unwrap();
-                Some(())
-            } else {
-                println!("Executable not found");
-                None
-            }
-        }
-        _ => {
-            println!("Cache dir for {path} not found");
-            None
-        }
-    }
-}
+mod executor;
 
 #[tokio::main]
 async fn main() {
@@ -57,59 +26,14 @@ async fn main() {
         match args.get(1) {
             Some(v) => {
                 if v == "node" || v == "npm" || v == "npx" {
-                    let bin = match &target.os {
-                        target::Os::Windows => match v.as_str() {
-                            "node" => "node.exe",
-                            "npm" => "npm.cmd",
-                            _ => "npx.cmd",
-                        },
-                        _ => match v.as_str() {
-                            "node" => "bin/node",
-                            "npm" => "bin/npm",
-                            _ => "bin/npx"
-                        }
-                    };
-                    match try_run("node", bin) {
-                        Some(()) => {}
-                        None => {
-                            println!("NO!");
-                            let node_url = get_node_url(&target).await;
-                            println!("Node download url: {}", node_url);
-                            download_unpack_and_all_that_stuff(&node_url, ".cache/node").await;
-                            try_run("node", bin).expect("Unable to execute");
-                        }
+                    {
+                        try_run_node(target, v).await.expect("NODE fail");
                     }
                 } else if v == "gradle" {
-                    println!("Finally - the important bits!");
-                    let bin = match &target.os {
-                        target::Os::Windows => "gradle.exe",
-                        _ => "gradle"
-                    };
-                    match try_run("gradle", bin) {
-                        Some(()) => {}
-                        None => {
-                            println!("NO!");
-                            let gradle_url = get_gradle_url(&target).await;
-                            println!("Gradle download url: {}", gradle_url);
-                            download_unpack_and_all_that_stuff(&gradle_url, ".cache/gradle").await;
-                            try_run("gradle", bin).expect("Unable to execute");
-                        }
-                    }
+                    prep_java(target).await.expect("Unable to prep Java");
+                    try_run_gradle(target).await.expect("Gradle fail!");
                 } else if v == "java" {
-                    println!("Hey ho let us go Java!");
-                    let bin = match &target.os {
-                        target::Os::Windows => "bin/java.exe",
-                        _ => "bin/java"
-                    };
-                    match try_run("java", bin) {
-                        Some(()) => {}
-                        None => {
-                            let java_url = get_java_download_url(&target).await;
-                            println!("Java download url: {}", java_url);
-                            download_unpack_and_all_that_stuff(&java_url, ".cache/java").await;
-                            try_run("java", bin).expect("Unable to execute");
-                        }
-                    }
+                    try_run_java(target).await.expect("Java fail");
                 } else {
                     println!("It is {}", v);
                 }

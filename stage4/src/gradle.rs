@@ -1,24 +1,38 @@
-use scraper::{Html, Selector};
+use std::path::PathBuf;
+
+use crate::download_unpack_and_all_that_stuff;
+use crate::executor::{prep_bin, try_run};
+use crate::target::Target;
 
 use super::target;
 
-pub async fn get_gradle_url(_target: &target::Target) -> String {
-    let body = reqwest::get("https://services.gradle.org/distributions/gradle-6.9.3-bin.zip").await
-        .expect("Unable to connect to gradle.org").text().await
-        .expect("Unable to download gradle list of versions");
+async fn prep(target: Target) -> () {
+    let gradle_url = get_gradle_url(&target).await;
+    println!("Gradle download url: {}", gradle_url);
+    download_unpack_and_all_that_stuff(&gradle_url, ".cache/gradle").await;
+}
 
-    let url_selector = Selector::parse(".download-matrix a")
-        .expect("Unable to find nodejs version to download");
-    let document = Html::parse_document(body.as_str());
-    let gradle_urls = document.select(&url_selector).map(|x| {
-        x.value().attr("href")
-            .expect("Unable to find link to gradledownload").to_string()
-    }).collect::<Vec<_>>();
+pub async fn prep_gradle(target: Target) -> Result<PathBuf, String> {
+    let bin = match &target.os {
+        target::Os::Windows => "gradle.exe",
+        _ => "gradle"
+    };
+    prep_bin(bin, "gradle", || Box::pin(prep(target))).await
+}
 
-    for x in &gradle_urls {
-        println!("{}", x);
+pub async fn try_run_gradle(target: Target) -> Result<(), String> {
+    let bin_path = prep_gradle(target).await?.clone();
+    println!("path is {:?}", bin_path);
+    if bin_path.exists() {
+        return if try_run(bin_path.to_str().unwrap_or("")).unwrap() {
+            Ok(())
+        } else {
+            Err("Unable to execute".to_string())
+        };
     }
-    let gradle_url = gradle_urls.first().unwrap().to_string();
-    println!("URL is {gradle_url}");
-    gradle_url
+    Ok(())
+}
+
+pub async fn get_gradle_url(_target: &Target) -> String {
+    return String::from("https://services.gradle.org/distributions/gradle-6.9.3-bin.zip");
 }

@@ -1,16 +1,20 @@
 #[derive(PartialEq)]
 #[derive(Debug)]
+#[derive(Copy, Clone)]
 pub enum Arch { X86_64, Armv7 }
 
 #[derive(PartialEq)]
 #[derive(Debug)]
+#[derive(Copy, Clone)]
 pub enum Os { Windows, Linux, Mac }
 
 #[derive(PartialEq)]
 #[derive(Debug)]
+#[derive(Copy, Clone)]
 pub enum Variant { Musl, Gnu, Msvc, None }
 
 #[derive(Debug)]
+#[derive(Copy, Clone)]
 pub struct Target {
     pub arch: Arch,
     pub os: Os,
