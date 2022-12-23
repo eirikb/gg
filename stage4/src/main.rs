@@ -2,7 +2,7 @@ use std::{env, fs};
 
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
 
-use crate::executor::{Executor, try_execute};
+use crate::executor::{Executor, prep, try_execute};
 use crate::gradle::Gradle;
 use crate::java::Java;
 use crate::node::Node;
@@ -26,14 +26,13 @@ async fn main() {
     async {
         match args.get(1) {
             Some(v) => {
+                let input = (target, v.to_string());
                 if v == "node" || v == "npm" || v == "npx" {
-                    try_execute(Box::new(Node {}), target, v.to_string()).await.expect("Node: Oh no");
+                    try_execute(&Node {}, input).await.expect("Node: Oh no");
                 } else if v == "gradle" {
-                    // prep_java(target).await.expect("Unable to prep Java");
-                    // try_run_gradle(target).await.expect("Gradle fail!");
-                    try_execute(Box::new(Gradle {}), target, v.to_string()).await.expect("Gradle: Oh no");
+                    try_execute(&Gradle {}, input).await.expect("Gradle: Oh no");
                 } else if v == "java" {
-                    try_execute(Box::new(Java {}), target, v.to_string()).await.expect("Java: Oh no");
+                    try_execute(&Java {}, input).await.expect("Java: Oh no");
                 } else {
                     println!("It is {}", v);
                 }

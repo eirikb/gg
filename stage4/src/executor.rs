@@ -2,26 +2,37 @@ use std::env;
 use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
+use std::process::Command;
 
 use crate::target::Target;
+
+#[derive(PartialEq)]
+#[derive(Debug)]
+#[derive(Clone)]
+pub struct AppPath {
+    pub app: PathBuf,
+    pub bin: PathBuf,
+}
 
 pub trait Executor {
     fn prep(&self, target: Target) -> Pin<Box<dyn Future<Output=()>>>;
     fn get_bin(&self, target: Target, v: String) -> &str;
     fn get_path(&self) -> &str;
+    fn before_exec<'a>(&'a self, input: (Target, String), command: &'a mut Command) -> Pin<Box<dyn Future<Output=()> + 'a>>;
 }
 
-async fn prep(executor: Box<dyn Executor>, target: Target, v: String) -> Result<PathBuf, String> {
+pub async fn prep(executor: &dyn Executor, input: (Target, String)) -> Result<AppPath, String> {
+    let (target, v) = input;
     let bin = executor.get_bin(target, v);
     let path = executor.get_path();
     prep_bin(bin, path, || executor.prep(target)).await
 }
 
-pub async fn try_execute(executor: Box<dyn Executor>, target: Target, v: String) -> Result<(), String> {
-    let bin_path = prep(executor, target, v).await?.clone();
-    println!("path is {:?}", bin_path);
-    if bin_path.exists() {
-        return if try_run(bin_path.to_str().unwrap_or("")).unwrap() {
+pub async fn try_execute(executor: &dyn Executor, input: (Target, String)) -> Result<(), String> {
+    let app_path = prep(executor, input.clone()).await?.clone();
+    println!("path is {:?}", app_path);
+    if app_path.bin.exists() {
+        return if try_run(executor, input.clone(), app_path).await.unwrap() {
             Ok(())
         } else {
             Err("Unable to execute".to_string())
@@ -30,7 +41,7 @@ pub async fn try_execute(executor: Box<dyn Executor>, target: Target, v: String)
     Ok(())
 }
 
-fn get_bin_path(bin: &str, path: &str) -> Result<PathBuf, String> {
+fn get_app_path(bin: &str, path: &str) -> Result<AppPath, String> {
     let path = env::current_dir()
         .map_err(|_| "Current dir not found")?
         .join(".cache")
@@ -42,33 +53,38 @@ fn get_bin_path(bin: &str, path: &str) -> Result<PathBuf, String> {
         .next()
         .ok_or("")?;
 
-    let path = dir_entry
+    let app_path = dir_entry
         .map_err(|_| "app dir not found")?
-        .path()
-        .join(bin);
+        .path();
 
-    Ok(path)
+
+    let bin_path = app_path.join(bin);
+
+    Ok(AppPath { app: app_path, bin: bin_path })
 }
 
-async fn prep_bin(bin: &str, path: &str, prep: impl Fn() -> Pin<Box<dyn Future<Output=()>>>) -> Result<PathBuf, String> {
+async fn prep_bin(bin: &str, path: &str, prep: impl Fn() -> Pin<Box<dyn Future<Output=()>>>) -> Result<AppPath, String> {
     println!("Find {bin} in {path}");
-    let bin_path = get_bin_path(bin, path);
+    let app_path = get_app_path(bin, path);
 
-    println!("and path is {:?}", bin_path);
-    if !(bin_path.is_ok() && bin_path.unwrap().exists()) {
+    println!("and path is {:?}", app_path);
+    if !(app_path.is_ok() && app_path.unwrap().bin.exists()) {
         println!("prep it!");
         prep().await;
         println!("prep done yo!");
     }
-    get_bin_path(bin, path)
+    get_app_path(bin, path)
 }
 
-fn try_run(bin_path: &str) -> Result<bool, String> {
+async fn try_run(executor: &dyn Executor, input: (Target, String), app_path: AppPath) -> Result<bool, String> {
+    let bin_path = app_path.bin.to_str().unwrap_or("");
     println!("Executing: {:?}", bin_path);
     let path_string = &env::var("PATH").unwrap_or("".to_string());
-    let path = format!("{bin_path}/bin:{path_string}");
+    let path = format!("{bin_path}:{path_string}");
     println!("PATH: {path}");
-    let res = std::process::Command::new(&bin_path)
+    let mut command = Command::new(&bin_path);
+    executor.before_exec(input, &mut command).await;
+    let res = command
         .env("PATH", path)
         .args(env::args().skip(2))
         .spawn().map_err(|_| "What")?.wait().map_err(|_| "eh")?.success();

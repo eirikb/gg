@@ -1,5 +1,6 @@
 use std::future::Future;
 use std::pin::Pin;
+use std::process::Command;
 
 use scraper::{Html, Selector};
 use serde::Deserialize;
@@ -64,6 +65,10 @@ impl Executor for Node {
 
     fn get_path(&self) -> &str {
         "node"
+    }
+
+    fn before_exec(&self, _input: (Target, String), _command: &mut Command) -> Pin<Box<dyn Future<Output=()>>> {
+        Box::pin(async {})
     }
 }
 

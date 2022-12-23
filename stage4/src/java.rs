@@ -1,5 +1,6 @@
 use std::future::Future;
 use std::pin::Pin;
+use std::process::Command;
 
 use serde::Deserialize;
 use serde::Serialize;
@@ -60,6 +61,10 @@ impl Executor for Java {
 
     fn get_path(&self) -> &str {
         "java"
+    }
+
+    fn before_exec(&self, _input: (Target, String), _command: &mut Command) -> Pin<Box<dyn Future<Output=()>>> {
+        Box::pin(async {})
     }
 }
 
