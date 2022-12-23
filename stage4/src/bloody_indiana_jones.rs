@@ -44,7 +44,7 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
             println!("path_path {}", &part_path);
             create_dir_all(&part_path).expect("Unable to create download dir");
             let target_dir = PathBuf::from(&part_path);
-            zip_extract::extract(std::fs::File::open(file_path).unwrap(), &target_dir, true).unwrap();
+            zip_extract::extract(File::open(file_path).unwrap(), &target_dir, true).unwrap();
         }
         _ => ()
     }
@@ -54,7 +54,7 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
     match Path::new(&file_name).extension().unwrap().to_str() {
         Some("tar") => {
             println!("Untar {file_name}");
-            let mut archive = tar::Archive::new(std::io::BufReader::new(std::fs::File::open(file_name).unwrap()));
+            let mut archive = tar::Archive::new(std::io::BufReader::new(File::open(file_name).unwrap()));
             archive.unpack(path).expect("Unable to extract");
         }
         _ => {}

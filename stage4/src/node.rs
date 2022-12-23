@@ -6,7 +6,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::download_unpack_and_all_that_stuff;
-use crate::executor::{Executor};
+use crate::executor::Executor;
 use crate::target::Target;
 
 use super::target;
@@ -105,7 +105,7 @@ pub async fn get_node_url(target: &Target) -> String {
     }
 }
 
-fn pick_node_url(target: &target::Target, node_urls: Vec<String>) -> String {
+fn pick_node_url(target: &Target, node_urls: Vec<String>) -> String {
     return node_urls.into_iter().filter(|url|
         match &target.arch {
             target::Arch::X86_64 => url.contains("x64"),
