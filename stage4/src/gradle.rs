@@ -29,6 +29,6 @@ impl Executor for Gradle {
     }
 }
 
-pub async fn get_gradle_url(_target: &Target) -> String {
+async fn get_gradle_url(_target: &Target) -> String {
     return String::from("https://services.gradle.org/distributions/gradle-6.9.3-bin.zip");
 }

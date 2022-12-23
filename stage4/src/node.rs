@@ -11,18 +11,18 @@ use crate::target::Target;
 
 use super::target;
 
-pub type Root = Vec<Root2>;
+type Root = Vec<Root2>;
 
 #[derive(Serialize, Debug, Clone, PartialEq, Deserialize)]
 #[serde(untagged)]
-pub enum LTS {
+enum LTS {
     String(String),
     Bool(bool),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Root2 {
+struct Root2 {
     pub version: String,
     pub date: String,
     pub files: Vec<String>,
@@ -67,7 +67,7 @@ impl Executor for Node {
     }
 }
 
-pub async fn get_node_url(target: &Target) -> String {
+async fn get_node_url(target: &Target) -> String {
     match &target.variant {
         target::Variant::Musl => {
             let json = reqwest::get("https://unofficial-builds.nodejs.org/download/release/index.json").await.unwrap().text().await.unwrap();

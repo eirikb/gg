@@ -7,11 +7,11 @@ use serde::Serialize;
 use crate::{download_unpack_and_all_that_stuff, Executor};
 use crate::target::{Arch, Os, Target, Variant};
 
-pub type Root = Vec<Root2>;
+type Root = Vec<Root2>;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Root2 {
+struct Root2 {
     pub abi: String,
     pub arch: String,
     #[serde(rename = "bundle_type")]
@@ -63,7 +63,7 @@ impl Executor for Java {
     }
 }
 
-pub async fn get_java_download_url(target: &Target) -> String {
+async fn get_java_download_url(target: &Target) -> String {
     let json = reqwest::get("https://www.azul.com/wp-admin/admin-ajax.php?action=bundles&endpoint=community&use_stage=false&include_fields=java_version,release_status,abi,arch,bundle_type,cpu_gen,ext,features,hw_bitness,javafx,latest,os,support_term").await.unwrap().text().await.unwrap();
     let root: Root = serde_json::from_str(json.as_str()).expect("JSON was not well-formatted");
     let node = root.iter().find(|node| {

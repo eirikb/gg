@@ -50,7 +50,7 @@ fn get_bin_path(bin: &str, path: &str) -> Result<PathBuf, String> {
     Ok(path)
 }
 
-pub async fn prep_bin(bin: &str, path: &str, prep: impl Fn() -> Pin<Box<dyn Future<Output=()>>>) -> Result<PathBuf, String> {
+async fn prep_bin(bin: &str, path: &str, prep: impl Fn() -> Pin<Box<dyn Future<Output=()>>>) -> Result<PathBuf, String> {
     println!("Find {bin} in {path}");
     let bin_path = get_bin_path(bin, path);
 
@@ -63,7 +63,7 @@ pub async fn prep_bin(bin: &str, path: &str, prep: impl Fn() -> Pin<Box<dyn Futu
     get_bin_path(bin, path)
 }
 
-pub fn try_run(bin_path: &str) -> Result<bool, String> {
+fn try_run(bin_path: &str) -> Result<bool, String> {
     println!("Executing: {:?}", bin_path);
     let path_string = &env::var("PATH").unwrap_or("".to_string());
     let path = format!("{bin_path}/bin:{path_string}");
