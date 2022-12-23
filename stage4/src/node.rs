@@ -1,11 +1,12 @@
-use std::path::PathBuf;
+use std::future::Future;
+use std::pin::Pin;
 
 use scraper::{Html, Selector};
 use serde::Deserialize;
 use serde::Serialize;
 
 use crate::download_unpack_and_all_that_stuff;
-use crate::executor::{prep_bin, try_run};
+use crate::executor::{Executor};
 use crate::target::Target;
 
 use super::target;
@@ -35,43 +36,36 @@ pub struct Root2 {
     pub security: bool,
 }
 
+pub struct Node {}
 
-async fn prep(target: Target) -> () {
-    let node_url = get_node_url(&target).await;
-    println!("Node download url: {}", node_url);
-    download_unpack_and_all_that_stuff(&node_url, ".cache/node").await;
-}
-
-async fn prep_node(target: Target, v: &String) -> Result<PathBuf, String> {
-    let bin = match &target.os {
-        target::Os::Windows => match v.as_str() {
-            "node" => "node.exe",
-            "npm" => "npm.cmd",
-            _ => "npx.cmd",
-        },
-        _ => match v.as_str() {
-            "node" => "bin/node",
-            "npm" => "bin/npm",
-            _ => "bin/npx"
-        }
-    };
-
-    prep_bin(bin, "node", || Box::pin(prep(target))).await
-}
-
-pub async fn try_run_node(target: Target, v: &String) -> Result<(), String> {
-    let bin_path = prep_node(target, v).await?.clone();
-    println!("path is {:?}", bin_path);
-    if bin_path.exists() {
-        return if try_run(bin_path.to_str().unwrap_or("")).unwrap() {
-            Ok(())
-        } else {
-            Err("Unable to execute".to_string())
-        };
+impl Executor for Node {
+    fn prep(&self, target: Target) -> Pin<Box<dyn Future<Output=()>>> {
+        Box::pin(async move {
+            let node_url = get_node_url(&target).await;
+            println!("Node download url: {}", node_url);
+            download_unpack_and_all_that_stuff(&node_url, ".cache/node").await;
+        })
     }
-    Ok(())
-}
 
+    fn get_bin(&self, target: Target, v: String) -> &str {
+        match &target.os {
+            target::Os::Windows => match v.as_str() {
+                "node" => "node.exe",
+                "npm" => "npm.cmd",
+                _ => "npx.cmd",
+            },
+            _ => match v.as_str() {
+                "node" => "bin/node",
+                "npm" => "bin/npm",
+                _ => "bin/npx"
+            }
+        }
+    }
+
+    fn get_path(&self) -> &str {
+        "node"
+    }
+}
 
 pub async fn get_node_url(target: &Target) -> String {
     match &target.variant {

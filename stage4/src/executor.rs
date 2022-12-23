@@ -3,6 +3,33 @@ use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
 
+use crate::target::Target;
+
+pub trait Executor {
+    fn prep(&self, target: Target) -> Pin<Box<dyn Future<Output=()>>>;
+    fn get_bin(&self, target: Target, v: String) -> &str;
+    fn get_path(&self) -> &str;
+}
+
+async fn prep(executor: Box<dyn Executor>, target: Target, v: String) -> Result<PathBuf, String> {
+    let bin = executor.get_bin(target, v);
+    let path = executor.get_path();
+    prep_bin(bin, path, || executor.prep(target)).await
+}
+
+pub async fn try_execute(executor: Box<dyn Executor>, target: Target, v: String) -> Result<(), String> {
+    let bin_path = prep(executor, target, v).await?.clone();
+    println!("path is {:?}", bin_path);
+    if bin_path.exists() {
+        return if try_run(bin_path.to_str().unwrap_or("")).unwrap() {
+            Ok(())
+        } else {
+            Err("Unable to execute".to_string())
+        };
+    }
+    Ok(())
+}
+
 fn get_bin_path(bin: &str, path: &str) -> Result<PathBuf, String> {
     let path = env::current_dir()
         .map_err(|_| "Current dir not found")?

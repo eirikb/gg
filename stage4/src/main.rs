@@ -2,9 +2,10 @@ use std::{env, fs};
 
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
 
-use crate::gradle::try_run_gradle;
-use crate::java::{prep_java, try_run_java};
-use crate::node::try_run_node;
+use crate::executor::{Executor, try_execute};
+use crate::gradle::Gradle;
+use crate::java::Java;
+use crate::node::Node;
 
 mod target;
 mod bloody_indiana_jones;
@@ -26,14 +27,13 @@ async fn main() {
         match args.get(1) {
             Some(v) => {
                 if v == "node" || v == "npm" || v == "npx" {
-                    {
-                        try_run_node(target, v).await.expect("NODE fail");
-                    }
+                    try_execute(Box::new(Node {}), target, v.to_string()).await.expect("Node: Oh no");
                 } else if v == "gradle" {
-                    prep_java(target).await.expect("Unable to prep Java");
-                    try_run_gradle(target).await.expect("Gradle fail!");
+                    // prep_java(target).await.expect("Unable to prep Java");
+                    // try_run_gradle(target).await.expect("Gradle fail!");
+                    try_execute(Box::new(Gradle {}), target, v.to_string()).await.expect("Gradle: Oh no");
                 } else if v == "java" {
-                    try_run_java(target).await.expect("Java fail");
+                    try_execute(Box::new(Java {}), target, v.to_string()).await.expect("Java: Oh no");
                 } else {
                     println!("It is {}", v);
                 }
@@ -43,16 +43,4 @@ async fn main() {
             }
         }
     }.await;
-    // println!("CWD is {}", env::current_dir().unwrap().display())
-    // let app = App::new("m")
-    //     .version("1.0")
-    //     .author("Eirik Brandtzæg. <eirikb@eirikb.no>")
-    //     .about("Bootstrap")
-    //     .subcommand(SubCommand::with_name("node")
-    //         .about("Ugh node"))
-    //     .subcommand(SubCommand::with_name("")
-    //         .about("Ugh no"));
-    // let matches = app.get_matches();
-    //
-    // let val = matches.value_of("node").unwrap_or("OK");
 }

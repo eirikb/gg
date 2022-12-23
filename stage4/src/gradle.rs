@@ -1,36 +1,32 @@
-use std::path::PathBuf;
+use std::future::Future;
+use std::pin::Pin;
 
-use crate::download_unpack_and_all_that_stuff;
-use crate::executor::{prep_bin, try_run};
+use crate::{download_unpack_and_all_that_stuff, Executor};
 use crate::target::Target;
 
 use super::target;
 
-async fn prep(target: Target) -> () {
-    let gradle_url = get_gradle_url(&target).await;
-    println!("Gradle download url: {}", gradle_url);
-    download_unpack_and_all_that_stuff(&gradle_url, ".cache/gradle").await;
-}
+pub struct Gradle {}
 
-pub async fn prep_gradle(target: Target) -> Result<PathBuf, String> {
-    let bin = match &target.os {
-        target::Os::Windows => "gradle.exe",
-        _ => "gradle"
-    };
-    prep_bin(bin, "gradle", || Box::pin(prep(target))).await
-}
-
-pub async fn try_run_gradle(target: Target) -> Result<(), String> {
-    let bin_path = prep_gradle(target).await?.clone();
-    println!("path is {:?}", bin_path);
-    if bin_path.exists() {
-        return if try_run(bin_path.to_str().unwrap_or("")).unwrap() {
-            Ok(())
-        } else {
-            Err("Unable to execute".to_string())
-        };
+impl Executor for Gradle {
+    fn prep(&self, target: Target) -> Pin<Box<dyn Future<Output=()>>> {
+        Box::pin(async move {
+            let gradle_url = get_gradle_url(&target).await;
+            println!("Gradle download url: {}", gradle_url);
+            download_unpack_and_all_that_stuff(&gradle_url, ".cache/gradle").await;
+        })
     }
-    Ok(())
+
+    fn get_bin(&self, target: Target, _: String) -> &str {
+        match &target.os {
+            target::Os::Windows => "gradle.exe",
+            _ => "gradle"
+        }
+    }
+
+    fn get_path(&self) -> &str {
+        "gradle"
+    }
 }
 
 pub async fn get_gradle_url(_target: &Target) -> String {
