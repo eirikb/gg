@@ -23,23 +23,22 @@ async fn main() {
     let target = target::parse_target(&system);
     dbg!(&target);
 
-    async {
-        match args.get(1) {
-            Some(v) => {
-                let input = AppInput { target, cmd: v.to_string() };
-                if v == "node" || v == "npm" || v == "npx" {
-                    try_execute(&Node {}, input).await.expect("Node: Oh no");
-                } else if v == "gradle" {
-                    try_execute(&Gradle {}, input).await.expect("Gradle: Oh no");
-                } else if v == "java" {
-                    try_execute(&Java {}, input).await.expect("Java: Oh no");
-                } else {
-                    println!("It is {}", v);
-                }
-            }
-            None => {
-                println!("Nope");
+    match args.get(1) {
+        Some(cmd) => {
+            let executor: Option<&dyn Executor> = match cmd.as_str() {
+                "node" | "npm" | "npx" => Some(&Node {}),
+                "gradle" => Some(&Gradle {}),
+                "java" => Some(&Java {}),
+                _ => None
+            };
+            if executor.is_some() {
+                try_execute(executor.unwrap(), AppInput { target, cmd: cmd.to_string() }).await.unwrap();
+            } else {
+                println!("No such command {cmd}");
             }
         }
-    }.await;
+        None => {
+            println!("No command")
+        }
+    };
 }
