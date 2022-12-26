@@ -30,7 +30,7 @@ impl Executor for Gradle {
         "gradle"
     }
 
-    fn before_exec<'a>(&'a self, input: (Target, String), command: &'a mut Command) -> Pin<Box<dyn Future<Output=()> + 'a>> {
+    fn before_exec<'a>(&'a self, input: (Target, String), command: &'a mut Command) -> Pin<Box<dyn Future<Output=Option<String>> + 'a>> {
         Box::pin(async move {
             let app_path = prep(&Java {}, input.clone()).await.expect("Unable to install Java");
             println!("java path is {:?}", app_path);
@@ -39,8 +39,7 @@ impl Executor for Gradle {
             let bin_path = app_path.bin.to_str().unwrap_or("");
             let path = format!("{bin_path}:{path_string}");
             println!("PATH: {path}");
-            command.env("PATH", path);
-            ()
+            Some(path)
         })
     }
 }

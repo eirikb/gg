@@ -67,8 +67,8 @@ impl Executor for Node {
         "node"
     }
 
-    fn before_exec(&self, _input: (Target, String), _command: &mut Command) -> Pin<Box<dyn Future<Output=()>>> {
-        Box::pin(async {})
+    fn before_exec(&self, _input: (Target, String), _command: &mut Command) -> Pin<Box<dyn Future<Output=Option<String>>>> {
+        Box::pin(async { None })
     }
 }
 

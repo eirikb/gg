@@ -18,7 +18,7 @@ pub trait Executor {
     fn prep(&self, target: Target) -> Pin<Box<dyn Future<Output=()>>>;
     fn get_bin(&self, target: Target, v: String) -> &str;
     fn get_path(&self) -> &str;
-    fn before_exec<'a>(&'a self, input: (Target, String), command: &'a mut Command) -> Pin<Box<dyn Future<Output=()> + 'a>>;
+    fn before_exec<'a>(&'a self, input: (Target, String), command: &'a mut Command) -> Pin<Box<dyn Future<Output=Option<String>> + 'a>>;
 }
 
 pub async fn prep(executor: &dyn Executor, input: (Target, String)) -> Result<AppPath, String> {
@@ -83,9 +83,12 @@ async fn try_run(executor: &dyn Executor, input: (Target, String), app_path: App
     let path = format!("{bin_path}:{path_string}");
     println!("PATH: {path}");
     let mut command = Command::new(&bin_path);
-    executor.before_exec(input, &mut command).await;
+    let more_path = executor.before_exec(input, &mut command).await;
     let res = command
-        .env("PATH", path)
+        .env("PATH", match more_path {
+            None => path,
+            Some(p) => format!("{p}:{path}")
+        })
         .args(env::args().skip(2))
         .spawn().map_err(|_| "What")?.wait().map_err(|_| "eh")?.success();
     if !res {
