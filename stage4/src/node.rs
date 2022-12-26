@@ -7,7 +7,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::download_unpack_and_all_that_stuff;
-use crate::executor::Executor;
+use crate::executor::{AppInput, Executor};
 use crate::target::Target;
 
 use super::target;
@@ -40,22 +40,22 @@ struct Root2 {
 pub struct Node {}
 
 impl Executor for Node {
-    fn prep(&self, target: Target) -> Pin<Box<dyn Future<Output=()>>> {
+    fn prep(&self, input: AppInput) -> Pin<Box<dyn Future<Output=()>>> {
         Box::pin(async move {
-            let node_url = get_node_url(&target).await;
+            let node_url = get_node_url(&input.target).await;
             println!("Node download url: {}", node_url);
             download_unpack_and_all_that_stuff(&node_url, ".cache/node").await;
         })
     }
 
-    fn get_bin(&self, target: Target, v: String) -> &str {
-        match &target.os {
-            target::Os::Windows => match v.as_str() {
+    fn get_bin(&self, input: AppInput) -> &str {
+        match &input.target.os {
+            target::Os::Windows => match input.cmd.as_str() {
                 "node" => "node.exe",
                 "npm" => "npm.cmd",
                 _ => "npx.cmd",
             },
-            _ => match v.as_str() {
+            _ => match input.cmd.as_str() {
                 "node" => "bin/node",
                 "npm" => "bin/npm",
                 _ => "bin/npx"
@@ -67,7 +67,7 @@ impl Executor for Node {
         "node"
     }
 
-    fn before_exec(&self, _input: (Target, String), _command: &mut Command) -> Pin<Box<dyn Future<Output=Option<String>>>> {
+    fn before_exec(&self, _input: AppInput, _command: &mut Command) -> Pin<Box<dyn Future<Output=Option<String>>>> {
         Box::pin(async { None })
     }
 }

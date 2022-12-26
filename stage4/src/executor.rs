@@ -14,21 +14,26 @@ pub struct AppPath {
     pub bin: PathBuf,
 }
 
+#[derive(Clone)]
+pub struct AppInput {
+    pub target: Target,
+    pub cmd: String,
+}
+
 pub trait Executor {
-    fn prep(&self, target: Target) -> Pin<Box<dyn Future<Output=()>>>;
-    fn get_bin(&self, target: Target, v: String) -> &str;
+    fn prep(&self, input: AppInput) -> Pin<Box<dyn Future<Output=()>>>;
+    fn get_bin(&self, input: AppInput) -> &str;
     fn get_path(&self) -> &str;
-    fn before_exec<'a>(&'a self, input: (Target, String), command: &'a mut Command) -> Pin<Box<dyn Future<Output=Option<String>> + 'a>>;
+    fn before_exec<'a>(&'a self, input: AppInput, command: &'a mut Command) -> Pin<Box<dyn Future<Output=Option<String>> + 'a>>;
 }
 
-pub async fn prep(executor: &dyn Executor, input: (Target, String)) -> Result<AppPath, String> {
-    let (target, v) = input;
-    let bin = executor.get_bin(target, v);
+pub async fn prep(executor: &dyn Executor, input: AppInput) -> Result<AppPath, String> {
+    let bin = executor.get_bin(input.clone());
     let path = executor.get_path();
-    prep_bin(bin, path, || executor.prep(target)).await
+    prep_bin(bin, path, || executor.prep(input.clone())).await
 }
 
-pub async fn try_execute(executor: &dyn Executor, input: (Target, String)) -> Result<(), String> {
+pub async fn try_execute(executor: &dyn Executor, input: AppInput) -> Result<(), String> {
     let app_path = prep(executor, input.clone()).await?.clone();
     println!("path is {:?}", app_path);
     if app_path.bin.exists() {
@@ -76,7 +81,7 @@ async fn prep_bin(bin: &str, path: &str, prep: impl Fn() -> Pin<Box<dyn Future<O
     get_app_path(bin, path)
 }
 
-async fn try_run(executor: &dyn Executor, input: (Target, String), app_path: AppPath) -> Result<bool, String> {
+async fn try_run(executor: &dyn Executor, input: AppInput, app_path: AppPath) -> Result<bool, String> {
     let bin_path = app_path.bin.to_str().unwrap_or("");
     println!("Executing: {:?}", bin_path);
     let path_string = &env::var("PATH").unwrap_or("".to_string());

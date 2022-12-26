@@ -4,6 +4,7 @@ use std::pin::Pin;
 use std::process::Command;
 
 use crate::{download_unpack_and_all_that_stuff, Executor, Java, prep};
+use crate::executor::AppInput;
 use crate::target::Target;
 
 use super::target;
@@ -11,16 +12,17 @@ use super::target;
 pub struct Gradle {}
 
 impl Executor for Gradle {
-    fn prep(&self, target: Target) -> Pin<Box<dyn Future<Output=()>>> {
+    fn prep(&self, input: AppInput) -> Pin<Box<dyn Future<Output=()>>> {
         Box::pin(async move {
-            let gradle_url = get_gradle_url(&target).await;
+            prep(&Java {}, input.clone()).await.expect("Unable to install Java");
+            let gradle_url = get_gradle_url(&input.target).await;
             println!("Gradle download url: {}", gradle_url);
             download_unpack_and_all_that_stuff(&gradle_url, ".cache/gradle").await;
         })
     }
 
-    fn get_bin(&self, target: Target, _: String) -> &str {
-        match &target.os {
+    fn get_bin(&self, input: AppInput) -> &str {
+        match &input.target.os {
             target::Os::Windows => "bin/gradle.exe",
             _ => "bin/gradle"
         }
@@ -30,7 +32,7 @@ impl Executor for Gradle {
         "gradle"
     }
 
-    fn before_exec<'a>(&'a self, input: (Target, String), command: &'a mut Command) -> Pin<Box<dyn Future<Output=Option<String>> + 'a>> {
+    fn before_exec<'a>(&'a self, input: AppInput, command: &'a mut Command) -> Pin<Box<dyn Future<Output=Option<String>> + 'a>> {
         Box::pin(async move {
             let app_path = prep(&Java {}, input.clone()).await.expect("Unable to install Java");
             println!("java path is {:?}", app_path);

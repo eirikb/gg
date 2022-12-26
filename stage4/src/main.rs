@@ -2,7 +2,7 @@ use std::{env, fs};
 
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
 
-use crate::executor::{Executor, prep, try_execute};
+use crate::executor::{AppInput, Executor, prep, try_execute};
 use crate::gradle::Gradle;
 use crate::java::Java;
 use crate::node::Node;
@@ -26,7 +26,7 @@ async fn main() {
     async {
         match args.get(1) {
             Some(v) => {
-                let input = (target, v.to_string());
+                let input = AppInput { target, cmd: v.to_string() };
                 if v == "node" || v == "npm" || v == "npx" {
                     try_execute(&Node {}, input).await.expect("Node: Oh no");
                 } else if v == "gradle" {

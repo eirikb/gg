@@ -6,6 +6,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::{download_unpack_and_all_that_stuff, Executor};
+use crate::executor::AppInput;
 use crate::target::{Arch, Os, Target, Variant};
 
 type Root = Vec<Root2>;
@@ -44,16 +45,16 @@ struct Root2 {
 pub struct Java {}
 
 impl Executor for Java {
-    fn prep(&self, target: Target) -> Pin<Box<dyn Future<Output=()>>> {
+    fn prep(&self, input: AppInput) -> Pin<Box<dyn Future<Output=()>>> {
         Box::pin(async move {
-            let java_url = get_java_download_url(&target).await;
+            let java_url = get_java_download_url(&input.target).await;
             println!("Java download url: {}", java_url);
             download_unpack_and_all_that_stuff(&java_url, ".cache/java").await;
         })
     }
 
-    fn get_bin(&self, target: Target, _: String) -> &str {
-        match &target.os {
+    fn get_bin(&self, input: AppInput) -> &str {
+        match &input.target.os {
             Os::Windows => "bin/java.exe",
             _ => "bin/java"
         }
@@ -63,7 +64,7 @@ impl Executor for Java {
         "java"
     }
 
-    fn before_exec(&self, _input: (Target, String), _command: &mut Command) -> Pin<Box<dyn Future<Output=Option<String>>>> {
+    fn before_exec(&self, _: AppInput, _command: &mut Command) -> Pin<Box<dyn Future<Output=Option<String>>>> {
         Box::pin(async { None })
     }
 }
