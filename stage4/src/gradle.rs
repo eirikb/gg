@@ -3,21 +3,22 @@ use std::future::Future;
 use std::pin::Pin;
 use std::process::Command;
 
-use crate::{download_unpack_and_all_that_stuff, Executor, Java, prep};
-use crate::executor::AppInput;
-use crate::target::Target;
+use crate::{Executor, Java};
+use crate::executor::{AppInput, Download, prep};
 
 use super::target;
 
 pub struct Gradle {}
 
 impl Executor for Gradle {
-    fn prep(&self, input: AppInput) -> Pin<Box<dyn Future<Output=()>>> {
+    fn get_download_urls(&self, _input: AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>>>> {
         Box::pin(async move {
-            prep(&Java {}, input.clone()).await.expect("Unable to install Java");
-            let gradle_url = get_gradle_url(&input.target).await;
-            println!("Gradle download url: {}", gradle_url);
-            download_unpack_and_all_that_stuff(&gradle_url, ".cache/gradle").await;
+            vec![
+                Download {
+                    download_url: "https://services.gradle.org/distributions/gradle-6.9.3-bin.zip".to_string(),
+                    version: "".to_string(),
+                    lts: false,
+                }]
         })
     }
 
@@ -28,7 +29,7 @@ impl Executor for Gradle {
         }
     }
 
-    fn get_path(&self) -> &str {
+    fn get_name(&self) -> &str {
         "gradle"
     }
 
@@ -46,6 +47,3 @@ impl Executor for Gradle {
     }
 }
 
-async fn get_gradle_url(_target: &Target) -> String {
-    return String::from("https://services.gradle.org/distributions/gradle-6.9.3-bin.zip");
-}

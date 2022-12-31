@@ -1,7 +1,7 @@
 #[derive(PartialEq)]
 #[derive(Debug)]
 #[derive(Copy, Clone)]
-pub enum Arch { X86_64, Armv7 }
+pub enum Arch { X86_64, Armv7, Arm64 }
 
 #[derive(PartialEq)]
 #[derive(Debug)]
@@ -26,6 +26,7 @@ pub fn parse_target(input: &str) -> Target {
     return Target {
         arch: match parts[0] {
             x if x.contains("x86_64") => Arch::X86_64,
+            x if x.contains("arm64") => Arch::Arm64,
             _ => Arch::Armv7
         },
         os: match input.to_lowercase() {

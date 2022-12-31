@@ -3,7 +3,7 @@ use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::process::Command;
-
+use crate::download_unpack_and_all_that_stuff;
 use crate::target::Target;
 
 #[derive(PartialEq)]
@@ -20,17 +20,42 @@ pub struct AppInput {
     pub cmd: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct Download {
+    pub version: String,
+    pub lts: bool,
+    pub download_url: String,
+}
+
 pub trait Executor {
-    fn prep(&self, input: AppInput) -> Pin<Box<dyn Future<Output=()>>>;
+    fn get_download_urls(&self, input: AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>>>>;
     fn get_bin(&self, input: AppInput) -> &str;
-    fn get_path(&self) -> &str;
-    fn before_exec<'a>(&'a self, input: AppInput, command: &'a mut Command) -> Pin<Box<dyn Future<Output=Option<String>> + 'a>>;
+    fn get_name(&self) -> &str;
+    fn before_exec<'a>(&'a self, _input: AppInput, _command: &'a mut Command) -> Pin<Box<dyn Future<Output=Option<String>> + 'a>> {
+        Box::pin(async move { None })
+    }
 }
 
 pub async fn prep(executor: &dyn Executor, input: AppInput) -> Result<AppPath, String> {
     let bin = executor.get_bin(input.clone());
-    let path = executor.get_path();
-    prep_bin(bin, path, || executor.prep(input.clone())).await
+    let path = executor.get_name();
+    println!("Find {bin} in {path}");
+    let app_path: Result<AppPath, String> = get_app_path(bin, path);
+
+    match app_path {
+        Ok(app_path_ok) if app_path_ok.bin.exists() => return Ok(app_path_ok),
+        _ => {}
+    }
+
+    println!("prep it!");
+    let urls = executor.get_download_urls(input.clone()).await;
+    let url_string = urls[0].clone().download_url;
+    dbg!(url_string.as_str());
+    let cache_path = format!(".cache/{path}");
+    download_unpack_and_all_that_stuff(url_string.as_str(), cache_path.as_str()).await;
+    println!("prep done yo!");
+
+    get_app_path(bin, path)
 }
 
 pub async fn try_execute(executor: &dyn Executor, input: AppInput) -> Result<(), String> {
@@ -68,18 +93,18 @@ fn get_app_path(bin: &str, path: &str) -> Result<AppPath, String> {
     Ok(AppPath { app: app_path, bin: bin_path })
 }
 
-async fn prep_bin(bin: &str, path: &str, prep: impl Fn() -> Pin<Box<dyn Future<Output=()>>>) -> Result<AppPath, String> {
-    println!("Find {bin} in {path}");
-    let app_path = get_app_path(bin, path);
-
-    println!("and path is {:?}", app_path);
-    if !(app_path.is_ok() && app_path.unwrap().bin.exists()) {
-        println!("prep it!");
-        prep().await;
-        println!("prep done yo!");
-    }
-    get_app_path(bin, path)
-}
+// async fn prep_bin(bin: &str, path: &str, prep: impl Fn() -> Pin<Box<dyn Future<Output=()>>>) -> Result<AppPath, String> {
+//     println!("Find {bin} in {path}");
+//     let app_path = get_app_path(bin, path);
+//
+//     println!("and path is {:?}", app_path);
+//     if !(app_path.is_ok() && app_path.unwrap().bin.exists()) {
+//         println!("prep it!");
+//         prep().await;
+//         println!("prep done yo!");
+//     }
+//     get_app_path(bin, path)
+// }
 
 async fn try_run(executor: &dyn Executor, input: AppInput, app_path: AppPath) -> Result<bool, String> {
     let bin_path = app_path.bin.to_str().unwrap_or("");
