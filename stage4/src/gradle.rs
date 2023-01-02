@@ -3,6 +3,7 @@ use std::env;
 use std::future::Future;
 use std::pin::Pin;
 use std::process::Command;
+
 use scraper::{Html, Selector};
 use semver::VersionReq;
 
@@ -53,10 +54,10 @@ impl Executor for Gradle {
         Box::pin(async move {
             let app_path = prep(&Java { version_req_map: self.version_req_map.clone() }, input).await.expect("Unable to install Java");
             println!("java path is {:?}", app_path);
-            command.env("JAVA_HOME", app_path.app);
+            command.env("JAVA_HOME", app_path.app.clone());
             let path_string = &env::var("PATH").unwrap_or("".to_string());
-            let bin_path = app_path.bin.to_str().unwrap_or("");
-            let path = format!("{bin_path}:{path_string}");
+            let parent_bin_path = app_path.parent_bin_path();
+            let path = format!("{parent_bin_path}:{path_string}");
             println!("PATH: {path}");
             Some(path)
         })

@@ -1,6 +1,6 @@
 use std::env;
 use std::future::Future;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::process::Command;
 use semver::{Version, VersionReq};
@@ -13,6 +13,12 @@ use crate::target::Target;
 pub struct AppPath {
     pub app: PathBuf,
     pub bin: PathBuf,
+}
+
+impl AppPath {
+    pub(crate) fn parent_bin_path(&self) -> String {
+        self.bin.parent().unwrap_or(Path::new("/")).to_str().unwrap_or("").to_string()
+    }
 }
 
 pub struct AppInput {
@@ -99,7 +105,8 @@ async fn try_run(executor: &dyn Executor, input: &AppInput, app_path: AppPath) -
     let bin_path = app_path.bin.to_str().unwrap_or("");
     println!("Executing: {:?}", bin_path);
     let path_string = &env::var("PATH").unwrap_or("".to_string());
-    let path = format!("{bin_path}:{path_string}");
+    let parent_bin_path = app_path.parent_bin_path();
+    let path = format!("{parent_bin_path}:{path_string}");
     println!("PATH: {path}");
     let mut command = Command::new(&bin_path);
     let more_path = executor.before_exec(input, &mut command).await;
@@ -109,7 +116,7 @@ async fn try_run(executor: &dyn Executor, input: &AppInput, app_path: AppPath) -
             Some(p) => format!("{p}:{path}")
         })
         .args(env::args().skip(2))
-        .spawn().map_err(|_| "What")?.wait().map_err(|_| "eh")?.success();
+        .spawn().map_err(|e| e.to_string())?.wait().map_err(|_| "eh")?.success();
     if !res {
         println!("Unable to execute {bin_path}");
     }
