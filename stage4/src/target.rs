@@ -18,7 +18,7 @@ pub enum Variant { Musl, Gnu, Msvc, None }
 pub struct Target {
     pub arch: Arch,
     pub os: Os,
-    pub variant: Variant,
+    pub variant: Variant
 }
 
 pub fn parse_target(input: &str) -> Target {

@@ -3,6 +3,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use scraper::{Html, Selector};
+use semver::VersionReq;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -36,21 +37,28 @@ struct Root2 {
     pub security: bool,
 }
 
-pub struct Node {}
+pub struct Node {
+    pub version_req_map: HashMap<String, VersionReq>,
+    pub cmd: String,
+}
 
 impl Executor for Node {
-    fn get_download_urls(&self, input: AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>>>> {
+    fn get_version_req(&self) -> &VersionReq {
+        &self.version_req_map["node"]
+    }
+
+    fn get_download_urls<'a>(&self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {
         Box::pin(async move { get_node_urls(&input.target).await })
     }
 
-    fn get_bin(&self, input: AppInput) -> &str {
+    fn get_bin(&self, input: &AppInput) -> &str {
         match &input.target.os {
-            target::Os::Windows => match input.cmd.as_str() {
+            target::Os::Windows => match self.cmd.as_str() {
                 "node" => "node.exe",
                 "npm" => "npm.cmd",
                 _ => "npx.cmd",
             },
-            _ => match input.cmd.as_str() {
+            _ => match self.cmd.as_str() {
                 "node" => "bin/node",
                 "npm" => "bin/npm",
                 _ => "bin/npx"

@@ -1,17 +1,25 @@
+use std::collections::HashMap;
 use std::env;
 use std::future::Future;
 use std::pin::Pin;
 use std::process::Command;
+use semver::VersionReq;
 
 use crate::{Executor, Java};
 use crate::executor::{AppInput, Download, prep};
 
 use super::target;
 
-pub struct Gradle {}
+pub struct Gradle {
+    pub version_req_map: HashMap<String, VersionReq>,
+}
 
 impl Executor for Gradle {
-    fn get_download_urls(&self, _input: AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>>>> {
+    fn get_version_req(&self) -> &VersionReq {
+        &self.version_req_map["gradle"]
+    }
+
+    fn get_download_urls(&self, _input: &AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>>>> {
         Box::pin(async move {
             vec![
                 Download {
@@ -22,7 +30,7 @@ impl Executor for Gradle {
         })
     }
 
-    fn get_bin(&self, input: AppInput) -> &str {
+    fn get_bin(&self, input: &AppInput) -> &str {
         match &input.target.os {
             target::Os::Windows => "bin/gradle.exe",
             _ => "bin/gradle"
@@ -33,9 +41,9 @@ impl Executor for Gradle {
         "gradle"
     }
 
-    fn before_exec<'a>(&'a self, input: AppInput, command: &'a mut Command) -> Pin<Box<dyn Future<Output=Option<String>> + 'a>> {
+    fn before_exec<'a>(&'a self, input: &'a AppInput, command: &'a mut Command) -> Pin<Box<dyn Future<Output=Option<String>> + 'a>> {
         Box::pin(async move {
-            let app_path = prep(&Java {}, input.clone()).await.expect("Unable to install Java");
+            let app_path = prep(&Java { version_req_map: self.version_req_map.clone() }, input).await.expect("Unable to install Java");
             println!("java path is {:?}", app_path);
             command.env("JAVA_HOME", app_path.app);
             let path_string = &env::var("PATH").unwrap_or("".to_string());

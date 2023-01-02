@@ -1,4 +1,7 @@
 use std::{env, fs};
+use std::collections::HashMap;
+use semver::VersionReq;
+use regex::Regex;
 
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
 
@@ -24,16 +27,27 @@ async fn main() {
     dbg!(&target);
 
     match args.get(1) {
-        Some(cmd) => {
-            let executor: Option<&dyn Executor> = match cmd.as_str() {
-                "node" | "npm" | "npx" => Some(&Node {}),
-                "gradle" => Some(&Gradle {}),
-                "java" => Some(&Java {}),
+        Some(cmds) => {
+            let version_reqs_iter = cmds.split(":").map(|cmd| {
+                let parts: Vec<_> = Regex::new(r"[@]").unwrap().split(cmd).into_iter().collect();
+                let cmd = parts[0].to_string();
+                let version_req = VersionReq::parse(parts.get(1).unwrap_or(&"*")).unwrap_or(VersionReq::default());
+                (cmd, version_req)
+            });
+            let mut version_reqs: Vec<(String, VersionReq)> = version_reqs_iter.clone().collect();
+            dbg!(version_reqs.clone());
+            let (cmd, _) = version_reqs.remove(0);
+            let version_req_map: HashMap<String, VersionReq> = version_reqs_iter.into_iter().collect();
+
+            let executor: Option<Box<dyn Executor>> = match cmd.as_str() {
+                "node" | "npm" | "npx" => Some(Box::new(Node { cmd, version_req_map })),
+                "gradle" => Some(Box::new(Gradle { version_req_map })),
+                "java" => Some(Box::new(Java { version_req_map })),
                 _ => None
             };
-            match executor {
-                Some(executor) => try_execute(executor, AppInput { target, cmd: cmd.to_string() }).await.unwrap(),
-                None => println!("No such command {cmd}")
+
+            if executor.is_some() {
+                try_execute(&*executor.unwrap(), &AppInput { target }).await.unwrap();
             }
         }
         None => {

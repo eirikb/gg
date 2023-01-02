@@ -1,5 +1,7 @@
+use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
+use semver::VersionReq;
 
 use serde::Deserialize;
 use serde::Serialize;
@@ -41,14 +43,20 @@ struct Root2 {
     pub url: String,
 }
 
-pub struct Java {}
+pub struct Java {
+    pub version_req_map: HashMap<String, VersionReq>,
+}
 
 impl Executor for Java {
-    fn get_download_urls(&self, input: AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>>>> {
+    fn get_version_req(&self) -> &VersionReq {
+        &self.version_req_map["java"]
+    }
+
+    fn get_download_urls<'a>(&self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {
         Box::pin(async move { get_java_download_urls(&input.target).await })
     }
 
-    fn get_bin(&self, input: AppInput) -> &str {
+    fn get_bin(&self, input: &AppInput) -> &str {
         match &input.target.os {
             Os::Windows => "bin/java.exe",
             _ => "bin/java"
