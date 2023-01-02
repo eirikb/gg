@@ -110,6 +110,7 @@ async fn unofficial_downloads(target: &Target) -> Vec<Download> {
         (Os::Windows, _, _) => "win-x64-zip",
         (Os::Linux, Arch::Armv7, Variant::Musl) => "linux-armv7l-musl",
         (Os::Linux, Arch::Arm64, Variant::Musl) => "linux-arm64-musl",
+        (Os::Linux, Arch::X86_64, Variant::Musl) => "linux-x64-musl",
         (Os::Linux, Arch::Armv7, _) => "linux-armv7l",
         (Os::Linux, Arch::Arm64, _) => "linux-arm64",
         _ => "linux-x64",

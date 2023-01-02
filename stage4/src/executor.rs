@@ -55,6 +55,10 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
 
     println!("prep it!");
     let urls = executor.get_download_urls(input).await;
+    println!("Got {} urls", &urls.len());
+    if urls.is_empty() {
+        panic!("Did not find any download URL!");
+    }
     let url = urls.iter().find(|url| executor.get_version_req().unwrap_or(&VersionReq::default()).matches(&Version::parse(url.version.as_str()).unwrap_or(Version::new(0, 0, 0)))).unwrap_or(&urls[0]);
 
     let url_string = url.clone().download_url;
