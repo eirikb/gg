@@ -379,6 +379,7 @@ jobs:
           sudo apt-get install dos2unix
           mv stage1 _stage1
           mv stage2 _stage2
+          mv stage3 _stage3
           rm -rf .cache/gg
           mkdir -p .cache/gg
           rm -rf stage1
@@ -422,12 +423,12 @@ jobs:
         run: |
           file gg.cmd
           head gg.cmd
-          sh gg.cmd node -e 'console.log(1)'
+          sh gg.cmd node@14 -e 'console.log(1)'
           echo "Nice, let's try again"
-          sh gg.cmd node -e 'console.log(1)'
-          sh gg.cmd node -v
-          sh gg.cmd npm -v
-          sh gg.cmd npx -v
+          sh gg.cmd node@14 -e 'console.log(1)'
+          sh gg.cmd node@14 -v
+          sh gg.cmd npm:node@14 -v
+          sh gg.cmd npx:node@14 -v
           sh gg.cmd java -version
           sh gg.cmd java -version
 
@@ -447,11 +448,11 @@ jobs:
       - name: Run!
         shell: cmd
         run: |
-          .\gg.cmd node -e 'console.log(1)'
-          .\gg.cmd node -e 'console.log(1)'
-          .\gg.cmd node -v
-          .\gg.cmd npm -v
-          .\gg.cmd npx -v
+          .\gg.cmd node@14 -e 'console.log(1)'
+          .\gg.cmd node@14 -e 'console.log(1)'
+          .\gg.cmd node@14 -v
+          .\gg.cmd npm:node@14 -v
+          .\gg.cmd npx:node@14 -v
           .\gg.cmd java -version
           .\gg.cmd java -version
 
@@ -475,12 +476,12 @@ jobs:
           if [ "${{ matrix.container }}" == "alpine" ]; then
             apk add libstdc++
           fi
-          sh gg.cmd node -e 'console.log(1)'
+          sh gg.cmd node@14 -e 'console.log(1)'
           echo "Nice, let's try again"
-          sh gg.cmd node -e 'console.log(1)'
-          sh gg.cmd node -v
-          sh gg.cmd npm -v
-          sh gg.cmd npx -v
+          sh gg.cmd node@14 -e 'console.log(1)'
+          sh gg.cmd node@14 -v
+          sh gg.cmd npm:node@14 -v
+          sh gg.cmd npx:node@14 -v
           sh gg.cmd java -version
           sh gg.cmd java -version
 
@@ -513,12 +514,12 @@ jobs:
           run: |
             uname -a
             cd /ok
-            sh gg.cmd node -e 'console.log(1)'
+            sh gg.cmd node@14 -e 'console.log(1)'
             echo "Nice, let's try again"
-            sh gg.cmd node -e 'console.log(1)'
-            sh gg.cmd node -v
-            sh gg.cmd npm -v
-            sh gg.cmd npx -v
+            sh gg.cmd node@14 -e 'console.log(1)'
+            sh gg.cmd node@14 -v
+            sh gg.cmd npm:node@14 -v
+            sh gg.cmd npx:node@14 -v
             sh gg.cmd java -version
             sh gg.cmd java -version
 

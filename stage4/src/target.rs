@@ -1,20 +1,24 @@
 #[derive(PartialEq)]
 #[derive(Debug)]
-pub enum Arch { X86_64, Armv7 }
+#[derive(Copy, Clone)]
+pub enum Arch { X86_64, Armv7, Arm64 }
 
 #[derive(PartialEq)]
 #[derive(Debug)]
+#[derive(Copy, Clone)]
 pub enum Os { Windows, Linux, Mac }
 
 #[derive(PartialEq)]
 #[derive(Debug)]
+#[derive(Copy, Clone)]
 pub enum Variant { Musl, Gnu, Msvc, None }
 
 #[derive(Debug)]
+#[derive(Copy, Clone)]
 pub struct Target {
     pub arch: Arch,
     pub os: Os,
-    pub variant: Variant,
+    pub variant: Variant
 }
 
 pub fn parse_target(input: &str) -> Target {
@@ -22,6 +26,7 @@ pub fn parse_target(input: &str) -> Target {
     return Target {
         arch: match parts[0] {
             x if x.contains("x86_64") => Arch::X86_64,
+            x if x.contains("arm64") => Arch::Arm64,
             _ => Arch::Armv7
         },
         os: match input.to_lowercase() {

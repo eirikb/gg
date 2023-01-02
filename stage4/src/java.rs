@@ -1,13 +1,20 @@
+use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
+use semver::VersionReq;
+
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::target::{Arch, Os, Variant, Target};
+use crate::Executor;
+use crate::executor::{AppInput, Download};
+use crate::target::{Arch, Os, Target, Variant};
 
-pub type Root = Vec<Root2>;
+type Root = Vec<Root2>;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Root2 {
+struct Root2 {
     pub abi: String,
     pub arch: String,
     #[serde(rename = "bundle_type")]
@@ -36,11 +43,35 @@ pub struct Root2 {
     pub url: String,
 }
 
+pub struct Java {
+    pub version_req_map: HashMap<String, VersionReq>,
+}
 
-pub async fn get_java_download_url(target: &Target) -> String {
+impl Executor for Java {
+    fn get_version_req(&self) -> Option<&VersionReq> {
+        self.version_req_map.get("java")
+    }
+
+    fn get_download_urls<'a>(&self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {
+        Box::pin(async move { get_java_download_urls(&input.target).await })
+    }
+
+    fn get_bin(&self, input: &AppInput) -> &str {
+        match &input.target.os {
+            Os::Windows => "bin/java.exe",
+            _ => "bin/java"
+        }
+    }
+
+    fn get_name(&self) -> &str {
+        "java"
+    }
+}
+
+async fn get_java_download_urls(target: &Target) -> Vec<Download> {
     let json = reqwest::get("https://www.azul.com/wp-admin/admin-ajax.php?action=bundles&endpoint=community&use_stage=false&include_fields=java_version,release_status,abi,arch,bundle_type,cpu_gen,ext,features,hw_bitness,javafx,latest,os,support_term").await.unwrap().text().await.unwrap();
     let root: Root = serde_json::from_str(json.as_str()).expect("JSON was not well-formatted");
-    let node = root.iter().find(|node| {
+    root.iter().filter(|node| {
         let node_os = match node.os.as_str() {
             "windows" => Os::Windows,
             x if x.contains("linux") => Os::Linux,
@@ -61,6 +92,12 @@ pub async fn get_java_download_url(target: &Target) -> String {
         } else {
             false
         }
-    });
-    return String::from(node.unwrap().clone().url);
+    }).map(|node| {
+        let n = node.clone();
+        Download {
+            download_url: n.url,
+            lts: true,
+            version: n.java_version.into_iter().map(|i| i.to_string()).collect::<Vec<String>>().join("."),
+        }
+    }).collect()
 }
