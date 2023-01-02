@@ -7,6 +7,8 @@ if (Test-Path .cache\gg\stage4) {
 cd .cache\gg
 Get-Item stage3* | % {
     $name = $_.Name + ".exe"
+    Write-Host $_.Name
+    Write-Host "Hello " + $_.Name
     if (!$_.Name.EndsWith(".exe")) {
         Write-Host "re to the name"
         cp $_.Name $name
