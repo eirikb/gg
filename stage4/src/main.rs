@@ -30,7 +30,7 @@ async fn main() {
     match args.get(1) {
         Some(cmds) => {
             let version_reqs_iter = cmds.split(":").map(|cmd| {
-                let parts: Vec<_> = Regex::new(r"[@]").unwrap().split(cmd).into_iter().collect();
+                let parts: Vec<_> = Regex::new(r"@").unwrap().split(cmd).into_iter().collect();
                 let cmd = parts[0].to_string();
                 let version_req = VersionReq::parse(parts.get(1).unwrap_or(&"*")).unwrap_or(VersionReq::default());
                 (cmd, version_req)

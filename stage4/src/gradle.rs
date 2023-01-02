@@ -3,6 +3,7 @@ use std::env;
 use std::future::Future;
 use std::pin::Pin;
 use std::process::Command;
+use scraper::{Html, Selector};
 use semver::VersionReq;
 
 use crate::{Executor, Java};
@@ -21,12 +22,19 @@ impl Executor for Gradle {
 
     fn get_download_urls(&self, _input: &AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>>>> {
         Box::pin(async move {
-            vec![
+            let body = reqwest::get("https://gradle.org/releases").await
+                .expect("Unable to connect to services.gradle.org").text().await
+                .expect("Unable to download gradle list of versions");
+
+            let document = Html::parse_document(body.as_str());
+            document.select(&Selector::parse("a[name]").unwrap()).map(|link| {
+                let version = link.value().attr("name").unwrap_or("").to_string();
                 Download {
-                    download_url: "https://services.gradle.org/distributions/gradle-6.9.3-bin.zip".to_string(),
-                    version: "".to_string(),
+                    download_url: format!("https://services.gradle.org/distributions/gradle-{version}-bin.zip"),
                     lts: false,
-                }]
+                    version,
+                }
+            }).collect()
         })
     }
 

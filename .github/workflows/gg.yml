@@ -423,9 +423,9 @@ jobs:
         run: |
           file gg.cmd
           head gg.cmd
-          sh gg.cmd node -e 'console.log(1)'
+          sh gg.cmd node@14 -e 'console.log(1)'
           echo "Nice, let's try again"
-          sh gg.cmd node -e 'console.log(1)'
+          sh gg.cmd node@14 -e 'console.log(1)'
           sh gg.cmd node@14 -v
           sh gg.cmd npm:node@14 -v
           sh gg.cmd npx:node@14 -v
@@ -448,8 +448,8 @@ jobs:
       - name: Run!
         shell: cmd
         run: |
-          .\gg.cmd node -e 'console.log(1)'
-          .\gg.cmd node -e 'console.log(1)'
+          .\gg.cmd node@14 -e 'console.log(1)'
+          .\gg.cmd node@14 -e 'console.log(1)'
           .\gg.cmd node@14 -v
           .\gg.cmd npm:node@14 -v
           .\gg.cmd npx:node@14 -v
@@ -476,9 +476,9 @@ jobs:
           if [ "${{ matrix.container }}" == "alpine" ]; then
             apk add libstdc++
           fi
-          sh gg.cmd node -e 'console.log(1)'
+          sh gg.cmd node@14 -e 'console.log(1)'
           echo "Nice, let's try again"
-          sh gg.cmd node -e 'console.log(1)'
+          sh gg.cmd node@14 -e 'console.log(1)'
           sh gg.cmd node@14 -v
           sh gg.cmd npm:node@14 -v
           sh gg.cmd npx:node@14 -v
@@ -514,9 +514,9 @@ jobs:
           run: |
             uname -a
             cd /ok
-            sh gg.cmd node -e 'console.log(1)'
+            sh gg.cmd node@14 -e 'console.log(1)'
             echo "Nice, let's try again"
-            sh gg.cmd node -e 'console.log(1)'
+            sh gg.cmd node@14 -e 'console.log(1)'
             sh gg.cmd node@14 -v
             sh gg.cmd npm:node@14 -v
             sh gg.cmd npx:node@14 -v
