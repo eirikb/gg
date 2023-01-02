@@ -28,7 +28,10 @@ Get-Item stage3* | % {
 
 cd ../..
 
-if (Test-Path .cache\gg\stage4) {
+ls
+ls .cache
+ls .cache\gg
+if (Test-Path .cache\gg\stage4.exe) {
     Write-Host "Run 2";
     return Start-Process .cache\gg\stage4 $args;
 } else {
