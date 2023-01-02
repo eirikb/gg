@@ -1,9 +1,13 @@
 use std::collections::HashMap;
 use std::env;
+use std::fs::File;
 use std::future::Future;
+use std::io::BufReader;
 use std::pin::Pin;
 use std::process::Command;
 
+use java_properties::read;
+use regex::Regex;
 use scraper::{Html, Selector};
 use semver::VersionReq;
 
@@ -16,13 +20,41 @@ pub struct Gradle {
     pub version_req_map: HashMap<String, Option<VersionReq>>,
 }
 
+trait HelloWorld {
+    fn get_version_from_gradle_url(&self) -> Option<String>;
+}
+
+impl HelloWorld for String {
+    fn get_version_from_gradle_url(&self) -> Option<String> {
+        if let Ok(r) = Regex::new(r"gradle-(.*)-") {
+            let captures: Vec<_> = r.captures_iter(self).collect();
+            if captures.len() > 0 {
+                if let Some(cap) = captures[0].get(1) {
+                    return Some(cap.as_str().to_string());
+                }
+            }
+        }
+        None
+    }
+}
+
 impl Executor for Gradle {
     fn get_version_req(&self) -> Option<VersionReq> {
         if let Some(v) = self.version_req_map.get("gradle") {
-            v.clone()
-        } else {
-            None
+            if let Some(v) = v {
+                return Some(v.clone());
+            }
         }
+        if let Ok(file) = File::open("gradle/wrapper/gradle-wrapper.properties") {
+            if let Ok(map) = read(BufReader::new(file)) {
+                if let Some(distribution_url) = map.get("distributionUrl") {
+                    if let Some(version) = distribution_url.get_version_from_gradle_url() {
+                        return VersionReq::parse(version.as_str()).ok();
+                    }
+                }
+            }
+        }
+        None
     }
 
     fn get_download_urls(&self, _input: &AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>>>> {
@@ -68,3 +100,15 @@ impl Executor for Gradle {
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use crate::gradle::HelloWorld;
+
+    #[test]
+    fn it_works() {
+        let input = "https://services.gradle.org/distributions/gradle-6.8.3-bin.zip";
+        let version = input.to_string().get_version_from_gradle_url();
+        assert_eq!(version.unwrap(), "6.8.3");
+    }
+}
