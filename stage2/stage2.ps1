@@ -1,6 +1,6 @@
 echo "Hello..."
 
-if (Test-Path.cache\gg\stage4) {
+if (Test-Path .cache\gg\stage4) {
     return Start-Process .cache\gg\stage4 $args;
 }
 
