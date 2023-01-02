@@ -20,13 +20,13 @@ Get-Item stage3* | % {
         Write-Host "re to the name"
         cp $_.Name $name
         Start-Process -ErrorAction SilentlyContinue $name
-        cd ../..
     } else {
         Write-Host $_.Name
         Start-Process -ErrorAction SilentlyContinue $name
-        cd ../..
     }
 }
+
+cd ../..
 
 if (Test-Path .cache\gg\stage4) {
     Write-Host "Run 2";
