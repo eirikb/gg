@@ -48,8 +48,8 @@ pub struct Java {
 }
 
 impl Executor for Java {
-    fn get_version_req(&self) -> &VersionReq {
-        &self.version_req_map["java"]
+    fn get_version_req(&self) -> Option<&VersionReq> {
+        self.version_req_map.get("java")
     }
 
     fn get_download_urls<'a>(&self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {

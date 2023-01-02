@@ -15,8 +15,8 @@ pub struct Gradle {
 }
 
 impl Executor for Gradle {
-    fn get_version_req(&self) -> &VersionReq {
-        &self.version_req_map["gradle"]
+    fn get_version_req(&self) -> Option<&VersionReq> {
+        self.version_req_map.get("gradle")
     }
 
     fn get_download_urls(&self, _input: &AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>>>> {

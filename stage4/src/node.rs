@@ -43,8 +43,8 @@ pub struct Node {
 }
 
 impl Executor for Node {
-    fn get_version_req(&self) -> &VersionReq {
-        &self.version_req_map["node"]
+    fn get_version_req(&self) -> Option<&VersionReq> {
+        self.version_req_map.get("node")
     }
 
     fn get_download_urls<'a>(&self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {

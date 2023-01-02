@@ -27,7 +27,7 @@ pub struct Download {
 }
 
 pub trait Executor {
-    fn get_version_req(&self) -> &VersionReq;
+    fn get_version_req(&self) -> Option<&VersionReq>;
     fn get_download_urls<'a>(&self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>>;
     fn get_bin(&self, input: &AppInput) -> &str;
     fn get_name(&self) -> &str;
@@ -49,7 +49,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
 
     println!("prep it!");
     let urls = executor.get_download_urls(input).await;
-    let url = urls.iter().find(|url| executor.get_version_req().matches(&Version::parse(url.version.as_str()).unwrap_or(Version::new(0, 0, 0)))).unwrap_or(&urls[0]);
+    let url = urls.iter().find(|url| executor.get_version_req().unwrap_or(&VersionReq::default()).matches(&Version::parse(url.version.as_str()).unwrap_or(Version::new(0, 0, 0)))).unwrap_or(&urls[0]);
 
     let url_string = url.clone().download_url;
     dbg!(url_string.as_str());
