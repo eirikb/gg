@@ -1,6 +1,6 @@
 echo "Hello..."
 
-if (Get-Item .cache\gg\stage4) {
+if (Test-Path.cache\gg\stage4) {
     return Start-Process .cache\gg\stage4 $args;
 }
 
@@ -19,6 +19,8 @@ Get-Item stage3* | % {
     }
 }
 
-if (Get-Item .cache\gg\stage4) {
+if (Test-Path .cache\gg\stage4) {
     return Start-Process .cache\gg\stage4 $args;
+} else {
+    Write-Host "stage4 not found :(";
 }
