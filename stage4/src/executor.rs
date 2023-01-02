@@ -44,9 +44,9 @@ pub trait Executor {
 
 pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, String> {
     let bin = executor.get_bin(input);
-    let path = executor.get_name();
+    let path = executor.get_name().to_string() + executor.get_version_req().unwrap_or(&VersionReq::default()).to_string().as_str();
     println!("Find {bin} in {path}");
-    let app_path: Result<AppPath, String> = get_app_path(bin, path);
+    let app_path: Result<AppPath, String> = get_app_path(bin, path.as_str());
 
     match app_path {
         Ok(app_path_ok) if app_path_ok.bin.exists() => return Ok(app_path_ok),
@@ -63,7 +63,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
     download_unpack_and_all_that_stuff(url_string.as_str(), cache_path.as_str()).await;
     println!("prep done yo!");
 
-    get_app_path(bin, path)
+    get_app_path(bin, path.as_str())
 }
 
 pub async fn try_execute(executor: &dyn Executor, input: &AppInput) -> Result<(), String> {
