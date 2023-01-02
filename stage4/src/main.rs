@@ -32,13 +32,13 @@ async fn main() {
             let version_reqs_iter = cmds.split(":").map(|cmd| {
                 let parts: Vec<_> = Regex::new(r"@").unwrap().split(cmd).into_iter().collect();
                 let cmd = parts[0].to_string();
-                let version_req = VersionReq::parse(parts.get(1).unwrap_or(&"*")).unwrap_or(VersionReq::default());
+                let version_req = VersionReq::parse(parts.get(1).unwrap_or(&"")).ok();
                 (cmd, version_req)
             });
-            let mut version_reqs: Vec<(String, VersionReq)> = version_reqs_iter.clone().collect();
+            let mut version_reqs: Vec<(String, Option<VersionReq>)> = version_reqs_iter.clone().collect();
             dbg!(version_reqs.clone());
             let (cmd, _) = version_reqs.remove(0);
-            let version_req_map: HashMap<String, VersionReq> = version_reqs_iter.into_iter().collect();
+            let version_req_map: HashMap<String, Option<VersionReq>> = version_reqs_iter.into_iter().collect();
 
             let executor: Option<Box<dyn Executor>> = match cmd.as_str() {
                 "node" | "npm" | "npx" => Some(Box::new(Node { cmd, version_req_map })),

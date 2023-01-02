@@ -33,7 +33,7 @@ pub struct Download {
 }
 
 pub trait Executor {
-    fn get_version_req(&self) -> Option<&VersionReq>;
+    fn get_version_req(&self) -> Option<VersionReq>;
     fn get_download_urls<'a>(&self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>>;
     fn get_bin(&self, input: &AppInput) -> &str;
     fn get_name(&self) -> &str;
@@ -44,7 +44,7 @@ pub trait Executor {
 
 pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, String> {
     let bin = executor.get_bin(input);
-    let path = (executor.get_name().to_string() + executor.get_version_req().unwrap_or(&VersionReq::default()).to_string().as_str()).replace("*", "star").replace("^", "hat");
+    let path = (executor.get_name().to_string() + executor.get_version_req().unwrap_or(VersionReq::default()).to_string().as_str()).replace("*", "star").replace("^", "hat");
     println!("Find {bin} in {path}");
     let app_path: Result<AppPath, String> = get_app_path(bin, path.as_str());
 
@@ -59,7 +59,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
     if urls.is_empty() {
         panic!("Did not find any download URL!");
     }
-    let url = urls.iter().find(|url| executor.get_version_req().unwrap_or(&VersionReq::default()).matches(&Version::parse(url.version.as_str()).unwrap_or(Version::new(0, 0, 0)))).unwrap_or(&urls[0]);
+    let url = urls.iter().find(|url| executor.get_version_req().unwrap_or(VersionReq::default()).matches(&Version::parse(url.version.as_str()).unwrap_or(Version::new(0, 0, 0)))).unwrap_or(&urls[0]);
 
     let url_string = url.clone().download_url;
     dbg!(url_string.as_str());

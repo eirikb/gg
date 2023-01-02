@@ -44,12 +44,16 @@ struct Root2 {
 }
 
 pub struct Java {
-    pub version_req_map: HashMap<String, VersionReq>,
+    pub version_req_map: HashMap<String, Option<VersionReq>>,
 }
 
 impl Executor for Java {
-    fn get_version_req(&self) -> Option<&VersionReq> {
-        self.version_req_map.get("java")
+    fn get_version_req(&self) -> Option<VersionReq> {
+        if let Some(v) = self.version_req_map.get("java") {
+            v.clone()
+        } else {
+            None
+        }
     }
 
     fn get_download_urls<'a>(&self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {

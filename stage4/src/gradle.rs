@@ -13,12 +13,16 @@ use crate::executor::{AppInput, Download, prep};
 use super::target;
 
 pub struct Gradle {
-    pub version_req_map: HashMap<String, VersionReq>,
+    pub version_req_map: HashMap<String, Option<VersionReq>>,
 }
 
 impl Executor for Gradle {
-    fn get_version_req(&self) -> Option<&VersionReq> {
-        self.version_req_map.get("gradle")
+    fn get_version_req(&self) -> Option<VersionReq> {
+        if let Some(v) = self.version_req_map.get("gradle") {
+            v.clone()
+        } else {
+            None
+        }
     }
 
     fn get_download_urls(&self, _input: &AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>>>> {
