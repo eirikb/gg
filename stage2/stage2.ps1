@@ -1,5 +1,7 @@
 echo "Hello..."
 
+Write-Host "Args? $args"
+
 if (Test-Path .cache\gg\stage4) {
     Write-Host "Run 1"
     return Start-Process .cache\gg\stage4 $args
