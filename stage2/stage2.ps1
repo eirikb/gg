@@ -1,8 +1,8 @@
 echo "Hello..."
 
 if (Test-Path .cache\gg\stage4) {
-    Write-Host "Run 1";
-    return Start-Process .cache\gg\stage4 $args;
+    Write-Host "Run 1"
+    return Start-Process .cache\gg\stage4 $args
 }
 
 ls
@@ -21,16 +21,8 @@ Get-Item stage3* | % {
         ls
         cp $_.Name $name
         ls
-        Write-Host "start $name"
-        Start-Process -Wait -NoNewWindow -ErrorAction SilentlyContinue $name
-        Write-Host "start 2 $name"
-        Start-Process $name -Wait -NoNewWindow -ErrorAction SilentlyContinue
-        Write-Host "start 3 $name"
-        Start-Process ".\$name" -Wait -NoNewWindow -ErrorAction SilentlyContinue
-    } else {
-        Write-Host $_.Name
-        Start-Process -Wait -NoNewWindow -ErrorAction SilentlyContinue $name
     }
+    Start-Process ".\$name" -Wait -NoNewWindow -ErrorAction SilentlyContinue
 }
 
 cd ../..
@@ -39,8 +31,8 @@ ls
 ls .cache
 ls .cache\gg
 if (Test-Path .cache\gg\stage4.exe) {
-    Write-Host "Run 2";
-    return Start-Process .cache\gg\stage4 $args;
+    Write-Host "Run 2"
+    return Start-Process ".\stage4" -Wait -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
 } else {
-    Write-Host "stage4 not found :(";
+    Write-Host "stage4 not found :("
 }
