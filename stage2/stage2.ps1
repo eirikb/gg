@@ -22,14 +22,14 @@ Get-Item stage3* | % {
         cp $_.Name $name
         ls
         Write-Host "start $name"
-        Start-Process -Wait -NoNewWindow -ErrorAction -SilentlyContinue $name
+        Start-Process -Wait -NoNewWindow -ErrorAction SilentlyContinue $name
         Write-Host "start 2 $name"
-        Start-Process $name -ArgumentList $allArgs -Wait -NoNewWindow
+        Start-Process $name -Wait -NoNewWindow -ErrorAction SilentlyContinue
         Write-Host "start 3 $name"
-        Start-Process ".\$name" -ArgumentList $allArgs -Wait -NoNewWindow
+        Start-Process ".\$name" -Wait -NoNewWindow -ErrorAction SilentlyContinue
     } else {
         Write-Host $_.Name
-        Start-Process -Wait -NoNewWindow -ErrorAction -SilentlyContinue $name
+        Start-Process -Wait -NoNewWindow -ErrorAction SilentlyContinue $name
     }
 }
 
