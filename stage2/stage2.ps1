@@ -18,11 +18,13 @@ Get-Item stage3* | % {
     Test-Path $_.Name
     if (!$_.Name.EndsWith(".exe")) {
         Write-Host "re to the name"
+        ls
         cp $_.Name $name
-        Start-Process -ErrorAction SilentlyContinue $name
+        ls
+        Start-Process -Wait -NoNewWindow -ErrorAction SilentlyContinue $name
     } else {
         Write-Host $_.Name
-        Start-Process -ErrorAction SilentlyContinue $name
+        Start-Process -Wait -NoNewWindow -ErrorAction SilentlyContinue $name
     }
 }
 
