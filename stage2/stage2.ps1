@@ -30,8 +30,15 @@ cd ../..
 ls
 ls .cache
 ls .cache\gg
-if (Test-Path .cache\gg\stage4.exe) {
+if (Test-Path stage4) {
     Write-Host "Run 2"
+    return Start-Process ".\stage4" -Wait -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
+} else {
+    Write-Host "stage4 not found :("
+}
+
+if (Test-Path ".\stage4") {
+    Write-Host "Run 3"
     return Start-Process ".\stage4" -Wait -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
 } else {
     Write-Host "stage4 not found :("
