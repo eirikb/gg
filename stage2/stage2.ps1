@@ -21,10 +21,10 @@ Get-Item stage3* | % {
         ls
         cp $_.Name $name
         ls
-        Start-Process -Wait -NoNewWindow -ErrorAction SilentlyContinue $name
+        Start-Process -Wait -NoNewWindow -ErrorAction -SilentlyContinue $name
     } else {
         Write-Host $_.Name
-        Start-Process -Wait -NoNewWindow -ErrorAction SilentlyContinue $name
+        Start-Process -Wait -NoNewWindow -ErrorAction -SilentlyContinue $name
     }
 }
 
