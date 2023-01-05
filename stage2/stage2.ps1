@@ -25,6 +25,10 @@ Get-Item stage3* | % {
         ls
     }
     Start-Process ".\$name" -Wait -NoNewWindow -ErrorAction SilentlyContinue
+    if ($LastExitCode -eq 0) {
+        Write-Output "It worked! Write system!"
+        $_.Name | Out-File -FilePath system
+    }
 }
 
 cd ../..
