@@ -24,6 +24,8 @@ Get-Item stage3* | % {
     if ($proc.ExitCode -eq 0) {
         Write-Output "It worked! Write system!"
         $_.Name | Out-File -FilePath system
+        ls
+        cat system
     } else {
         Write-Host "Didn't work $($proc.ExitCode)"
         Write-Host "proc is $proc"
@@ -34,6 +36,7 @@ cd ../..
 
 if (Test-Path ".cache\gg\stage4") {
     Write-Host "Run 2"
+    cat .cache\gg\system
     $proc = Start-Process ".\.cache\gg\stage4" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
     Wait-Process -InputObject $proc
     return $proc.ExitCode
