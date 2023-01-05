@@ -7,11 +7,8 @@ if (Test-Path .cache\gg\stage4) {
     return Start-Process .cache\gg\stage4 $args
 }
 
-ls
 Write-Host "cd..."
 cd .cache\gg
-ls
-pwd
 Get-Item stage3* | % {
     pwd
     $name = $_.Name + ".exe"
@@ -20,32 +17,27 @@ Get-Item stage3* | % {
     Test-Path $_.Name
     if (!$_.Name.EndsWith(".exe")) {
         Write-Host "re to the name"
-        ls
         cp $_.Name $name
-        ls
     }
-    Start-Process ".\$name" -Wait -NoNewWindow -ErrorAction SilentlyContinue
-    if ($LastExitCode -eq 0) {
+    $proc = Start-Process ".\$name" -PassThru -NoNewWindow -ErrorAction SilentlyContinue
+    Wait-Process -InputObject $prod
+    if ($proc.ExitCode -eq 0) {
         Write-Output "It worked! Write system!"
         $_.Name | Out-File -FilePath system
+    } else {
+        Write-Host "Didn't work $($proc.ExitCode)"
+        Write-Host "proc is $proc"
     }
 }
 
 cd ../..
 
-ls
-ls .cache
-ls .cache\gg
 if (Test-Path ".cache\gg\stage4") {
     Write-Host "Run 2"
-    return Start-Process ".\.cache\gg\stage4" -Wait -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
+    $proc = Start-Process ".\.cache\gg\stage4" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
+    Wait-Process -InputObject $proc
+    return $proc.ExitCode
 } else {
     Write-Host "stage4 not found :("
 }
 
-if (Test-Path ".\.cache\gg\stage4") {
-    Write-Host "Run 3"
-    return Start-Process ".\.cache\gg\stage4" -Wait -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
-} else {
-    Write-Host "stage4 not found :("
-}
