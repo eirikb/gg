@@ -20,7 +20,7 @@ Get-Item stage3* | % {
         cp $_.Name $name
     }
     $proc = Start-Process ".\$name" -PassThru -NoNewWindow -ErrorAction SilentlyContinue
-    Wait-Process -InputObject $prod
+    Wait-Process -InputObject $proc
     if ($proc.ExitCode -eq 0) {
         Write-Output "It worked! Write system!"
         $_.Name | Out-File -FilePath system
