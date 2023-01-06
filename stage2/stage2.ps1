@@ -34,6 +34,9 @@ cd ../..
 if (Test-Path ".cache\gg\stage4") {
     Write-Host "Run 2"
     cat .cache\gg\system
+    echo location is "$(Get-Location)"
+    echo "location is $(Get-Location)"
+    echo "args is $args"
     $proc = Start-Process ".\.cache\gg\stage4" -WorkingDirectory "$(Get-Location)" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
     Wait-Process -InputObject $proc
     return $proc.ExitCode
