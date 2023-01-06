@@ -23,9 +23,12 @@ Get-Item stage3* | % {
     Wait-Process -InputObject $proc
     if ($proc.ExitCode -eq 0) {
         Write-Output "It worked! Write system!"
-        $_.Name | Out-File -FilePath system
+        $_.Name > system
+        echo ls
         ls
+        echo cat
         cat system
+        echo done
     } else {
         Write-Host "Didn't work $($proc.ExitCode)"
         Write-Host "proc is $proc"
