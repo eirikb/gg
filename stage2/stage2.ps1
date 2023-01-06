@@ -22,13 +22,7 @@ Get-Item stage3* | % {
     $proc = Start-Process ".\$name" -PassThru -NoNewWindow -ErrorAction SilentlyContinue
     Wait-Process -InputObject $proc
     if ($proc.ExitCode -eq 0) {
-        Write-Output "It worked! Write system!"
         $_.Name > system
-        echo ls
-        ls
-        echo cat
-        cat system
-        echo done
     } else {
         Write-Host "Didn't work $($proc.ExitCode)"
         Write-Host "proc is $proc"
@@ -40,7 +34,7 @@ cd ../..
 if (Test-Path ".cache\gg\stage4") {
     Write-Host "Run 2"
     cat .cache\gg\system
-    $proc = Start-Process ".\.cache\gg\stage4" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
+    $proc = Start-Process ".\.cache\gg\stage4" -WorkingDirectory . -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
     Wait-Process -InputObject $proc
     return $proc.ExitCode
 } else {
