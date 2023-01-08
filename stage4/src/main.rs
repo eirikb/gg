@@ -24,7 +24,7 @@ async fn main() {
     dbg!(args.clone());
 
     let dir = current_dir();
-    dbg!("dir is {dir}");
+    dbg!(&dir);
 
     let paths = fs::read_dir("./").unwrap();
     dbg!(&paths);
