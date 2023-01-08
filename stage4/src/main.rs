@@ -1,5 +1,6 @@
 use std::{env, fs};
 use std::collections::HashMap;
+use std::env::current_dir;
 use semver::VersionReq;
 use regex::Regex;
 
@@ -21,6 +22,16 @@ mod executor;
 async fn main() {
     let args: Vec<String> = env::args().collect();
     dbg!(args.clone());
+
+    let dir = current_dir();
+    dbg!("dir is {dir}");
+
+    let paths = fs::read_dir("./").unwrap();
+    dbg!(&paths);
+
+    for x in paths {
+        dbg!(&x);
+    }
 
     let system = fs::read_to_string(".cache/gg/system").unwrap_or(String::from("x86_64-linux")).trim().to_string();
     println!("System is {:?}", system);
