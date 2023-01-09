@@ -34,7 +34,7 @@ pub struct Download {
 
 pub trait Executor {
     fn get_version_req(&self) -> Option<VersionReq>;
-    fn get_download_urls<'a>(&self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>>;
+    fn get_download_urls<'a>(&'a self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>>;
     fn get_bin(&self, input: &AppInput) -> &str;
     fn get_name(&self) -> &str;
     fn before_exec<'a>(&'a self, _input: &'a AppInput, _command: &'a mut Command) -> Pin<Box<dyn Future<Output=Option<String>> + 'a>> {

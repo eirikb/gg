@@ -62,8 +62,19 @@ impl Executor for Gradle {
         None
     }
 
-    fn get_download_urls(&self, _input: &AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>>>> {
+    fn get_download_urls<'a>(&'a self, _input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {
         Box::pin(async move {
+            if let Some(distribution_url) = get_distribution_url() {
+                if let Some(version) = distribution_url.get_version_from_gradle_url() {
+                    return vec![Download {
+                        download_url: distribution_url,
+                        lts: false,
+                        version,
+                    }];
+                }
+            }
+
+
             let body = reqwest::get("https://gradle.org/releases").await
                 .expect("Unable to connect to services.gradle.org").text().await
                 .expect("Unable to download gradle list of versions");
