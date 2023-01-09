@@ -38,6 +38,15 @@ impl HelloWorld for String {
     }
 }
 
+fn get_distribution_url() -> Option<String> {
+    if let Ok(file) = File::open("gradle/wrapper/gradle-wrapper.properties") {
+        if let Ok(map) = read(BufReader::new(file)) {
+            return map.get("distributionUrl").map(|s| s.clone());
+        }
+    }
+    None
+}
+
 impl Executor for Gradle {
     fn get_version_req(&self) -> Option<VersionReq> {
         if let Some(v) = self.version_req_map.get("gradle") {
@@ -45,13 +54,9 @@ impl Executor for Gradle {
                 return Some(v.clone());
             }
         }
-        if let Ok(file) = File::open("gradle/wrapper/gradle-wrapper.properties") {
-            if let Ok(map) = read(BufReader::new(file)) {
-                if let Some(distribution_url) = map.get("distributionUrl") {
-                    if let Some(version) = distribution_url.get_version_from_gradle_url() {
-                        return VersionReq::parse(version.as_str()).ok();
-                    }
-                }
+        if let Some(distribution_url) = get_distribution_url() {
+            if let Some(version) = distribution_url.get_version_from_gradle_url() {
+                return VersionReq::parse(version.as_str()).ok();
             }
         }
         None
