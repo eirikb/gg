@@ -24,25 +24,6 @@ async fn main() {
     let args: Vec<String> = env::args().collect();
     dbg!(args.clone());
 
-
-    for x in fs::read_dir("./.cache/gg").unwrap() {
-        if let Ok(y) = x {
-            dbg!(&y.file_name());
-            if y.path().is_file() {
-                dbg!(&fs::read_to_string(y.path()).unwrap_or("what".to_string()));
-            }
-        }
-    }
-    // dbg!(&fs::read_to_string("system").unwrap_or("what".to_string()));
-    // dbg!(&fs::read_to_string(".\\system").unwrap_or("what".to_string()));
-    // dbg!(&fs::read_to_string(".cache/gg/system").unwrap_or("what".to_string()));
-    // dbg!(&fs::read_to_string(".cache/gg\\system").unwrap_or("what".to_string()));
-    // dbg!(&fs::read_to_string(".cache\\gg\\system").unwrap_or("what".to_string()));
-    // dbg!(&fs::read_to_string(".\\.cache/gg/system").unwrap_or("what".to_string()));
-    // dbg!(&fs::read_to_string(".\\.cache/gg\\system").unwrap_or("what".to_string()));
-    // dbg!(&fs::read_to_string(".\\.cache\\gg\\system").unwrap_or("what".to_string()));
-    // dbg!(&fs::read_to_string(current_dir().unwrap().join(".cache").join("gg").join("system")).unwrap_or("what".to_string()));
-
     let system = fs::read_to_string("./.cache/gg/system").unwrap_or(String::from("x86_64-linux")).trim().to_string();
     println!("System is {:?}", system);
     let target = target::parse_target(&system);
