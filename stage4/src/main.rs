@@ -41,6 +41,8 @@ async fn main() {
     for x in fs::read_dir("./.cache/gg").unwrap() {
         dbg!(&x);
     }
+    dbg!(&fs::read_to_string("system").unwrap_or("what".to_string()));
+    dbg!(&fs::read_to_string(".\\system").unwrap_or("what".to_string()));
     dbg!(&fs::read_to_string(".cache/gg/system").unwrap_or("what".to_string()));
     dbg!(&fs::read_to_string(".cache/gg\\system").unwrap_or("what".to_string()));
     dbg!(&fs::read_to_string(".cache\\gg\\system").unwrap_or("what".to_string()));
