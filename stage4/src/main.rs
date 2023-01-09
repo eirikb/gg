@@ -25,8 +25,14 @@ mod executor;
 async fn main() {
     let args: Vec<String> = env::args().collect();
     dbg!(args.clone());
-
     dbg!(&fs::read("./.cache/gg/system"));
+    dbg!(&fs::read("./.cache/gg/system2"));
+    dbg!(&fs::read("./.cache/gg/system3"));
+
+    dbg!(&fs::read_to_string("./.cache/gg/system"));
+    dbg!(&fs::read_to_string("./.cache/gg/system2"));
+    dbg!(&fs::read_to_string("./.cache/gg/system3"));
+
     let system = fs::read_to_string("./.cache/gg/system").unwrap_or(String::from("x86_64-linux")).trim().to_string();
     dbg!(&fs::read_to_string(".cache/gg/system"));
     if let Ok(mut f) = File::open(".cache/gg/system") {

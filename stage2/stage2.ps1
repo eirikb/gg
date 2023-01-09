@@ -23,6 +23,13 @@ Get-Item stage3* | % {
     Wait-Process -InputObject $proc
     if ($proc.ExitCode -eq 0) {
         $_.Name > system
+        echo "${$_.Name}" | Out-File system2
+        "" + $_.Name > system3
+
+        echo "GO!"
+        echo [System.IO.File]::ReadAllBytes("system")
+        echo [System.IO.File]::ReadAllBytes("system2")
+        echo [System.IO.File]::ReadAllBytes("system3")
     } else {
         Write-Host "Didn't work $($proc.ExitCode)"
         Write-Host "proc is $proc"
