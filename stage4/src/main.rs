@@ -24,7 +24,7 @@ async fn main() {
     let args: Vec<String> = env::args().collect();
     dbg!(args.clone());
 
-    let system = fs::read_to_string("./.cache/gg/verver").unwrap_or(String::from("x86_64-linux")).trim().to_string();
+    let system = fs::read_to_string("./.cache/gg/system").unwrap_or(String::from("x86_64-linux")).trim().to_string();
     println!("System is {:?}", system);
     let target = target::parse_target(&system);
     dbg!(&target);

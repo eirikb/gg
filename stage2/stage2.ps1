@@ -22,7 +22,7 @@ Get-Item stage3* | % {
     $proc = Start-Process ".\$name" -PassThru -NoNewWindow -ErrorAction SilentlyContinue
     Wait-Process -InputObject $proc
     if ($proc.ExitCode -eq 0) {
-        $_.Name > verver
+        $_.Name > system
     } else {
         Write-Host "Didn't work $($proc.ExitCode)"
         Write-Host "proc is $proc"
@@ -33,7 +33,7 @@ cd ../..
 
 if (Test-Path ".cache\gg\stage4") {
     Write-Host "Run 2"
-    cat .cache\gg\verver
+    cat .cache\gg\system
     echo location is "$(Get-Location)"
     echo "location is $(Get-Location)"
     echo "args is $args"
