@@ -25,6 +25,7 @@ async fn main() {
     dbg!(args.clone());
 
     let system = fs::read_to_string("./.cache/gg/system").unwrap_or(String::from("x86_64-linux")).trim().to_string();
+    dbg!(&fs::read_to_string("./.cache/gg/system"));
     println!("System is {:?}", system);
     let target = target::parse_target(&system);
     dbg!(&target);
