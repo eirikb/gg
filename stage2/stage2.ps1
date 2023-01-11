@@ -27,9 +27,12 @@ Get-Item stage3* | % {
         "" + $_.Name > system3
 
         echo "GO!"
-        echo [System.IO.File]::ReadAllBytes("system")
-        echo [System.IO.File]::ReadAllBytes("system2")
-        echo [System.IO.File]::ReadAllBytes("system3")
+        [System.IO.File]::ReadAllBytes("system") | echo
+        [System.IO.File]::ReadAllBytes("system2") | echo
+        [System.IO.File]::ReadAllBytes("system3") | echo
+        Write-Host $([System.IO.File]::ReadAllBytes("system"))
+        Write-Host $([System.IO.File]::ReadAllBytes("system2"))
+        Write-Host $([System.IO.File]::ReadAllBytes("system3"))
     } else {
         Write-Host "Didn't work $($proc.ExitCode)"
         Write-Host "proc is $proc"
