@@ -27,6 +27,11 @@ Get-Item stage3* | % {
         "" + $_.Name > system3
 
         echo "GO!"
+        cat system
+        cat system2
+        cat system3
+        pwd
+        ls
         [System.IO.File]::ReadAllBytes("system") | echo
         [System.IO.File]::ReadAllBytes("system2") | echo
         [System.IO.File]::ReadAllBytes("system3") | echo
