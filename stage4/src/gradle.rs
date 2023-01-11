@@ -7,6 +7,7 @@ use std::pin::Pin;
 use std::process::Command;
 
 use java_properties::read;
+use log::debug;
 use regex::Regex;
 use scraper::{Html, Selector};
 use semver::VersionReq;
@@ -105,12 +106,12 @@ impl Executor for Gradle {
     fn before_exec<'a>(&'a self, input: &'a AppInput, command: &'a mut Command) -> Pin<Box<dyn Future<Output=Option<String>> + 'a>> {
         Box::pin(async move {
             let app_path = prep(&Java { version_req_map: self.version_req_map.clone() }, input).await.expect("Unable to install Java");
-            println!("java path is {:?}", app_path);
+            debug!("java path is {:?}", app_path);
             command.env("JAVA_HOME", app_path.app.clone());
             let path_string = &env::var("PATH").unwrap_or("".to_string());
             let parent_bin_path = app_path.parent_bin_path();
             let path = format!("{parent_bin_path}:{path_string}");
-            println!("PATH: {path}");
+            debug!("PATH: {path}");
             Some(path)
         })
     }

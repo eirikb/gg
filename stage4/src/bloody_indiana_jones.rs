@@ -1,8 +1,10 @@
 use std::fs::{create_dir_all, File};
 use std::path::{Path, PathBuf};
+use log::{debug, info};
 
 pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
-    println!("Downloading {url}");
+    println!("START PROGRESS BAR HERE");
+    info!("Downloading {url}");
     let res = reqwest::get(url).await
         .expect("Unable to download");
     create_dir_all(".cache/gg/downloads").expect("Unable to create download dir");
@@ -16,9 +18,9 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
 
     std::io::copy(&mut bytes.as_ref(), &mut out)
         .expect("Unable to download the file?!");
-    println!("Done...");
+    info!("Download complete");
 
-    println!("Extracting {file_name}");
+    info!("Extracting {file_name}");
     let ext = Path::new(&file_name).extension().unwrap().to_str();
     let file_buf_reader = tokio::io::BufReader::new(tokio::fs::File::open(file_path).await.unwrap());
     let file_path_decomp = &Path::new(&format!(".cache/gg/downloads/{file_name}")).with_extension("").to_str().unwrap().to_string();
@@ -28,20 +30,23 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
         Some("xz") | Some("gz") => {
             match ext {
                 Some("xz") => {
+                    info!("Decompressing Xz");
                     let mut decoder = async_compression::tokio::bufread::XzDecoder::new(file_buf_reader);
                     tokio::io::copy(&mut decoder, &mut file_writer).await.unwrap();
                 }
                 _ => {
+                    info!("Decompressing Gzip");
                     let mut decoder = async_compression::tokio::bufread::GzipDecoder::new(file_buf_reader);
                     tokio::io::copy(&mut decoder, &mut file_writer).await.unwrap();
                 }
             };
         }
         Some("zip") => {
-            println!("Path is {}", &path);
+            info!("Decompressing Zip");
+            debug!("Path is {}", &path);
             let part = path.split("/").last().unwrap_or("unknown");
             let part_path = format!(".cache/{part}/{part}");
-            println!("path_path {}", &part_path);
+            debug!("path_path {}", &part_path);
             create_dir_all(&part_path).expect("Unable to create download dir");
             let target_dir = PathBuf::from(&part_path);
             zip_extract::extract(File::open(file_path).unwrap(), &target_dir, true).unwrap();
@@ -53,7 +58,7 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
 
     match Path::new(&file_name).extension().unwrap().to_str() {
         Some("tar") => {
-            println!("Untar {file_name}");
+            info!("Untar {file_name}");
             let mut archive = tar::Archive::new(std::io::BufReader::new(File::open(file_name).unwrap()));
             archive.unpack(path).expect("Unable to extract");
         }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
 
-use log::info;
+use log::{debug, info};
 use regex::Regex;
 use semver::VersionReq;
 
@@ -20,26 +20,27 @@ mod gradle;
 mod java;
 mod executor;
 mod no_clap;
-mod demite;
 
 #[tokio::main]
 async fn main() {
     if let Some(no_clap) = NoClap::new() {
-        let log_level = vec![("-vvv", "debug"), ("-vv", "info"), ("-v", "warn")].into_iter().find(|(input, _)| no_clap.gg_args.contains(&input.to_string()));
+        let log_level = vec![("-vv", "debug"), ("-v", "info")].into_iter().find(|(input, _)| no_clap.gg_args.contains(&input.to_string()));
 
         let log_level = if let Some((_, log_level)) = log_level {
             log_level
         } else {
-            "error"
+            "warn"
         };
 
         env_logger::init_from_env(env_logger::Env::default().default_filter_or(log_level));
 
-        demite!(&no_clap);
+        debug!(target: "main", "{:?}", &no_clap);
 
         let system = fs::read_to_string("./.cache/gg/system").unwrap_or(String::from("x86_64-linux")).trim().to_string();
         info!("System is {system}");
+
         let target = target::parse_target(&system);
+        debug!(target: "main", "{:?}", &target);
 
         let version_reqs_iter = no_clap.cmds.split(":").map(|cmd| {
             let parts: Vec<_> = Regex::new(r"@").unwrap().split(cmd).into_iter().collect();
@@ -47,9 +48,11 @@ async fn main() {
             let version_req = VersionReq::parse(parts.get(1).unwrap_or(&"")).ok();
             (cmd, version_req)
         });
+
         let mut version_reqs: Vec<(String, Option<VersionReq>)> = version_reqs_iter.clone().collect();
         let (cmd, _) = version_reqs.remove(0);
         let version_req_map: HashMap<String, Option<VersionReq>> = version_reqs_iter.into_iter().collect();
+        debug!(target: "main", "{:?}", &version_req_map);
 
         let executor: Option<Box<dyn Executor>> = match cmd.as_str() {
             "node" | "npm" | "npx" => Some(Box::new(Node { cmd, version_req_map })),
@@ -60,6 +63,8 @@ async fn main() {
 
         if executor.is_some() {
             try_execute(&*executor.unwrap(), &AppInput { target }).await.unwrap();
+        } else {
+            info!("Unable to find an executor");
         }
     } else {
         println!("No command");
