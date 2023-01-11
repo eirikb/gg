@@ -7,9 +7,7 @@ use semver::{Version, VersionReq};
 use crate::download_unpack_and_all_that_stuff;
 use crate::target::Target;
 
-#[derive(PartialEq)]
-#[derive(Debug)]
-#[derive(Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct AppPath {
     pub app: PathBuf,
     pub bin: PathBuf,
