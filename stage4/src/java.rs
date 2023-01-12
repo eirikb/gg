@@ -1,6 +1,9 @@
 use std::collections::HashMap;
+use std::fs::{File};
 use std::future::Future;
+use std::io::BufReader;
 use std::pin::Pin;
+use java_properties::read;
 use semver::VersionReq;
 
 use serde::Deserialize;
@@ -47,13 +50,28 @@ pub struct Java {
     pub version_req_map: HashMap<String, Option<VersionReq>>,
 }
 
+fn get_jdk_version() -> Option<String> {
+    if let Ok(file) = File::open("gradle/wrapper/gradle-wrapper.properties") {
+        if let Ok(map) = read(BufReader::new(file)) {
+            return map.get("jdkVersion").map(|s| s.clone());
+        }
+    }
+    None
+}
+
 impl Executor for Java {
     fn get_version_req(&self) -> Option<VersionReq> {
         if let Some(v) = self.version_req_map.get("java") {
-            v.clone()
-        } else {
-            None
+            return v.clone();
         }
+
+        if let Some(jdk_version) = get_jdk_version() {
+            if let Ok(version) = VersionReq::parse(jdk_version.as_str()) {
+                return Some(version);
+            }
+        }
+
+        None
     }
 
     fn get_download_urls<'a>(&self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {
