@@ -38,6 +38,9 @@ Get-Item stage3* | % {
         Write-Host $([System.IO.File]::ReadAllBytes("$(pwd)\system"))
         Write-Host $([System.IO.File]::ReadAllBytes("$(pwd)\system2"))
         Write-Host $([System.IO.File]::ReadAllBytes("$(pwd)\system3"))
+        echo "TEST"
+        echo $([system.Text.Encoding]::UTF8.GetBytes("test"))
+        echo $([system.Text.Encoding]::UTF8.GetBytes($_.Name))
     } else {
         Write-Host "Didn't work $($proc.ExitCode)"
         Write-Host "proc is $proc"
