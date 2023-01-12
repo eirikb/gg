@@ -24,7 +24,7 @@ Get-Item stage3* | % {
     if ($proc.ExitCode -eq 0) {
         $_.Name > system
         echo "${$_.Name}" | Out-File system2
-        "" + $_.Name > system3
+        Out-File -LiteralPath system3 -InputObject $_.Name
 
         echo "GO!"
         cat system
