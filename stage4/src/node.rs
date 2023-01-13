@@ -6,6 +6,7 @@ use scraper::{Html, Selector};
 use semver::VersionReq;
 use serde::Deserialize;
 use serde::Serialize;
+use package_json::PackageJsonManager;
 
 use crate::executor::{AppInput, Download, Executor};
 use crate::target::{Arch, Os, Target, Variant};
@@ -38,13 +39,39 @@ struct Root2 {
 }
 
 pub struct Node {
-    pub version_req_map: HashMap<String, VersionReq>,
+    pub version_req_map: HashMap<String, Option<VersionReq>>,
     pub cmd: String,
 }
 
+fn get_package_version() -> Option<Box<VersionReq>> {
+    let mut manager = PackageJsonManager::new();
+    if manager.locate_closest().is_ok() {
+        if let Ok(json) = manager.read_ref() {
+            if json.engines.is_some() {
+                Some(Box::new(VersionReq::parse(json.clone().engines.clone().unwrap().get("node").unwrap_or(&"".to_string())).unwrap_or(VersionReq::default())))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
 impl Executor for Node {
-    fn get_version_req(&self) -> Option<&VersionReq> {
-        self.version_req_map.get("node")
+    fn get_version_req(&self) -> Option<VersionReq> {
+        if let Some(v) = self.version_req_map.get("node") {
+            if let Some(v) = v {
+                return Some(v.clone());
+            }
+        }
+        if let Some(v) = get_package_version() {
+            Some(*v)
+        } else {
+            None
+        }
     }
 
     fn get_download_urls<'a>(&self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {
