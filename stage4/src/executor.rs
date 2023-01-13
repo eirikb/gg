@@ -51,7 +51,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
     match app_path {
         Ok(app_path_ok) if app_path_ok.bin.exists() => return Ok(app_path_ok),
         _ => {
-            println!("App not found in cache. Download time")
+            info!("App {bin} not found in cache. Download time");
         }
     }
 

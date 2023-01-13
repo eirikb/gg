@@ -13,6 +13,7 @@ strum_macros = "0.24"
 tar = "0.4.38"
 futures = "0.3.24"
 futures-io = "0.3.24"
+futures-util = "0.3.25"
 tokio-util = { version = "0.7.4", features = ["compat"] }
 async-compression = { version = "0.3.14", features = ["all"] }
 zip-extract = "0.1.1"

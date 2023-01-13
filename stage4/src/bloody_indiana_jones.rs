@@ -1,24 +1,54 @@
+use std::cmp::min;
 use std::fs::{create_dir_all, File};
+use std::io::Write;
 use std::path::{Path, PathBuf};
+use futures_util::StreamExt;
+use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info};
 
 pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
-    println!("START PROGRESS BAR HERE");
     info!("Downloading {url}");
-    let res = reqwest::get(url).await
-        .expect("Unable to download");
+
+    let client = reqwest::Client::new();
+    let res = client.get(url)
+        .send()
+        .await
+        .expect(format!("Failed to get {url}").as_str());
+    let total_size = res
+        .content_length()
+        .expect(format!("Failed to get content length from {url}").as_str());
+
+    debug!("Total size {:?}", total_size);
+
     create_dir_all(".cache/gg/downloads").expect("Unable to create download dir");
 
+    let pb = ProgressBar::new(total_size);
+    pb.set_style(ProgressStyle::default_bar()
+        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
+        .unwrap());
+    pb.set_message(format!("Downloading {}", url));
+
     let mut file_name = reqwest::Url::parse(url).unwrap().path_segments().unwrap().last().unwrap().to_string();
+    debug!("File name {:?}", file_name);
 
     let file_path = &format!(".cache/gg/downloads/{file_name}");
-    let mut out = File::create(file_path)
-        .expect("Unable to create archive file");
-    let bytes = res.bytes().await.expect("duh");
+    debug!("{:?}", file_path);
 
-    std::io::copy(&mut bytes.as_ref(), &mut out)
-        .expect("Unable to download the file?!");
-    info!("Download complete");
+    let mut file = File::create(file_path)
+        .expect(format!("Failed to create file '{}'", file_path).as_str());
+    let mut downloaded: u64 = 0;
+    let mut stream = res.bytes_stream();
+
+    while let Some(item) = stream.next().await {
+        let chunk = item.expect(format!("Error while downloading file").as_str());
+        file.write_all(&chunk)
+            .expect("Error while writing to file");
+        let new = min(downloaded + (chunk.len() as u64), total_size);
+        downloaded = new;
+        pb.set_position(new);
+    }
+
+    pb.finish_with_message(format!("Downloaded {} to {}", url, file_path));
 
     info!("Extracting {file_name}");
     let ext = Path::new(&file_name).extension().unwrap().to_str();
