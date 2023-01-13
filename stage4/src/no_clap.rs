@@ -26,18 +26,3 @@ impl NoClap {
         }
     }
 }
-
-#[cfg(test)]
-mod test {
-    // use crate::bloody_indiana_jones::download_unpack_and_all_that_stuff;
-
-    use crate::NoClap;
-
-    #[tokio::test]
-    async fn ok() {
-        // let url = String::from("https://nodejs.org/dist/v16.17.1/node-v16.17.1-linux-x64.tar.xz");
-        // download_unpack_and_all_that_stuff(&url, &String::from("node")).await;
-
-        NoClap
-    }
-}

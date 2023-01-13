@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use std::process::ExitCode;
 
 use log::{debug, info};
 use regex::Regex;
@@ -22,7 +23,7 @@ mod executor;
 mod no_clap;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> ExitCode {
     if let Some(no_clap) = NoClap::new() {
         let log_level = vec![("-vv", "debug"), ("-v", "info")].into_iter().find(|(input, _)| no_clap.gg_args.contains(&input.to_string()));
 
@@ -62,7 +63,11 @@ async fn main() {
         };
 
         if executor.is_some() {
-            try_execute(&*executor.unwrap(), &AppInput { target }).await.unwrap();
+            return ExitCode::from(if let Ok(_) = try_execute(&*executor.unwrap(), &AppInput { target }).await {
+                0
+            } else {
+                1
+            });
         } else {
             info!("Unable to find an executor");
         }
@@ -70,4 +75,5 @@ async fn main() {
         println!("No command");
         println!("Here be help in the future. I promise");
     }
+    return ExitCode::from(1);
 }
