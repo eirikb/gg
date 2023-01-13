@@ -23,8 +23,10 @@ Get-Item stage3* | % {
     Wait-Process -InputObject $proc
     if ($proc.ExitCode -eq 0) {
         $_.Name > system
-        echo "${$_.Name}" | Out-File system2
-        Out-File -LiteralPath system3 -InputObject $_.Name
+        Out-File -Encoding unicode -LiteralPath system -InputObject $_.Name
+        Out-File -Encoding utf8 -LiteralPath system2 -InputObject $_.Name
+        Out-File -Encoding ASCII  -LiteralPath system3 -InputObject $_.Name
+        Out-File -Encoding utf8BIM -LiteralPath system4 -InputObject $_.Name
 
         echo "GO!"
         cat system
@@ -33,11 +35,20 @@ Get-Item stage3* | % {
         pwd
         ls
         [System.IO.File]::ReadAllBytes("$(pwd)\system") | echo
+        echo "..."
         [System.IO.File]::ReadAllBytes("$(pwd)\system2") | echo
+        echo "..."
         [System.IO.File]::ReadAllBytes("$(pwd)\system3") | echo
+        echo "..."
+        [System.IO.File]::ReadAllBytes("$(pwd)\system4") | echo
+        echo "..."
         Write-Host $([System.IO.File]::ReadAllBytes("$(pwd)\system"))
+        echo "..."
         Write-Host $([System.IO.File]::ReadAllBytes("$(pwd)\system2"))
+        echo "..."
         Write-Host $([System.IO.File]::ReadAllBytes("$(pwd)\system3"))
+        echo "..."
+        Write-Host $([System.IO.File]::ReadAllBytes("$(pwd)\system4"))
         echo "TEST"
         echo $([system.Text.Encoding]::UTF8.GetBytes("test"))
         echo $([system.Text.Encoding]::UTF8.GetBytes($_.Name))
