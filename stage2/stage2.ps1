@@ -23,31 +23,26 @@ Get-Item stage3* | % {
     Wait-Process -InputObject $proc
     if ($proc.ExitCode -eq 0) {
         $_.Name > system
-        Out-File -Encoding unicode -LiteralPath system -InputObject $_.Name
-        Out-File -Encoding utf8 -LiteralPath system2 -InputObject $_.Name
-        Out-File -Encoding ASCII  -LiteralPath system3 -InputObject $_.Name
-        Out-File -Encoding utf8BIM -LiteralPath system4 -InputObject $_.Name
+        Out-File -Encoding ascii -LiteralPath system -InputObject $_.Name
+        Out-File -Encoding utf8BOM -LiteralPath system2 -InputObject $_.Name
+        Out-File -Encoding utf8NoBom -LiteralPath system3 -InputObject $_.Name
+        Out-File -Encoding utf8 -LiteralPath system4 -InputObject $_.Name
 
         echo "GO!"
         cat system
+        echo "... 1"
         cat system2
+        echo "... 2"
         cat system3
-        pwd
-        ls
-        [System.IO.File]::ReadAllBytes("$(pwd)\system") | echo
-        echo "..."
-        [System.IO.File]::ReadAllBytes("$(pwd)\system2") | echo
-        echo "..."
-        [System.IO.File]::ReadAllBytes("$(pwd)\system3") | echo
-        echo "..."
-        [System.IO.File]::ReadAllBytes("$(pwd)\system4") | echo
-        echo "..."
+        echo "... 3"
+        cat system4
+        echo "... 4"
         Write-Host $([System.IO.File]::ReadAllBytes("$(pwd)\system"))
-        echo "..."
+        echo "... 5"
         Write-Host $([System.IO.File]::ReadAllBytes("$(pwd)\system2"))
-        echo "..."
+        echo "... 6"
         Write-Host $([System.IO.File]::ReadAllBytes("$(pwd)\system3"))
-        echo "..."
+        echo "... 7"
         Write-Host $([System.IO.File]::ReadAllBytes("$(pwd)\system4"))
         echo "TEST"
         echo $([system.Text.Encoding]::UTF8.GetBytes("test"))
