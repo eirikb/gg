@@ -40,7 +40,19 @@ if (Test-Path ".cache\gg\stage4") {
     $proc = Start-Process ".\.cache\gg\stage4" -WorkingDirectory "$(Get-Location)" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
     Write-Host $proc
     Wait-Process -InputObject $proc
-    exit $proc.ExitCode
+    echo $proc.ExitCode
+
+    $proc = Start-Process ".\.cache\gg\stage4" -WorkingDirectory "$(Get-Location)" -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
+    Write-Host $proc
+    Wait-Process -InputObject $proc
+    echo $proc.ExitCode
+
+    echo "NOW WHAT"
+    $htArgs  = if ($Args.Count) { @{ Args = $Args } } else { @{} }
+    $proc = Start-Process ".\.cache\gg\stage4" -WorkingDirectory "$(Get-Location)" -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $htArgs
+    Write-Host $proc
+    Wait-Process -InputObject $proc
+    echo $proc.ExitCode
 } else {
     Write-Host "stage4 not found :("
 }
