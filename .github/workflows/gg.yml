@@ -300,8 +300,8 @@ jobs:
         include:
           - arch: armv7
             target: armv7-unknown-linux-gnu
-          - arch: armv7
-            target: armv7-unknown-linux-musl
+#          - arch: armv7
+#            target: armv7-unknown-linux-musl
 
     runs-on: ubuntu-20.04
 
@@ -493,7 +493,7 @@ jobs:
       matrix:
         include:
           - arch: armv7
-            target: armv7-unknown-linux-musl
+            target: armv7-unknown-linux-gnu
 
     runs-on: ubuntu-20.04
     steps:

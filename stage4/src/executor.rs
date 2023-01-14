@@ -43,7 +43,7 @@ pub trait Executor {
 
 pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, String> {
     let bin = executor.get_bin(input);
-    let path = (executor.get_name().to_string() + executor.get_version_req().unwrap_or(VersionReq::default()).to_string().as_str()).replace("*", "star").replace("^", "hat");
+    let path = (executor.get_name().to_string() + executor.get_version_req().unwrap_or(VersionReq::default()).to_string().as_str()).replace("*", "_star_").replace("^", "_hat_");
     info!( "Trying to find {bin} in {path}");
 
     let app_path: Result<AppPath, String> = get_app_path(bin, path.as_str());
