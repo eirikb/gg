@@ -14,6 +14,7 @@ name: gg.cmd
 jobs:
 
   A-stage4-OS:
+    if: false
     strategy:
       matrix:
         include:
@@ -58,6 +59,7 @@ jobs:
 
 
   A-stage4-container:
+    if: false
     strategy:
       matrix:
         include:
@@ -123,8 +125,8 @@ jobs:
           key: cache1-arch-cargo-x7-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: uraimo/run-on-arch-action@v2
-        if: github.ref == 'refs/heads/main'
-        name: Run commands
+#        if: github.ref == 'refs/heads/main'
+      - name: Run commands
         id: runcmd
         with:
           arch: ${{ matrix.arch }}
@@ -147,15 +149,15 @@ jobs:
             cp -rp ok /cachus/
             cp target/release/stage4 /artifacts/
 
-      - if: github.ref == 'refs/heads/main'
-        run: |
+#      - if: github.ref == 'refs/heads/main'
+      - run: |
           sudo chown -R $(id -u):$(id -g) $PWD/artifacts
           sudo chown -R $(id -u):$(id -g) .
           rm -rf stage4
           find $PWD/artifacts -type f -name stage4 -exec cp {} ./stage4 \;
 
-      - if: github.ref == 'refs/heads/main'
-        name: Upload artifact
+#      - if: github.ref == 'refs/heads/main'
+      - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: stage4_${{ matrix.target }}
@@ -306,18 +308,18 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-      - if: github.ref == 'refs/heads/main'
-        uses: actions/checkout@v2
+#      - if: github.ref == 'refs/heads/main'
+      - uses: actions/checkout@v2
 
-      - if: github.ref == 'refs/heads/main'
-        name: Download stage4 hash
+#      - if: github.ref == 'refs/heads/main'
+      - name: Download stage4 hash
         uses: actions/download-artifact@v2
         with:
           name: hash
           path: hash
 
-      - if: github.ref == 'refs/heads/main'
-        uses: uraimo/run-on-arch-action@v2
+#      - if: github.ref == 'refs/heads/main'
+      - uses: uraimo/run-on-arch-action@v2
         name: Run commands
         id: runcmd
         with:
@@ -351,12 +353,12 @@ jobs:
             find . -type f \( -name stage3 -o -name stage3.exe \) -exec cp {} /artifacts/stage3_${{ matrix.target }} \;
             strip /artifacts/stage3_${{ matrix.target }}
 
-      - if: github.ref == 'refs/heads/main'
-        run: |
+#      - if: github.ref == 'refs/heads/main'
+      - run: |
           cp artifacts/* ./
 
-      - if: github.ref == 'refs/heads/main'
-        name: Upload artifact
+#      - if: github.ref == 'refs/heads/main'
+      - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: stage3_${{ matrix.target }}
@@ -487,7 +489,7 @@ jobs:
 
 
   E-test-arch:
-    if: github.ref == 'refs/heads/main'
+#    if: github.ref == 'refs/heads/main'
     needs: D-stage1
     strategy:
       matrix:
