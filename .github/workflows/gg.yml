@@ -14,7 +14,6 @@ name: gg.cmd
 jobs:
 
   A-stage4-OS:
-    if: false
     strategy:
       matrix:
         include:
@@ -59,7 +58,6 @@ jobs:
 
 
   A-stage4-container:
-    if: false
     strategy:
       matrix:
         include:
@@ -126,7 +124,7 @@ jobs:
 
       - uses: uraimo/run-on-arch-action@v2
 #        if: github.ref == 'refs/heads/main'
-      - name: Run commands
+        name: Run commands
         id: runcmd
         with:
           arch: ${{ matrix.arch }}
