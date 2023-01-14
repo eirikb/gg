@@ -514,13 +514,6 @@ jobs:
           run: |
             uname -a
             cd /ok
-            sh gg.cmd node@14 -e 'console.log(1)'
-            echo "Nice, let's try again"
-            sh gg.cmd node@14 -e 'console.log(1)'
-            sh gg.cmd node@14 -v
-            sh gg.cmd npm:node@14 -v
-            sh gg.cmd npx:node@14 -v
-            sh gg.cmd java -version
             sh gg.cmd java -version
 
 
