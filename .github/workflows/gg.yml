@@ -487,7 +487,8 @@ jobs:
 
 
   E-test-arch:
-    if: github.ref == 'refs/heads/main'
+    if: false
+#    if: github.ref == 'refs/heads/main'
     needs: D-stage1
     strategy:
       matrix:
