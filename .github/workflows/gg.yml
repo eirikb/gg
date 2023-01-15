@@ -10,6 +10,9 @@ on:
 # E Test (for each os target)
 # F: Create release
 
+env:
+  VERSION: 0.1.$GITHUB_RUN_NUMBER
+
 name: gg.cmd
 jobs:
 
@@ -39,6 +42,8 @@ jobs:
       - name: cargo pls
         shell: bash
         run: |
+          echo 2
+          echo VERSION IS $VERSION
           echo $GITHUB_RUN_ID
           echo 4
           echo $GITHUB_RUN_NUMBER
@@ -303,8 +308,8 @@ jobs:
         include:
           - arch: armv7
             target: armv7-unknown-linux-gnu
-#          - arch: armv7
-#            target: armv7-unknown-linux-musl
+    #          - arch: armv7
+    #            target: armv7-unknown-linux-musl
 
     runs-on: ubuntu-20.04
 
@@ -491,7 +496,7 @@ jobs:
 
   E-test-arch:
     if: false
-#    if: github.ref == 'refs/heads/main'
+    #    if: github.ref == 'refs/heads/main'
     needs: D-stage1
     strategy:
       matrix:
