@@ -39,11 +39,6 @@ jobs:
       - name: cargo pls
         shell: bash
         run: |
-          echo 1
-          echo ${{ GITHUB_RUN_ID }}
-          echo 2
-          echo ${{ GITHUB_RUN_NUMBER }}
-          echo 3
           echo $GITHUB_RUN_ID
           echo 4
           echo $GITHUB_RUN_NUMBER
