@@ -11,7 +11,7 @@ on:
 # F: Create release
 
 env:
-  VERSION: 0.1.${GITHUB_RUN_NUMBER}
+  VERSION: 0.1.${{ github.run_number }}
 
 name: gg.cmd
 jobs:
