@@ -42,11 +42,6 @@ jobs:
       - name: cargo pls
         shell: bash
         run: |
-          echo 2
-          echo VERSION IS $VERSION
-          echo $GITHUB_RUN_ID
-          echo 4
-          echo $GITHUB_RUN_NUMBER
           mkdir -p stage42
           mv stage4/* stage42
           rm -rf stage4
@@ -532,20 +527,14 @@ jobs:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Generate build number
-        id: buildnumber
-        uses: einaregilsson/build-number@v3
-        with:
-          token: ${{ github.token }}
-
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          tag_name: ${{ steps.buildnumber.outputs.build_number }}
-          release_name: Release ${{ steps.buildnumber.outputs.build_number }}
+          tag_name: ${{ vars.VERSION }}
+          release_name: Release ${{ vars.VERSION }}
           draft: false
           prerelease: false
 
