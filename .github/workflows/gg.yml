@@ -374,7 +374,7 @@ jobs:
 
 
   D-stage1:
-    needs: [ C-stage3-OS, C-stage3-container, C-stage3-arch ]
+    needs: [ version, C-stage3-OS, C-stage3-container, C-stage3-arch ]
     runs-on: ubuntu-latest
     steps:
       - name: Source
