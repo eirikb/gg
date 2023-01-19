@@ -11,7 +11,7 @@ jobs:
       version: ${{ steps.step1.outputs.version }}
     steps:
       - id: step1
-        run: echo "version=devvy" >> $GITHUB_OUTPUT
+        run: echo "version=devvy137" >> $GITHUB_OUTPUT
 
   A-stage4-OS:
     strategy:
