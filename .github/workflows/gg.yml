@@ -44,9 +44,7 @@ jobs:
           mv stage4/* stage42
           rm -rf stage4
           cd stage42
-          echo "OK ${{needs.version.outputs.version}}"
           export VERSION=${{needs.version.outputs.version}}
-          echo VERSION IS $VERSION
           
           rustup target add ${{ matrix.target }}
           cargo build --release --target=${{ matrix.target }}
@@ -96,9 +94,7 @@ jobs:
             source $HOME/.cargo/env
           fi
 
-          echo "OK ${{needs.version.outputs.version}}"
           export VER=${{needs.version.outputs.version}}
-          echo VERSION IS $VERSION
           
           cargo build --release --target=${{ matrix.target }}
           #--target=${{ matrix.target}}
@@ -409,6 +405,18 @@ jobs:
           cp _stage2/stage2.ps1 .cache/gg/
           chmod +x .cache/gg/stage2.sh
           tar -zpvcf gg.tgz .cache
+          
+          echo "OK ${{needs.version.outputs.version}}"
+          VERSION=${{needs.version.outputs.version}}
+          echo "version is $VERSION"
+          echo bat is 
+          cat _stage1/stage1.bat
+          echo "here we go..."
+          ver="$(printf '%-25s' "$VERSION")"
+          echo "$ver sion?"
+          sed -i "s/: VERSION:/: VERSION: $ver" _stage1/stage1.bat
+          echo bat is  now
+          cat _stage1/stage1.bat
           unix2dos _stage1/stage1.bat
           cat _stage1/stage1.bat _stage1/stage1.sh gg.tgz > gg.cmd
 
