@@ -13,6 +13,14 @@ on:
 name: gg.cmd
 jobs:
 
+  ver:
+    runs-on: ubuntu-latest
+    outputs:
+      ver: ${{ steps.step1.outputs.ver }}
+    steps:
+      - id: step1
+        run: echo "ver=dev" >> $GITHUB_OUTPUT
+
   A-stage4-OS:
     strategy:
       matrix:
@@ -25,6 +33,7 @@ jobs:
             target: x86_64-apple-darwin
 
     runs-on: ${{ matrix.os }}
+    needs: ver
     steps:
       - uses: actions/checkout@v2
 
@@ -43,6 +52,9 @@ jobs:
           mv stage4/* stage42
           rm -rf stage4
           cd stage42
+          echo "OK ${{needs.ver.outputs.ver}}"
+          export VER=${{needs.ver.outputs.ver}}
+          echo VER IS $VER
           
           rustup target add ${{ matrix.target }}
           cargo build --release --target=${{ matrix.target }}
@@ -65,6 +77,7 @@ jobs:
             target: x86_64-unknown-linux-musl
 
     runs-on: ubuntu-latest
+    needs: ver
     container: ${{ matrix.container }}
     steps:
       - uses: actions/checkout@v2
@@ -91,6 +104,10 @@ jobs:
             source $HOME/.cargo/env
           fi
 
+          echo "OK ${{needs.ver.outputs.ver}}"
+          export VER=${{needs.ver.outputs.ver}}
+          echo VER IS $VER
+          
           cargo build --release --target=${{ matrix.target }}
           #--target=${{ matrix.target}}
           find . -type f -name stage4.exe -exec cp {} ../stage4 \;
@@ -114,6 +131,7 @@ jobs:
             target: armv7-unknown-linux-musl
 
     runs-on: ubuntu-18.04
+    needs: ver
     steps:
       - uses: actions/checkout@v2.1.0
 
@@ -142,6 +160,9 @@ jobs:
           run: |
             cd stage4
             cp -rp /cachus/* . || :
+            echo "OK ${{needs.ver.outputs.ver}}"
+            export VER=${{needs.ver.outputs.ver}}
+            echo VER IS $VER
             CARGO_HOME=ok cargo build --release
             cp -rp target /cachus/
             cp -rp ok /cachus/
@@ -300,8 +321,8 @@ jobs:
         include:
           - arch: armv7
             target: armv7-unknown-linux-gnu
-#          - arch: armv7
-#            target: armv7-unknown-linux-musl
+    #          - arch: armv7
+    #            target: armv7-unknown-linux-musl
 
     runs-on: ubuntu-20.04
 
@@ -488,7 +509,7 @@ jobs:
 
   E-test-arch:
     if: false
-#    if: github.ref == 'refs/heads/main'
+    #    if: github.ref == 'refs/heads/main'
     needs: D-stage1
     strategy:
       matrix:
