@@ -414,7 +414,7 @@ jobs:
           echo "here we go..."
           ver="$(printf '%-25s' "$VERSION")"
           echo "$ver sion?"
-          sed -i "s/: VERSION:/: VERSION: $ver" _stage1/stage1.bat
+          sed -i "s/: VERSION:/: VERSION: $ver/" _stage1/stage1.bat
           echo bat is  now
           cat _stage1/stage1.bat
           unix2dos _stage1/stage1.bat
