@@ -553,7 +553,7 @@ jobs:
 
   release:
     name: Release!
-    needs: [ version, test-OS, test-batch, test-container, test-arch ]
+    needs: [ version, test-OS, test-batch, test-container ]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
