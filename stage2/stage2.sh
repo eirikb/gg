@@ -12,9 +12,7 @@ if [ ! -f .cache/gg/stage4 ]; then
 fi
 
 if [ -f ./.cache/gg/stage4 ]; then
-  echo "has stage4!"
   chmod +x ./.cache/gg/stage4
-  echo "2 system is"
   cat ./.cache/gg/system
   ./.cache/gg/stage4 "$@"
   exit $?

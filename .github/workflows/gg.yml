@@ -25,7 +25,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: echo "version=dev" >> $GITHUB_OUTPUT
 
-  A-stage4-OS:
+  stage4-OS:
     strategy:
       matrix:
         include:
@@ -71,7 +71,7 @@ jobs:
           path: stage4
 
 
-  A-stage4-container:
+  stage4-container:
     strategy:
       matrix:
         include:
@@ -121,7 +121,7 @@ jobs:
           path: stage4
 
 
-  A-stage4-arch:
+  stage4-arch:
     strategy:
       matrix:
         include:
@@ -183,8 +183,8 @@ jobs:
           path: stage4
 
 
-  B-hash:
-    needs: [ A-stage4-OS, A-stage4-container, A-stage4-arch ]
+  hash:
+    needs: [ stage4-OS, stage4-container, stage4-arch ]
     runs-on: ubuntu-20.04
     steps:
       - name: Download stage4 hash
@@ -216,8 +216,8 @@ jobs:
           source_folder: out
 
 
-  C-stage3-OS:
-    needs: B-hash
+  stage3-OS:
+    needs: hash
 
     strategy:
       matrix:
@@ -269,8 +269,8 @@ jobs:
           path: stage3_${{ matrix.target }}
 
 
-  C-stage3-container:
-    needs: B-hash
+  stage3-container:
+    needs: hash
 
     strategy:
       matrix:
@@ -313,8 +313,8 @@ jobs:
           path: stage3_${{ matrix.target }}
 
 
-  C-stage3-arch:
-    needs: B-hash
+  stage3-arch:
+    needs: hash
 
     strategy:
       matrix:
@@ -385,8 +385,8 @@ jobs:
 
 
 
-  D-stage1:
-    needs: [ version, C-stage3-OS, C-stage3-container, C-stage3-arch ]
+  stage1:
+    needs: [ version, stage3-OS, stage3-container, stage3-arch ]
     runs-on: ubuntu-latest
     steps:
       - name: Source
@@ -439,8 +439,8 @@ jobs:
           path: gg.cmd
 
 
-  E-test-OS:
-    needs: D-stage1
+  test-OS:
+    needs: stage1
     strategy:
       matrix:
         os: [ ubuntu-18.04, ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022, macOS-11, macOS-12 ]
@@ -465,8 +465,8 @@ jobs:
           sh gg.cmd java -version
           sh gg.cmd java -version
 
-  E-test-batch:
-    needs: D-stage1
+  test-batch:
+    needs: stage1
     strategy:
       matrix:
         os: [ windows-2019, windows-2022 ]
@@ -490,8 +490,8 @@ jobs:
           .\gg.cmd -vvv java -version
 
 
-  E-test-container:
-    needs: D-stage1
+  test-container:
+    needs: stage1
     strategy:
       matrix:
         container: [ ubuntu, debian, alpine, archlinux ]
@@ -519,10 +519,10 @@ jobs:
           sh gg.cmd java -version
 
 
-  E-test-arch:
+  test-arch:
     if: false
     #    if: github.ref == 'refs/heads/main'
-    needs: D-stage1
+    needs: stage1
     strategy:
       matrix:
         include:
@@ -551,9 +551,9 @@ jobs:
             sh gg.cmd java -version
 
 
-  F-release:
+  release:
     name: Release!
-    needs: [ version, E-test-OS, E-test-batch, E-test-container, E-test-arch ]
+    needs: [ version, test-OS, test-batch, test-container, test-arch ]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
