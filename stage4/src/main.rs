@@ -22,8 +22,12 @@ mod java;
 mod executor;
 mod no_clap;
 
+
 #[tokio::main]
 async fn main() -> ExitCode {
+    let ver = option_env!("VER").unwrap_or("dev");
+    println!("Version is {ver}");
+
     if let Some(no_clap) = NoClap::new() {
         let log_level = vec![("-vv", "debug"), ("-v", "info")].into_iter().find(|(input, _)| no_clap.gg_args.contains(&input.to_string()));
 

@@ -2,19 +2,28 @@ on:
   workflow_dispatch:
   push:
 
-# Plan (tiers):
-# A: Build stage4 (for each target)
-# B: Hash (create hash for each target)
-# C: Build stage3 (for each target)
-# D: Build gg
-# E Test (for each os target)
-# F: Create release
-
-env:
-  VERSION: 0.1.${{ github.run_number }}
-
 name: gg.cmd
 jobs:
+
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.step1.outputs.version }}
+    steps:
+      - name: Generate version
+        if: github.ref == 'refs/heads/main'
+        id: buildnumber
+        uses: einaregilsson/build-number@v3
+        with:
+          token: ${{ github.token }}
+
+      - name: Set prod version
+        if: github.ref == 'refs/heads/main'
+        run: echo "version=${{ steps.buildnumber.outputs.build_number }}" >> $GITHUB_OUTPUT
+
+      - name: Set dev version
+        if: github.ref == 'refs/heads/main'
+        run: echo "version=dev" >> $GITHUB_OUTPUT
 
   A-stage4-OS:
     strategy:
@@ -28,6 +37,7 @@ jobs:
             target: x86_64-apple-darwin
 
     runs-on: ${{ matrix.os }}
+    needs: version
     steps:
       - uses: actions/checkout@v2
 
@@ -46,6 +56,7 @@ jobs:
           mv stage4/* stage42
           rm -rf stage4
           cd stage42
+          export VERSION=${{needs.version.outputs.version}}
           
           rustup target add ${{ matrix.target }}
           cargo build --release --target=${{ matrix.target }}
@@ -68,6 +79,7 @@ jobs:
             target: x86_64-unknown-linux-musl
 
     runs-on: ubuntu-latest
+    needs: version
     container: ${{ matrix.container }}
     steps:
       - uses: actions/checkout@v2
@@ -94,6 +106,8 @@ jobs:
             source $HOME/.cargo/env
           fi
 
+          export VER=${{needs.version.outputs.version}}
+          
           cargo build --release --target=${{ matrix.target }}
           #--target=${{ matrix.target}}
           find . -type f -name stage4.exe -exec cp {} ../stage4 \;
@@ -117,6 +131,7 @@ jobs:
             target: armv7-unknown-linux-musl
 
     runs-on: ubuntu-18.04
+    needs: version
     steps:
       - uses: actions/checkout@v2.1.0
 
@@ -145,6 +160,9 @@ jobs:
           run: |
             cd stage4
             cp -rp /cachus/* . || :
+            echo "OK ${{needs.version.outputs.version}}"
+            export VERSION=${{needs.version.outputs.version}}
+            echo VERSION IS $VERSION
             CARGO_HOME=ok cargo build --release
             cp -rp target /cachus/
             cp -rp ok /cachus/
@@ -368,7 +386,7 @@ jobs:
 
 
   D-stage1:
-    needs: [ C-stage3-OS, C-stage3-container, C-stage3-arch ]
+    needs: [ version, C-stage3-OS, C-stage3-container, C-stage3-arch ]
     runs-on: ubuntu-latest
     steps:
       - name: Source
@@ -399,6 +417,18 @@ jobs:
           cp _stage2/stage2.ps1 .cache/gg/
           chmod +x .cache/gg/stage2.sh
           tar -zpvcf gg.tgz .cache
+          
+          echo "OK ${{needs.version.outputs.version}}"
+          VERSION=${{needs.version.outputs.version}}
+          echo "version is $VERSION"
+          echo bat is 
+          cat _stage1/stage1.bat
+          echo "here we go..."
+          ver="$(printf '%-25s' "$VERSION")"
+          echo "$ver sion?"
+          sed -i "s/: VERSION:/: VERSION: $ver/" _stage1/stage1.bat
+          echo bat is  now
+          cat _stage1/stage1.bat
           unix2dos _stage1/stage1.bat
           cat _stage1/stage1.bat _stage1/stage1.sh gg.tgz > gg.cmd
 
@@ -523,7 +553,7 @@ jobs:
 
   F-release:
     name: Release!
-    needs: [ E-test-OS, E-test-batch, E-test-container, E-test-arch ]
+    needs: [ version, E-test-OS, E-test-batch, E-test-container, E-test-arch ]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
@@ -533,8 +563,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          tag_name: ${{ vars.VERSION }}
-          release_name: Release ${{ vars.VERSION }}
+          tag_name: ${{ needs.version.outputs.version }}
+          release_name: Release ${{ needs.version.outputs.version }}
           draft: false
           prerelease: false
 
