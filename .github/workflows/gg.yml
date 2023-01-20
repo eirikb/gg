@@ -10,8 +10,20 @@ jobs:
     outputs:
       version: ${{ steps.step1.outputs.version }}
     steps:
-      - id: step1
-        run: echo "version=devvy137" >> $GITHUB_OUTPUT
+      - name: Generate version
+        if: github.ref == 'refs/heads/main'
+        id: buildnumber
+        uses: einaregilsson/build-number@v3
+        with:
+          token: ${{ github.token }}
+
+      - name: Set prod version
+        if: github.ref == 'refs/heads/main'
+        run: echo "version=${{ steps.buildnumber.outputs.build_number }}" >> $GITHUB_OUTPUT
+
+      - name: Set dev version
+        if: github.ref == 'refs/heads/main'
+        run: echo "version=dev" >> $GITHUB_OUTPUT
 
   A-stage4-OS:
     strategy:
@@ -541,24 +553,18 @@ jobs:
 
   F-release:
     name: Release!
-    needs: [ E-test-OS, E-test-batch, E-test-container, E-test-arch ]
+    needs: [ version, E-test-OS, E-test-batch, E-test-container, E-test-arch ]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Generate build number
-        id: buildnumber
-        uses: einaregilsson/build-number@v3
-        with:
-          token: ${{ github.token }}
-
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          tag_name: ${{ steps.buildnumber.outputs.build_number }}
-          release_name: Release ${{ steps.buildnumber.outputs.build_number }}
+          tag_name: ${{ needs.version.outputs.version }}
+          release_name: Release ${{ needs.version.outputs.version }}
           draft: false
           prerelease: false
 
