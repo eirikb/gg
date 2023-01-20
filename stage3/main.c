@@ -20,9 +20,6 @@ int main() {
   char path[1000];
   snprintf(path, 1000, "/%s", hash);
 
-  printf("Download path: %s\n", path);
-  printf("Connecting...\n");
-
   struct sockaddr_in serv_addr;
   int sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -54,7 +51,6 @@ int main() {
   long messageSize = 0;
   long totalSize = 0;
   int p = 0;
-  printf("Downloading file...\n");
 
   do {
     res = read(sock, buffer, bufferSize);
@@ -84,17 +80,12 @@ int main() {
   } while (messageSize > 0);
   fclose(f);
 
-  printf("\nFile downloaded, checking hash...\n");
   char newHash[HASH_SIZE];
   hashForFile("stage4", newHash);
-  printf("Hash expected ::%s::\n", hash);
-  printf("Hash from file: ::%s::\n", newHash);
-  printf("AND IT IS %d\n", strcmp(hash, newHash));
   if (strcmp(hash, newHash) != 0) {
     printf("Hash did not match :(\n");
     return 1;
   }
 
-  printf("Done!\n");
   return 0;
 }

@@ -89,9 +89,7 @@ int __cdecl main() {
     return 1;
   }
 
-  //  const long bufferSize = 65536;
   int p = 0;
-  printf("Downloading file...\n");
 
   size_t message_size = 0;
   size_t data_size = 0;
@@ -124,17 +122,12 @@ int __cdecl main() {
   } while (message_size > 0);
   fclose(f);
 
-  printf("\nFile downloaded, checking hash...\n");
   char newHash[SHA512_BLOCK_LENGTH + 1];
   hashForFile("stage4", newHash);
-  printf("Hash expected ::%s::\n", hash);
-  printf("Hash from file: ::%s::\n", newHash);
-  printf("AND IT IS %d\n", strcmp(hash, newHash));
   if (strcmp(hash, newHash) != 0) {
     printf("Hash did not match :(\n");
     return 1;
   }
 
-  printf("Done!\n");
   return 0;
 }
