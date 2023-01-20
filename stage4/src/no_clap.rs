@@ -11,8 +11,10 @@ pub struct NoClap {
     pub log_level: String,
     pub version_req_map: HashMap<String, Option<VersionReq>>,
     pub cmd: Option<String>,
+    pub custom_cmd: bool,
     pub help: bool,
     pub version: bool,
+    pub update: bool,
 }
 
 impl NoClap {
@@ -31,6 +33,8 @@ impl NoClap {
 
         let help = gg_args.contains(&"-h".to_string());
         let version = gg_args.contains(&"-V".to_string());
+        let custom_cmd = gg_args.contains(&"-c".to_string()) || gg_args.contains(&"-e".to_string());
+        let update = gg_args.contains(&"-u".to_string());
 
         let log_level = if let Some((_, log_level)) = log_level {
             log_level
@@ -58,7 +62,7 @@ impl NoClap {
 
         let version_req_map: HashMap<String, Option<VersionReq>> = version_reqs_iter.into_iter().collect();
 
-        Self { gg_args, app_args, log_level, cmd, version_req_map, help, version }
+        Self { gg_args, app_args, log_level, cmd, version_req_map, help, version, custom_cmd, update }
     }
 }
 
@@ -137,5 +141,30 @@ mod tests {
         assert_eq!(true, no_clap.cmd.is_none());
         assert_eq!(false, no_clap.help);
         assert_eq!(true, no_clap.version);
+    }
+
+    #[test]
+    fn custom_cmd1() {
+        let no_clap = NoClap::parse(["-c"].map(String::from).to_vec());
+        assert_eq!(true, no_clap.cmd.is_none());
+        assert_eq!(true, no_clap.custom_cmd);
+        assert_eq!(false, no_clap.version);
+    }
+
+    #[test]
+    fn custom_cmd2() {
+        let no_clap = NoClap::parse(["-c", "test"].map(String::from).to_vec());
+        assert_eq!(true, no_clap.cmd.is_some());
+        assert_eq!(true, no_clap.custom_cmd);
+        assert_eq!(false, no_clap.version);
+        assert_eq!("test", no_clap.cmd.unwrap());
+    }
+
+    #[test]
+    fn update() {
+        let no_clap = NoClap::parse(["-u"].map(String::from).to_vec());
+        assert_eq!(true, no_clap.cmd.is_none());
+        assert_eq!(true, no_clap.update);
+        assert_eq!(false, no_clap.version);
     }
 }

@@ -29,15 +29,17 @@ Version: {ver}
 Usage: ./gg.cmd [options] <executable name>@<version>:<dependent executable name>@<version> [program arguments]
 
 Options:
+    -u          Update gg.cmd
     -v          Verbose output
     -vv         Debug output
-    -e          Execute custom command. Note that you can pass arguments at the end
+    -e          Execute first command blindly
+    -c          Execute first command blindly
     -h          Print help
     -V          Print version
 
 Examples:
     ./gg.cmd node
-    ./gg.cmd -c soapui java@17
+    ./gg.cmd -c soapui:java@17
     ./gg.cmd gradle@6:java@17 clean build
     ./gg.cmd node@10 -e 'console.log(1)'
     ./gg.cmd -vv npm@14 start
@@ -100,5 +102,5 @@ async fn main() -> ExitCode {
         println!("Missing command");
         print_help(ver);
         ExitCode::from(1)
-    }
+    };
 }
