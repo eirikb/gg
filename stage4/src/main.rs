@@ -1,15 +1,19 @@
+use std::collections::HashMap;
 use std::fs;
 use std::process::{ExitCode};
 
 use log::{debug, info};
+use semver::VersionReq;
 
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
 
-use crate::executor::{AppInput, Executor, try_execute};
+use crate::executor::{AppInput, AppPath, Executor, prep, try_execute};
 use crate::gradle::Gradle;
 use crate::java::Java;
 use crate::no_clap::NoClap;
 use crate::node::Node;
+use crate::custom_command::CustomCommand;
+use crate::cmd_to_executor::cmd_to_executor;
 
 mod target;
 mod bloody_indiana_jones;
@@ -18,6 +22,8 @@ mod gradle;
 mod java;
 mod executor;
 mod no_clap;
+mod custom_command;
+mod cmd_to_executor;
 
 
 fn print_help(ver: &str) {
@@ -78,28 +84,28 @@ async fn main() -> ExitCode {
 
     debug!(target: "main", "{:?}", &no_clap.version_req_map);
 
-    let version_req_map = no_clap.version_req_map;
+    let version_req_map = no_clap.version_req_map.clone();
 
-    return if let Some(cmd) = no_clap.cmd {
-        let executor: Option<Box<dyn Executor>> = match cmd.as_str() {
-            "node" | "npm" | "npx" => Some(Box::new(Node { cmd, version_req_map })),
-            "gradle" => Some(Box::new(Gradle { version_req_map })),
-            "java" => Some(Box::new(Java { version_req_map })),
-            _ => None
+    return if let Some(cmd) = no_clap.clone().cmd {
+        let executor: Option<Box<dyn Executor>> = if no_clap.clone().custom_cmd {
+            Some(Box::new(CustomCommand { cmd }))
+        } else {
+            cmd_to_executor(cmd, version_req_map.clone())
         };
 
         if executor.is_some() {
-            return ExitCode::from(if let Ok(_) = try_execute(&*executor.unwrap(), &AppInput { target }).await {
+            let c = no_clap.clone();
+            return ExitCode::from(if let Ok(_) = try_execute(&*executor.unwrap(), &AppInput { target, no_clap: c }, version_req_map).await {
                 0
             } else {
                 1
             });
         } else {
-            info!("Unable to find an executor");
+            println!("Unable to find an executor for command. Try -h. Tip: If you just want to execute an arbitrary command try -c");
         }
         ExitCode::from(1)
     } else {
-        println!("Missing command");
+        println!("Missing command. Try -h");
         print_help(ver);
         ExitCode::from(1)
     };

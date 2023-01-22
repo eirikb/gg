@@ -4,7 +4,7 @@ use regex::Regex;
 use semver::VersionReq;
 
 /// Why not clap? Yes
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NoClap {
     pub gg_args: Vec<String>,
     pub app_args: Vec<String>,
@@ -26,7 +26,6 @@ impl NoClap {
     pub fn parse(args: Vec<String>) -> Self {
         let start_at = args.iter().position(|item| !item.starts_with("-")).unwrap_or(args.len());
         let cmds = args.get(start_at);
-        // if let Some(cmds) = cmds {
         let gg_args: Vec<String> = args.clone().into_iter().take(start_at).collect();
         let app_args: Vec<String> = args.clone().into_iter().skip(start_at + 1).collect();
         let log_level = vec![("-vv", "debug"), ("-v", "info")].into_iter().find(|(input, _)| gg_args.contains(&input.to_string()));

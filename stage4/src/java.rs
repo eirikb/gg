@@ -3,6 +3,7 @@ use std::fs::{File};
 use std::future::Future;
 use std::io::BufReader;
 use std::pin::Pin;
+use futures_util::StreamExt;
 use java_properties::read;
 use semver::VersionReq;
 
@@ -10,7 +11,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::Executor;
-use crate::executor::{AppInput, Download};
+use crate::executor::{AppInput, AppPath, Download};
 use crate::target::{Arch, Os, Target, Variant};
 
 type Root = Vec<Root2>;
@@ -47,7 +48,7 @@ struct Root2 {
 }
 
 pub struct Java {
-    pub version_req_map: HashMap<String, Option<VersionReq>>,
+    pub version_req: Option<VersionReq>,
 }
 
 fn get_jdk_version() -> Option<String> {
@@ -61,8 +62,8 @@ fn get_jdk_version() -> Option<String> {
 
 impl Executor for Java {
     fn get_version_req(&self) -> Option<VersionReq> {
-        if let Some(v) = self.version_req_map.get("java") {
-            return v.clone();
+        if let Some(v) = &self.version_req {
+            return Some(v.clone());
         }
 
         if let Some(jdk_version) = get_jdk_version() {
@@ -87,6 +88,10 @@ impl Executor for Java {
 
     fn get_name(&self) -> &str {
         "java"
+    }
+
+    fn get_env(&self, app_path: AppPath) -> HashMap<String, String> {
+        [(String::from("JAVA_HOME"), app_path.app.to_str().unwrap().to_string())].iter().cloned().collect()
     }
 }
 
