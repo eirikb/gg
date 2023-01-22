@@ -39,7 +39,7 @@ struct Root2 {
 }
 
 pub struct Node {
-    pub version_req_map: HashMap<String, Option<VersionReq>>,
+    pub version_req: Option<VersionReq>,
     pub cmd: String,
 }
 
@@ -62,10 +62,8 @@ fn get_package_version() -> Option<Box<VersionReq>> {
 
 impl Executor for Node {
     fn get_version_req(&self) -> Option<VersionReq> {
-        if let Some(v) = self.version_req_map.get("node") {
-            if let Some(v) = v {
-                return Some(v.clone());
-            }
+        if let Some(v) = &self.version_req {
+            return Some(v.clone());
         }
         if let Some(v) = get_package_version() {
             Some(*v)

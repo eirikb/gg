@@ -1,24 +1,20 @@
-use std::collections::HashMap;
-use std::env;
 use std::fs::File;
 use std::future::Future;
 use std::io::BufReader;
 use std::pin::Pin;
-use std::process::Command;
 
 use java_properties::read;
-use log::debug;
 use regex::Regex;
 use scraper::{Html, Selector};
 use semver::VersionReq;
 
-use crate::{Executor, Java};
-use crate::executor::{AppInput, Download, prep};
+use crate::{Executor};
+use crate::executor::{AppInput, Download};
 
 use super::target;
 
 pub struct Gradle {
-    pub version_req_map: HashMap<String, Option<VersionReq>>,
+    pub version_req: Option<VersionReq>,
 }
 
 trait HelloWorld {
@@ -50,10 +46,8 @@ fn get_distribution_url() -> Option<String> {
 
 impl Executor for Gradle {
     fn get_version_req(&self) -> Option<VersionReq> {
-        if let Some(v) = self.version_req_map.get("gradle") {
-            if let Some(v) = v {
-                return Some(v.clone());
-            }
+        if let Some(v) = &self.version_req {
+            return Some(v.clone());
         }
         if let Some(distribution_url) = get_distribution_url() {
             if let Some(version) = distribution_url.get_version_from_gradle_url() {
@@ -103,17 +97,8 @@ impl Executor for Gradle {
         "gradle"
     }
 
-    fn before_exec<'a>(&'a self, input: &'a AppInput, command: &'a mut Command) -> Pin<Box<dyn Future<Output=Option<String>> + 'a>> {
-        Box::pin(async move {
-            let app_path = prep(&Java { version_req_map: self.version_req_map.clone() }, input).await.expect("Unable to install Java");
-            debug!("java path is {:?}", app_path);
-            command.env("JAVA_HOME", app_path.app.clone());
-            let path_string = &env::var("PATH").unwrap_or("".to_string());
-            let parent_bin_path = app_path.parent_bin_path();
-            let path = format!("{parent_bin_path}:{path_string}");
-            debug!("PATH: {path}");
-            Some(path)
-        })
+    fn get_deps(&self) -> Vec<&str> {
+        vec!("java")
     }
 }
 

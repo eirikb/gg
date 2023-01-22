@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -5,7 +6,7 @@ use std::pin::Pin;
 use std::process::Command;
 use log::{debug, info};
 use semver::{Version, VersionReq};
-use crate::download_unpack_and_all_that_stuff;
+use crate::{cmd_to_executor, download_unpack_and_all_that_stuff, NoClap};
 use crate::target::Target;
 
 #[derive(PartialEq, Debug, Clone)]
@@ -22,6 +23,7 @@ impl AppPath {
 
 pub struct AppInput {
     pub target: Target,
+    pub no_clap: NoClap,
 }
 
 #[derive(Debug, Clone)]
@@ -36,12 +38,23 @@ pub trait Executor {
     fn get_download_urls<'a>(&'a self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>>;
     fn get_bin(&self, input: &AppInput) -> &str;
     fn get_name(&self) -> &str;
-    fn before_exec<'a>(&'a self, _input: &'a AppInput, _command: &'a mut Command) -> Pin<Box<dyn Future<Output=Option<String>> + 'a>> {
-        Box::pin(async move { None })
+    fn get_deps(&self) -> Vec<&str> {
+        vec![]
+    }
+    fn get_env(&self, _app_path: AppPath) -> HashMap<String, String> {
+        HashMap::new()
+    }
+
+    fn custom_prep(&self) -> Option<AppPath> {
+        None
     }
 }
 
 pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, String> {
+    if let Some(app_path) = executor.custom_prep() {
+        return Ok(app_path);
+    }
+
     let bin = executor.get_bin(input);
     let path = (executor.get_name().to_string() + executor.get_version_req().unwrap_or(VersionReq::default()).to_string().as_str()).replace("*", "_star_").replace("^", "_hat_");
     info!( "Trying to find {bin} in {path}");
@@ -75,11 +88,27 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
     get_app_path(bin, path.as_str())
 }
 
-pub async fn try_execute(executor: &dyn Executor, input: &AppInput) -> Result<(), String> {
+pub async fn try_execute(executor: &dyn Executor, input: &AppInput, version_req_map: HashMap<String, Option<VersionReq>>) -> Result<(), String> {
+    debug!("Prepping all");
+
+    let mut path_vars: Vec<String> = vec!();
+    let mut env_vars: HashMap<String, String> = HashMap::new();
+    for (cmd, _) in &version_req_map {
+        if let Some(executor) = cmd_to_executor(cmd.to_string(), version_req_map.clone()) {
+            let res = prep(&*executor, input).await;
+            if let Ok(app_path) = res {
+                path_vars.push(app_path.parent_bin_path());
+                env_vars.clone_from(&(&*executor).get_env(app_path));
+            } else if let Err(e) = res {
+                println!("Unable to prep {}: {}", cmd, e);
+            }
+        }
+    }
+
     let app_path = prep(executor, input).await?.clone();
     debug!("path is {:?}", app_path);
     if app_path.bin.exists() {
-        return if try_run(executor, input, app_path).await.unwrap() {
+        return if try_run(input, app_path, path_vars, env_vars).await.unwrap() {
             Ok(())
         } else {
             Err("Unable to execute".to_string())
@@ -110,21 +139,19 @@ fn get_app_path(bin: &str, path: &str) -> Result<AppPath, String> {
     Ok(AppPath { app: app_path, bin: bin_path })
 }
 
-async fn try_run(executor: &dyn Executor, input: &AppInput, app_path: AppPath) -> Result<bool, String> {
+async fn try_run(input: &AppInput, app_path: AppPath, path_vars: Vec<String>, env_vars: HashMap<String, String>) -> Result<bool, String> {
     let bin_path = app_path.bin.to_str().unwrap_or("");
     info!("Executing: {:?}", bin_path);
     let path_string = &env::var("PATH").unwrap_or("".to_string());
     let parent_bin_path = app_path.parent_bin_path();
-    let path = format!("{parent_bin_path}:{path_string}");
-    debug!("PATH: {path}");
+    let paths = path_vars.join(":");
+    let all_paths = vec!(parent_bin_path, paths, path_string.to_string()).join(":");
+    debug!("PATH: {all_paths}");
     let mut command = Command::new(&bin_path);
-    let more_path = executor.before_exec(input, &mut command).await;
     let res = command
-        .env("PATH", match more_path {
-            None => path,
-            Some(p) => format!("{p}:{path}")
-        })
-        .args(env::args().skip(2))
+        .env("PATH", all_paths)
+        .envs(env_vars)
+        .args(&input.no_clap.app_args)
         .spawn().map_err(|e| e.to_string())?.wait().map_err(|_| "eh")?.success();
     if !res {
         info!("Unable to execute {bin_path}");
