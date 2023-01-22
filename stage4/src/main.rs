@@ -1,13 +1,12 @@
-use std::collections::HashMap;
 use std::fs;
 use std::process::{ExitCode};
 
 use log::{debug, info};
-use semver::VersionReq;
 
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
+use crate::bloody_indiana_jones::download;
 
-use crate::executor::{AppInput, AppPath, Executor, prep, try_execute};
+use crate::executor::{AppInput, Executor, try_execute};
 use crate::gradle::Gradle;
 use crate::java::Java;
 use crate::no_clap::NoClap;
@@ -71,6 +70,13 @@ async fn main() -> ExitCode {
 
     if no_clap.version {
         println!("{}", ver);
+        return ExitCode::from(0);
+    }
+
+    if no_clap.update {
+        println!("Updating gg.cmd...");
+        let url = "https://github.com/eirikb/m/releases/latest/download/gg.cmd";
+        download(url, "gg.cmd").await;
         return ExitCode::from(0);
     }
 

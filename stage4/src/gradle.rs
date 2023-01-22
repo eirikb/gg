@@ -1,19 +1,15 @@
-use std::collections::HashMap;
-use std::env;
 use std::fs::File;
 use std::future::Future;
 use std::io::BufReader;
 use std::pin::Pin;
-use std::process::Command;
 
 use java_properties::read;
-use log::debug;
 use regex::Regex;
 use scraper::{Html, Selector};
 use semver::VersionReq;
 
-use crate::{Executor, Java};
-use crate::executor::{AppInput, Download, prep};
+use crate::{Executor};
+use crate::executor::{AppInput, Download};
 
 use super::target;
 

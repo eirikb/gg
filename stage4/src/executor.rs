@@ -108,7 +108,7 @@ pub async fn try_execute(executor: &dyn Executor, input: &AppInput, version_req_
     let app_path = prep(executor, input).await?.clone();
     debug!("path is {:?}", app_path);
     if app_path.bin.exists() {
-        return if try_run(executor, input, app_path, path_vars, env_vars).await.unwrap() {
+        return if try_run(input, app_path, path_vars, env_vars).await.unwrap() {
             Ok(())
         } else {
             Err("Unable to execute".to_string())
@@ -139,7 +139,7 @@ fn get_app_path(bin: &str, path: &str) -> Result<AppPath, String> {
     Ok(AppPath { app: app_path, bin: bin_path })
 }
 
-async fn try_run(executor: &dyn Executor, input: &AppInput, app_path: AppPath, path_vars: Vec<String>, env_vars: HashMap<String, String>) -> Result<bool, String> {
+async fn try_run(input: &AppInput, app_path: AppPath, path_vars: Vec<String>, env_vars: HashMap<String, String>) -> Result<bool, String> {
     let bin_path = app_path.bin.to_str().unwrap_or("");
     info!("Executing: {:?}", bin_path);
     let path_string = &env::var("PATH").unwrap_or("".to_string());

@@ -3,7 +3,6 @@ use std::fs::{File};
 use std::future::Future;
 use std::io::BufReader;
 use std::pin::Pin;
-use futures_util::StreamExt;
 use java_properties::read;
 use semver::VersionReq;
 

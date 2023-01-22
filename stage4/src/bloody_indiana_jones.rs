@@ -6,9 +6,11 @@ use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info};
 
-pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
-    info!("Downloading {url}");
+fn get_file_name(url: &str) -> String {
+    reqwest::Url::parse(url).unwrap().path_segments().unwrap().last().unwrap().to_string()
+}
 
+pub async fn download(url: &str, file_path: &str) {
     let client = reqwest::Client::new();
     let res = client.get(url)
         .send()
@@ -20,18 +22,15 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
 
     debug!("Total size {:?}", total_size);
 
-    create_dir_all(".cache/gg/downloads").expect("Unable to create download dir");
-
     let pb = ProgressBar::new(total_size);
     pb.set_style(ProgressStyle::default_bar()
         .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
         .unwrap());
     pb.set_message(format!("Downloading {}", url));
 
-    let mut file_name = reqwest::Url::parse(url).unwrap().path_segments().unwrap().last().unwrap().to_string();
+    let file_name = get_file_name(url);
     debug!("File name {:?}", file_name);
 
-    let file_path = &format!(".cache/gg/downloads/{file_name}");
     debug!("{:?}", file_path);
 
     let mut file = File::create(file_path)
@@ -49,6 +48,15 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
     }
 
     pb.finish_with_message(format!("Downloaded {} to {}", url, file_path));
+}
+
+pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
+    info!("Downloading {url}");
+
+    create_dir_all(".cache/gg/downloads").expect("Unable to create download dir");
+    let file_name = get_file_name(url);
+    let file_path = &format!(".cache/gg/downloads/{file_name}");
+    download(url, file_path.as_str()).await;
 
     info!("Extracting {file_name}");
     let ext = Path::new(&file_name).extension().unwrap().to_str();
@@ -84,7 +92,7 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
         _ => ()
     }
 
-    file_name = Path::new(&format!(".cache/gg/downloads/{file_name}")).with_extension("").to_str().unwrap().to_string();
+    let file_name = Path::new(&format!(".cache/gg/downloads/{file_name}")).with_extension("").to_str().unwrap().to_string();
 
     match Path::new(&file_name).extension().unwrap().to_str() {
         Some("tar") => {
