@@ -58,7 +58,6 @@ jobs:
           rm -rf stage4
           cd stage42
           export VERSION=${{needs.version.outputs.version}}
-          echo "version is $VERSION"
           
           rustup target add ${{ matrix.target }}
           cargo build --release --target=${{ matrix.target }}
