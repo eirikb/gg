@@ -22,7 +22,7 @@ jobs:
         run: echo "version=${{ steps.buildnumber.outputs.build_number }}" >> $GITHUB_OUTPUT
 
       - name: Set dev version
-        if: github.ref == 'refs/heads/main'
+        if: github.ref != 'refs/heads/main'
         run: echo "version=dev" >> $GITHUB_OUTPUT
 
   stage4-OS:
@@ -57,6 +57,7 @@ jobs:
           rm -rf stage4
           cd stage42
           export VERSION=${{needs.version.outputs.version}}
+          echo "Version is $VERSION"
           
           rustup target add ${{ matrix.target }}
           cargo build --release --target=${{ matrix.target }}
@@ -106,7 +107,7 @@ jobs:
             source $HOME/.cargo/env
           fi
 
-          export VER=${{needs.version.outputs.version}}
+          export VERSION=${{needs.version.outputs.version}}
           
           cargo build --release --target=${{ matrix.target }}
           #--target=${{ matrix.target}}
