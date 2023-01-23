@@ -17,11 +17,11 @@ jobs:
         with:
           token: ${{ github.token }}
 
-      - name: Set prod version
+      - name: step1
         if: github.ref == 'refs/heads/main'
         run: echo "version=${{ steps.buildnumber.outputs.build_number }}" >> $GITHUB_OUTPUT
 
-      - name: Set dev version
+      - name: step1
         if: github.ref != 'refs/heads/main'
         run: echo "version=dev" >> $GITHUB_OUTPUT
 
