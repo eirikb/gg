@@ -5,54 +5,27 @@ on:
 name: gg.cmd
 jobs:
 
-#  job1:
-#    runs-on: ubuntu-latest
-#    # Map a step output to a job output
-#    outputs:
-#    steps:
-#  job2:
-#    runs-on: ubuntu-latest
-#    needs: job1
-#    steps:
-#      - run: echo ${{needs.job1.outputs.output1}} ${{needs.job1.outputs.output2}}
-
-  ver:
+  version:
     runs-on: ubuntu-latest
     outputs:
-      test: ${{ steps.step1.outputs.test }}
-      ver: ${{ steps.ver.outputs.ver }}
-      version2: ${{ steps.step3.outputs.version2 }}
-      version3: ${{ steps.step4.outputs.version }}
-      output1: ${{ steps.step1.outputs.test }}
-      output2: ${{ steps.step2.outputs.test }}
+      version: ${{ steps.version.outputs.version }}
     steps:
-      - id: step1
-        run: echo "test=hello" >> $GITHUB_OUTPUT
-      - id: step2
-        run: echo "test=world" >> $GITHUB_OUTPUT
-#      - name: Generate version
-#        if: github.ref == 'refs/heads/main'
-#        id: buildnumber
-#        uses: einaregilsson/build-number@v3
-#        with:
-#          token: ${{ github.token }}
-#
-#      - name: step1
-#        if: github.ref == 'refs/heads/main'
-#        run: echo "version=${{ steps.buildnumber.outputs.build_number }}" >> $GITHUB_OUTPUT
+      - name: Generate version
+        if: github.ref == 'refs/heads/main'
+        id: buildnumber
+        uses: einaregilsson/build-number@v3
+        with:
+          token: ${{ github.token }}
 
-#      - name: step1
-##        if: github.ref != 'refs/heads/main'
-#        run: echo "test=hello" >> $GITHUB_OUTPUT
+      - name: Set prod version
+        id: version
+        if: github.ref == 'refs/heads/main'
+        run: echo "version=${{ steps.buildnumber.outputs.build_number }}" >> $GITHUB_OUTPUT
 
-#      - name: step2
-#        run: echo "ver=dev" >> $GITHUB_OUTPUT
-
-      - name: step3
-        run: echo "version2=dev" >> $GITHUB_OUTPUT
-
-      - name: ver
-        run: echo "ver=dev" >> $GITHUB_OUTPUT
+      - name: Set dev version
+        id: version
+        if: github.ref == 'refs/heads/main'
+        run: echo "version=dev" >> $GITHUB_OUTPUT
 
   stage4-OS:
     strategy:
@@ -66,7 +39,7 @@ jobs:
             target: x86_64-apple-darwin
 
     runs-on: ${{ matrix.os }}
-    needs: ver
+    needs: version
     steps:
       - uses: actions/checkout@v2
 
@@ -85,16 +58,7 @@ jobs:
           mv stage4/* stage42
           rm -rf stage4
           cd stage42
-          
-          echo 1
-          echo 2 ${{needs.ver.outputs.output1}} ${{needs.ver.outputs.output2}}
-          echo 3 ${{needs.ver.outputs.test}}
-          echo 4 ${{needs.ver.outputs.ver}}
-          echo 5 ${{needs.ver.outputs.version2}}
-          echo 6 ${{needs.ver.outputs.version3}}
-          
-          export VERSION=${{needs.ver.outputs.version}}
-          echo "Version is $VERSION"
+          export VERSION=${{needs.version.outputs.version}}
           
           rustup target add ${{ matrix.target }}
           cargo build --release --target=${{ matrix.target }}
@@ -117,7 +81,7 @@ jobs:
             target: x86_64-unknown-linux-musl
 
     runs-on: ubuntu-latest
-    needs: ver
+    needs: version
     container: ${{ matrix.container }}
     steps:
       - uses: actions/checkout@v2
@@ -144,7 +108,7 @@ jobs:
             source $HOME/.cargo/env
           fi
 
-          export VERSION=${{needs.ver.outputs.version}}
+          export VER=${{needs.version.outputs.version}}
           
           cargo build --release --target=${{ matrix.target }}
           #--target=${{ matrix.target}}
@@ -169,7 +133,7 @@ jobs:
             target: armv7-unknown-linux-musl
 
     runs-on: ubuntu-18.04
-    needs: ver
+    needs: version
     steps:
       - uses: actions/checkout@v2.1.0
 
@@ -198,8 +162,8 @@ jobs:
           run: |
             cd stage4
             cp -rp /cachus/* . || :
-            echo "OK ${{needs.ver.outputs.version}}"
-            export VERSION=${{needs.ver.outputs.version}}
+            echo "OK ${{needs.version.outputs.version}}"
+            export VERSION=${{needs.version.outputs.version}}
             echo VERSION IS $VERSION
             CARGO_HOME=ok cargo build --release
             cp -rp target /cachus/
@@ -424,7 +388,7 @@ jobs:
 
 
   stage1:
-    needs: [ ver, stage3-OS, stage3-container, stage3-arch ]
+    needs: [ version, stage3-OS, stage3-container, stage3-arch ]
     runs-on: ubuntu-latest
     steps:
       - name: Source
@@ -456,8 +420,8 @@ jobs:
           chmod +x .cache/gg/stage2.sh
           tar -zpvcf gg.tgz .cache
           
-          echo "OK ${{needs.ver.outputs.version}}"
-          VERSION=${{needs.ver.outputs.version}}
+          echo "OK ${{needs.version.outputs.version}}"
+          VERSION=${{needs.version.outputs.version}}
           echo "version is $VERSION"
           echo bat is 
           cat _stage1/stage1.bat
@@ -591,7 +555,7 @@ jobs:
 
   release:
     name: Release!
-    needs: [ ver, test-OS, test-batch, test-container ]
+    needs: [ version, test-OS, test-batch, test-container ]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
@@ -601,8 +565,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          tag_name: ${{ needs.ver.outputs.version }}
-          release_name: Release ${{ needs.ver.outputs.version }}
+          tag_name: ${{ needs.version.outputs.version }}
+          release_name: Release ${{ needs.version.outputs.version }}
           draft: false
           prerelease: false
 
