@@ -8,7 +8,7 @@ jobs:
   ver:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.step1.outputs.version }}
+      test: ${{ steps.step1.outputs.test }}
       ver: ${{ steps.step2.outputs.ver }}
       version2: ${{ steps.step3.outputs.version2 }}
       version3: ${{ steps.step4.outputs.version }}
@@ -26,7 +26,7 @@ jobs:
 
       - name: step1
         if: github.ref != 'refs/heads/main'
-        run: echo "version=dev" >> $GITHUB_OUTPUT
+        run: echo "test=hello" >> $GITHUB_OUTPUT
 
       - name: step2
         run: echo "ver=dev" >> $GITHUB_OUTPUT
@@ -34,8 +34,8 @@ jobs:
       - name: step3
         run: echo "version2=dev" >> $GITHUB_OUTPUT
 
-      - name: step4
-        run: echo "version=dev" >> $GITHUB_OUTPUT
+      - name: ver
+        run: echo "ver=dev" >> $GITHUB_OUTPUT
 
   stage4-OS:
     strategy:
@@ -69,7 +69,7 @@ jobs:
           rm -rf stage4
           cd stage42
           
-          echo ${{needs.ver.outputs.version}}
+          echo ${{needs.ver.outputs.test}}
           echo ${{needs.ver.outputs.ver}}
           echo ${{needs.ver.outputs.version2}}
           echo ${{needs.ver.outputs.version3}}
