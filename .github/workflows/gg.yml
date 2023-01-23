@@ -5,7 +5,7 @@ on:
 name: gg.cmd
 jobs:
 
-  version:
+  ver:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.step1.outputs.version }}
@@ -13,16 +13,16 @@ jobs:
       version2: ${{ steps.step3.outputs.version2 }}
       version3: ${{ steps.step4.outputs.version }}
     steps:
-      - name: Generate version
-        if: github.ref == 'refs/heads/main'
-        id: buildnumber
-        uses: einaregilsson/build-number@v3
-        with:
-          token: ${{ github.token }}
-
-      - name: step1
-        if: github.ref == 'refs/heads/main'
-        run: echo "version=${{ steps.buildnumber.outputs.build_number }}" >> $GITHUB_OUTPUT
+#      - name: Generate version
+#        if: github.ref == 'refs/heads/main'
+#        id: buildnumber
+#        uses: einaregilsson/build-number@v3
+#        with:
+#          token: ${{ github.token }}
+#
+#      - name: step1
+#        if: github.ref == 'refs/heads/main'
+#        run: echo "version=${{ steps.buildnumber.outputs.build_number }}" >> $GITHUB_OUTPUT
 
       - name: step1
         if: github.ref != 'refs/heads/main'
@@ -49,7 +49,7 @@ jobs:
             target: x86_64-apple-darwin
 
     runs-on: ${{ matrix.os }}
-    needs: version
+    needs: ver
     steps:
       - uses: actions/checkout@v2
 
@@ -69,12 +69,12 @@ jobs:
           rm -rf stage4
           cd stage42
           
-          echo ${{needs.version.outputs.version}}
-          echo ${{needs.version.outputs.ver}}
-          echo ${{needs.version.outputs.version2}}
-          echo ${{needs.version.outputs.version3}}
+          echo ${{needs.ver.outputs.version}}
+          echo ${{needs.ver.outputs.ver}}
+          echo ${{needs.ver.outputs.version2}}
+          echo ${{needs.ver.outputs.version3}}
           
-          export VERSION=${{needs.version.outputs.version}}
+          export VERSION=${{needs.ver.outputs.version}}
           echo "Version is $VERSION"
           
           rustup target add ${{ matrix.target }}
@@ -98,7 +98,7 @@ jobs:
             target: x86_64-unknown-linux-musl
 
     runs-on: ubuntu-latest
-    needs: version
+    needs: ver
     container: ${{ matrix.container }}
     steps:
       - uses: actions/checkout@v2
@@ -125,7 +125,7 @@ jobs:
             source $HOME/.cargo/env
           fi
 
-          export VERSION=${{needs.version.outputs.version}}
+          export VERSION=${{needs.ver.outputs.version}}
           
           cargo build --release --target=${{ matrix.target }}
           #--target=${{ matrix.target}}
@@ -150,7 +150,7 @@ jobs:
             target: armv7-unknown-linux-musl
 
     runs-on: ubuntu-18.04
-    needs: version
+    needs: ver
     steps:
       - uses: actions/checkout@v2.1.0
 
@@ -179,8 +179,8 @@ jobs:
           run: |
             cd stage4
             cp -rp /cachus/* . || :
-            echo "OK ${{needs.version.outputs.version}}"
-            export VERSION=${{needs.version.outputs.version}}
+            echo "OK ${{needs.ver.outputs.version}}"
+            export VERSION=${{needs.ver.outputs.version}}
             echo VERSION IS $VERSION
             CARGO_HOME=ok cargo build --release
             cp -rp target /cachus/
@@ -405,7 +405,7 @@ jobs:
 
 
   stage1:
-    needs: [ version, stage3-OS, stage3-container, stage3-arch ]
+    needs: [ ver, stage3-OS, stage3-container, stage3-arch ]
     runs-on: ubuntu-latest
     steps:
       - name: Source
@@ -437,8 +437,8 @@ jobs:
           chmod +x .cache/gg/stage2.sh
           tar -zpvcf gg.tgz .cache
           
-          echo "OK ${{needs.version.outputs.version}}"
-          VERSION=${{needs.version.outputs.version}}
+          echo "OK ${{needs.ver.outputs.version}}"
+          VERSION=${{needs.ver.outputs.version}}
           echo "version is $VERSION"
           echo bat is 
           cat _stage1/stage1.bat
@@ -572,7 +572,7 @@ jobs:
 
   release:
     name: Release!
-    needs: [ version, test-OS, test-batch, test-container ]
+    needs: [ ver, test-OS, test-batch, test-container ]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
@@ -582,8 +582,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          tag_name: ${{ needs.version.outputs.version }}
-          release_name: Release ${{ needs.version.outputs.version }}
+          tag_name: ${{ needs.ver.outputs.version }}
+          release_name: Release ${{ needs.ver.outputs.version }}
           draft: false
           prerelease: false
 
