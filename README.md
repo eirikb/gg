@@ -1,11 +1,20 @@
 # gg.cmd - The Ultimate Executable Manager
 
-Download:  
-[gg.cmd](https://github.com/eirikb/m/releases/latest/download/gg.cmd)
-
 Are you tired of managing multiple executables for different projects on your system? Introducing gg.cmd, the ultimate
 cross-platform executable manager. With gg.cmd, you can easily switch between different executables with a single
 command, saving you time and hassle.
+
+Download:  
+**[gg.cmd](https://github.com/eirikb/m/releases/latest/download/gg.cmd)**
+
+or
+
+Put it in your repo:
+> wget https://github.com/eirikb/m/releases/latest/download/gg.cmd
+
+or
+
+> curl https://github.com/eirikb/m/releases/latest/download/gg.cmd > gg.cmd
 
 ## Features
 
