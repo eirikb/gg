@@ -2,6 +2,7 @@ use std::fs;
 use std::process::{ExitCode};
 
 use log::{debug, info};
+use semver::VersionReq;
 
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
 use crate::bloody_indiana_jones::download;
@@ -90,7 +91,20 @@ async fn main() -> ExitCode {
 
     debug!(target: "main", "{:?}", &no_clap.version_req_map);
 
-    let version_req_map = no_clap.version_req_map.clone();
+    let mut version_req_map = no_clap.version_req_map.clone();
+    let version_req_map2 = no_clap.version_req_map.clone();
+
+    for x in &version_req_map2 {
+        let executor = cmd_to_executor(x.0.to_string(), version_req_map.clone());
+        if let Some(executor) = executor {
+            for x in executor.get_deps() {
+                if !version_req_map.contains_key(x) {
+                    version_req_map.insert(x.to_string(), Some(VersionReq::default()));
+                }
+            }
+        }
+    }
+
 
     return if let Some(cmd) = no_clap.clone().cmd {
         let executor: Option<Box<dyn Executor>> = if no_clap.clone().custom_cmd {
