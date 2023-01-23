@@ -25,7 +25,7 @@ jobs:
 #        run: echo "version=${{ steps.buildnumber.outputs.build_number }}" >> $GITHUB_OUTPUT
 
       - name: step1
-        if: github.ref != 'refs/heads/main'
+#        if: github.ref != 'refs/heads/main'
         run: echo "test=hello" >> $GITHUB_OUTPUT
 
       - name: step2
