@@ -8,7 +8,7 @@ jobs:
   version:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.step1.outputs.version }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Generate version
         if: github.ref == 'refs/heads/main'
@@ -17,13 +17,14 @@ jobs:
         with:
           token: ${{ github.token }}
 
-      - name: Set prod version
-        if: github.ref == 'refs/heads/main'
-        run: echo "version=${{ steps.buildnumber.outputs.build_number }}" >> $GITHUB_OUTPUT
-
-      - name: Set dev version
-        if: github.ref != 'refs/heads/main'
-        run: echo "version=dev" >> $GITHUB_OUTPUT
+      - name: Set version
+        id: version
+        run: |
+          if [ "${{github.ref}}" == "refs/heads/main" ]; then
+            echo "version=${{ steps.buildnumber.outputs.build_number }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=dev" >> $GITHUB_OUTPUT
+          fi
 
   stage4-OS:
     strategy:
@@ -57,7 +58,6 @@ jobs:
           rm -rf stage4
           cd stage42
           export VERSION=${{needs.version.outputs.version}}
-          echo "Version is $VERSION"
           
           rustup target add ${{ matrix.target }}
           cargo build --release --target=${{ matrix.target }}
@@ -107,7 +107,7 @@ jobs:
             source $HOME/.cargo/env
           fi
 
-          export VERSION=${{needs.version.outputs.version}}
+          export VER=${{needs.version.outputs.version}}
           
           cargo build --release --target=${{ matrix.target }}
           #--target=${{ matrix.target}}
