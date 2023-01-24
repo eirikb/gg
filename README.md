@@ -1,19 +1,12 @@
 # gg.cmd - The Ultimate Executable Manager
 
+[![gg.cmd](https://github.com/eirikb/gg/actions/workflows/gg.yml/badge.svg)](https://github.com/eirikb/gg/actions/workflows/gg.yml)
+
 Are you tired of managing multiple executables for different projects on your system? Introducing gg.cmd, the ultimate
 cross-platform executable manager. With gg.cmd, you can easily switch between different executables with a single
 command, saving you time and hassle.
 
-Download:  
-**[gg.cmd](https://github.com/eirikb/m/releases/latest/download/gg.cmd)**
-
-or
-
-Put it in your repo:
-> wget https://github.com/eirikb/m/releases/latest/download/gg.cmd
-
-or
-
+Install into your repo:
 > curl https://github.com/eirikb/m/releases/latest/download/gg.cmd > gg.cmd
 
 ## Features
@@ -31,7 +24,8 @@ Adds every dependency into `PATH` before executing.
 
 ## Usage
 
-Using gg.cmd is easy. Simply place the executable in the root of your project and run it with the `gg.cmd` command followed
+Using gg.cmd is easy. Simply place the executable in the root of your project and run it with the `gg.cmd` command
+followed
 by the desired executable and its required dependencies:
 
 ```bash
@@ -53,7 +47,7 @@ You can also specify multiple dependencies by separating them with a : symbol:
 
 #### Node
 
-Supports `npm` and `npx` as well. Version specified refers to node version (not npm).  
+Supports `npm` and `npx` as well. Version specified refers to node version (not npm).
 
 `engines` from `package.json` used to determine requried version.
 
