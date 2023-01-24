@@ -49,7 +49,9 @@ You can also specify multiple dependencies by separating them with a : symbol:
 
 Supports `npm` and `npx` as well. Version specified refers to node version (not npm).
 
-`engines` from `package.json` used to determine requried version.
+`engines` from `package.json` used to determine required version.
+
+`.nvmrc` file used to determine required version.
 
 For musl (e.g., alpine) unofficial builds are used ( https://unofficial-builds.nodejs.org/ ).
 

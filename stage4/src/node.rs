@@ -1,17 +1,18 @@
 use std::collections::HashMap;
+use std::fs;
 use std::future::Future;
 use std::pin::Pin;
+use log::info;
 
 use scraper::{Html, Selector};
 use semver::VersionReq;
 use serde::Deserialize;
 use serde::Serialize;
 use package_json::PackageJsonManager;
+use regex::Regex;
 
 use crate::executor::{AppInput, Download, Executor};
 use crate::target::{Arch, Os, Target, Variant};
-
-use super::target;
 
 type Root = Vec<Root2>;
 
@@ -48,16 +49,22 @@ fn get_package_version() -> Option<Box<VersionReq>> {
     if manager.locate_closest().is_ok() {
         if let Ok(json) = manager.read_ref() {
             if json.engines.is_some() {
-                Some(Box::new(VersionReq::parse(json.clone().engines.clone().unwrap().get("node").unwrap_or(&"".to_string())).unwrap_or(VersionReq::default())))
-            } else {
-                None
+                return Some(Box::new(VersionReq::parse(json.clone().engines.clone().unwrap().get("node").unwrap_or(&"".to_string())).unwrap_or(VersionReq::default())));
             }
-        } else {
-            None
         }
-    } else {
-        None
     }
+
+
+    if let Ok(nvmrc) = fs::read_to_string(".nvmrc") {
+        let nvmrc = Regex::new("^v").unwrap().replace(&nvmrc, "");
+        let nvmrc = nvmrc.trim();
+        info!("Got version {nvmrc} from .nvmrc");
+        if let Ok(ver) = VersionReq::parse(&nvmrc) {
+            info!("Got parsed version {ver} from .nvmrc");
+            return Some(Box::new(ver.clone()));
+        }
+    }
+    None
 }
 
 impl Executor for Node {
@@ -78,7 +85,7 @@ impl Executor for Node {
 
     fn get_bin(&self, input: &AppInput) -> &str {
         match &input.target.os {
-            target::Os::Windows => match self.cmd.as_str() {
+            Os::Windows => match self.cmd.as_str() {
                 "node" => "node.exe",
                 "npm" => "npm.cmd",
                 _ => "npx.cmd",
