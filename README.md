@@ -26,13 +26,16 @@ or
 - Easy executable switching with a single command
 - Fast and lightweight
 
+Install programs locally in a folder called `.cache`. Global install not supported.
+Adds every dependency into `PATH` before executing.
+
 ## Usage
 
-Using gg.cmd is easy. Simply place the executable in the root of your project and run it with the `gg` command followed
+Using gg.cmd is easy. Simply place the executable in the root of your project and run it with the `gg.cmd` command followed
 by the desired executable and its required dependencies:
 
 ```bash
-./gg.cmd <executable name>@<version>:<dependent executable name>@<version>
+./gg.cmd [gg options] <executable name>@<version>:<dependent executable name>@<version> [executable arguments]
 ```
 
 For example, to switch to a specific version of Gradle and the required version of Java, you can use the following
@@ -45,8 +48,26 @@ command:
 You can also specify multiple dependencies by separating them with a : symbol:
 
 ```
-./gg.cmd gradle@6:java@17:maven@3.6.3
+./gg.cmd gradle@6:java@17:node
 ```
+
+#### Node
+
+Supports `npm` and `npx` as well. Version specified refers to node version (not npm).  
+
+`engines` from `package.json` used to determine requried version.
+
+For musl (e.g., alpine) unofficial builds are used ( https://unofficial-builds.nodejs.org/ ).
+
+#### Gradle
+
+`distributionUrl` from `gradle/wrapper/gradle-wrapper.properties` used find download url.
+
+#### Java
+
+Sets `JAVA_HOME`.
+
+`jdkVersion` from `gradle/wrapper/gradle-wrapper.properties` used to determine required version.
 
 ## Examples
 
