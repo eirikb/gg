@@ -7,7 +7,7 @@ cross-platform executable manager. With gg.cmd, you can easily switch between di
 command, saving you time and hassle.
 
 Install into your repo:
-> curl https://github.com/eirikb/m/releases/latest/download/gg.cmd > gg.cmd
+> wget https://github.com/eirikb/m/releases/latest/download/gg.cmd
 
 ## Features
 
