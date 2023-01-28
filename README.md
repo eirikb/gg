@@ -12,12 +12,11 @@ Install into root of your repo:
 ## Features
 
 - Simplify the management of other executables in your project
-- Automatically detect and switch to the required executable version using project configuration files (such
+- Automatically detect and execute the required executable version using project configuration files (such
   as `package.json` for Node.js projects)
 - Support for chaining multiple executables (e.g. `gradle@6:java@17`)
 - Cross-platform compatibility (Windows, macOS, and Linux)
 - Cross-architecture compatibility (x86_64 and ARM)
-- Easy executable switching with a single command
 - Fast and lightweight
 
 Installs tool locally in a folder called `.cache`. Global install not supported.
@@ -47,13 +46,13 @@ by the desired executable and its required dependencies:
 
 Here are a few examples of how gg.cmd can make your life easier:
 
-### Switch to a specific version of Node
+### Execute specific version of Node
 
 ```
 ./gg.cmd node@14
 ```
 
-### Switch to a specific version of Gradle and the required version of Java
+### Execute specific version of Gradle and the required version of JVM/JDK
 
 ```
 ./gg.cmd gradle@6:java@17
