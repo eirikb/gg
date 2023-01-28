@@ -80,7 +80,9 @@ int main() {
   } while (messageSize > 0);
   fclose(f);
 
-  char newHash[HASH_SIZE];
+  printf("\n");
+
+    char newHash[HASH_SIZE];
   hashForFile("stage4", newHash);
   if (strcmp(hash, newHash) != 0) {
     printf("Hash did not match :(\n");
