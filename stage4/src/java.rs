@@ -56,6 +56,11 @@ fn get_jdk_version() -> Option<String> {
             return map.get("jdkVersion").map(|s| s.clone());
         }
     }
+    if let Ok(file) = File::open("gradle.properties") {
+        if let Ok(map) = read(BufReader::new(file)) {
+            return map.get("jdkVersion").map(|s| s.clone());
+        }
+    }
     None
 }
 

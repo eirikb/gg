@@ -32,19 +32,35 @@ by the desired executable and its required dependencies:
 ./gg.cmd [gg options] <executable name>@<version>:<dependent executable name>@<version> [executable arguments]
 ```
 
-## Executable table
+## Support table
 
-| Executable | Part of | Depends on | Version from                                                 | Download url from                                                    | Set environment variables |
-|------------|---------|------------|--------------------------------------------------------------|----------------------------------------------------------------------|---------------------------|
-| **node**   |         |            | `engines` in `package.json`<br/> Contents of `.nvmrc`        |                                                                      |
-| **npm**    | node    |            | node version                                                 |                                                                      |
-| **npx**    | node    |            | node version                                                 |                                                                      |
-| **gradle** |         | java       | `distrivutionUrl`                                            | `distributionUrl` in<br/> `gradle/wrapper/gradle-wrapper.properties` |
-| **java**   |         |            | `jdkVersion` from `gradle/wrapper/gradle-wrapper.properties` |                                                                      | JAVA_HOME                 |
+| Executable | Part of | Depends on | Version from                                                                                         | Download url from                                                                                                  | Set environment variables |
+|------------|---------|------------|------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|---------------------------|
+| **node**   |         |            | `engines` in `package.json`<br/> Contents of `.nvmrc`                                                |                                                                                                                    |
+| **npm**    | node    |            | node version                                                                                         |                                                                                                                    |
+| **npx**    | node    |            | node version                                                                                         |                                                                                                                    |
+| **gradle** |         | java       | `distributionUrl` in `gradle/wrapper/gradle-wrapper.properties`                                      | `distributionUrl` in<br/> `gradle/wrapper/gradle-wrapper.properties`<br/> `distributionUrl` in `gradle.properties` |
+| **java**   |         |            | `jdkVersion` in `gradle/wrapper/gradle-wrapper.properties` <br/> `jdkVersion` in `gradle.properties` |                                                                                                                    | JAVA_HOME                 |
+
+## On gradlew
+
+With support for `distributionUrl` in `gradle.properties` you can replace gradlew with a single `gg.cmd` and can
+delete these files:
+
+* gradle/wrapper/gradle-wrapper.jar
+* gradle/wrapper/gradle-wrapper.properties
+* gradlew
+* gradlew.bat
 
 ## Examples
 
 Here are a few examples of how gg.cmd can make your life easier:
+
+### Execute gradle
+
+```
+./gg.cmd gradle build
+```
 
 ### Execute specific version of Node
 
@@ -55,7 +71,7 @@ Here are a few examples of how gg.cmd can make your life easier:
 ### Execute specific version of Gradle and the required version of JVM/JDK
 
 ```
-./gg.cmd gradle@6:java@17
+./gg.cmd gradle@6:java@17 clean build
 ```
 
 ### Create a new node project
