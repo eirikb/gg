@@ -30,8 +30,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-18.04
-            target: x86_64-unknown-linux-gnu
           - os: windows-latest
             target: x86_64-pc-windows-msvc
           - os: macos-latest
@@ -78,6 +76,8 @@ jobs:
         include:
           - container: alpine
             target: x86_64-unknown-linux-musl
+          - container: ubuntu-68.04
+            target: x86_64-unknown-linux-gnu
 
     runs-on: ubuntu-latest
     needs: version
