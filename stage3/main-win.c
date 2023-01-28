@@ -122,7 +122,9 @@ int __cdecl main() {
   } while (message_size > 0);
   fclose(f);
 
-  char newHash[SHA512_BLOCK_LENGTH + 1];
+  printf("\n");
+
+    char newHash[SHA512_BLOCK_LENGTH + 1];
   hashForFile("stage4", newHash);
   if (strcmp(hash, newHash) != 0) {
     printf("Hash did not match :(\n");

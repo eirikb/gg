@@ -1,13 +1,13 @@
-# gg.cmd - The Ultimate Executable Manager
+# gg.cmd
 
 [![gg.cmd](https://github.com/eirikb/gg/actions/workflows/gg.yml/badge.svg)](https://github.com/eirikb/gg/actions/workflows/gg.yml)
 
-Are you tired of managing multiple executables for different projects on your system? Introducing gg.cmd, the ultimate
-cross-platform executable manager. With gg.cmd, you can easily switch between different executables with a single
-command, saving you time and hassle.
+gg.cmd is a cross-platform and cross-architecture command-line interface (CLI) that acts as an executable wrapper for
+various tools such as Gradle, JDK/JVM, Node.js, and Java. It requires minimal dependencies and is similar in
+functionality to gradlew.
 
-Install into your repo:
-> wget https://github.com/eirikb/m/releases/latest/download/gg.cmd
+Install into root of your repo:
+> wget gg.eirikb.no/gg.cmd
 
 ## Features
 
@@ -16,10 +16,11 @@ Install into your repo:
   as `package.json` for Node.js projects)
 - Support for chaining multiple executables (e.g. `gradle@6:java@17`)
 - Cross-platform compatibility (Windows, macOS, and Linux)
+- Cross-architecture compatibility (x86_64 and ARM)
 - Easy executable switching with a single command
 - Fast and lightweight
 
-Install programs locally in a folder called `.cache`. Global install not supported.
+Installs tool locally in a folder called `.cache`. Global install not supported.
 Adds every dependency into `PATH` before executing.
 
 ## Usage
@@ -32,57 +33,46 @@ by the desired executable and its required dependencies:
 ./gg.cmd [gg options] <executable name>@<version>:<dependent executable name>@<version> [executable arguments]
 ```
 
-For example, to switch to a specific version of Gradle and the required version of Java, you can use the following
-command:
+## Executable table
 
-```
-./gg.cmd gradle@6:java@17
-```
-
-You can also specify multiple dependencies by separating them with a : symbol:
-
-```
-./gg.cmd gradle@6:java@17:node
-```
-
-#### Node
-
-Supports `npm` and `npx` as well. Version specified refers to node version (not npm).
-
-`engines` from `package.json` used to determine required version.
-
-`.nvmrc` file used to determine required version.
-
-For musl (e.g., alpine) unofficial builds are used ( https://unofficial-builds.nodejs.org/ ).
-
-#### Gradle
-
-`distributionUrl` from `gradle/wrapper/gradle-wrapper.properties` used find download url.
-
-#### Java
-
-Sets `JAVA_HOME`.
-
-`jdkVersion` from `gradle/wrapper/gradle-wrapper.properties` used to determine required version.
+| Executable | Part of | Depends on | Version from                                                 | Download url from                                                    | Set environment variables |
+|------------|---------|------------|--------------------------------------------------------------|----------------------------------------------------------------------|---------------------------|
+| **node**   |         |            | `engines` in `package.json`<br/> Contents of `.nvmrc`        |                                                                      |
+| **npm**    | node    |            | node version                                                 |                                                                      |
+| **npx**    | node    |            | node version                                                 |                                                                      |
+| **gradle** |         | java       | `distrivutionUrl`                                            | `distributionUrl` in<br/> `gradle/wrapper/gradle-wrapper.properties` |
+| **java**   |         |            | `jdkVersion` from `gradle/wrapper/gradle-wrapper.properties` |                                                                      | JAVA_HOME                 |
 
 ## Examples
 
 Here are a few examples of how gg.cmd can make your life easier:
-<!--  Not yet
-# Automatically switch to the required version of Node.js as specified in package.json
-./gg
--->
 
-# Switch to a specific version of Node
+### Switch to a specific version of Node
 
 ```
 ./gg.cmd node@14
 ```
 
-# Switch to a specific version of Gradle and the required version of Java
+### Switch to a specific version of Gradle and the required version of Java
 
 ```
 ./gg.cmd gradle@6:java@17
+```
+
+### Create a new node project
+
+```bash
+./gg.cmd npm init -y
+```
+
+### Create a new React project
+
+```bash
+./gg.cmd npx create-react-app my-app
+cp gg.cmd my-app
+cd my-app
+./gg.cmd npm start
+
 ```
 
 ## Contributing

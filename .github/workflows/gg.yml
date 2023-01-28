@@ -30,8 +30,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-18.04
-            target: x86_64-unknown-linux-gnu
           - os: windows-latest
             target: x86_64-pc-windows-msvc
           - os: macos-latest
@@ -107,10 +105,9 @@ jobs:
             source $HOME/.cargo/env
           fi
 
-          export VER=${{needs.version.outputs.version}}
+          export VERSION=${{needs.version.outputs.version}}
           
           cargo build --release --target=${{ matrix.target }}
-          #--target=${{ matrix.target}}
           find . -type f -name stage4.exe -exec cp {} ../stage4 \;
           find . -type f -name stage4 -exec cp {} ../stage4 \;
 
@@ -119,6 +116,12 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: stage4_${{ matrix.target }}
+          path: stage4
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: stage4_x86_64-unknown-linux-gnu
           path: stage4
 
 
@@ -495,7 +498,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        container: [ ubuntu, debian, alpine, archlinux ]
+        container: [ ubuntu, debian, alpine, archlinux, 'ubuntu:14.04' ]
 
     runs-on: ubuntu-latest
     container: ${{ matrix.container }}
