@@ -41,6 +41,11 @@ fn get_distribution_url() -> Option<String> {
             return map.get("distributionUrl").map(|s| s.clone());
         }
     }
+    if let Ok(file) = File::open("gradle.properties") {
+        if let Ok(map) = read(BufReader::new(file)) {
+            return map.get("distributionUrl").map(|s| s.clone());
+        }
+    }
     None
 }
 
