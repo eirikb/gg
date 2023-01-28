@@ -76,7 +76,7 @@ jobs:
         include:
           - container: alpine
             target: x86_64-unknown-linux-musl
-          - container: ubuntu-68.04
+          - container: ubuntu-16.04
             target: x86_64-unknown-linux-gnu
 
     runs-on: ubuntu-latest
