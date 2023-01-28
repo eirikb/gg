@@ -59,7 +59,7 @@ Supported systems:
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    let ver = option_env!("VER").unwrap_or("dev");
+    let ver = option_env!("VERSION").unwrap_or("dev");
 
     let no_clap = NoClap::new();
     env_logger::init_from_env(env_logger::Env::default().default_filter_or(&no_clap.log_level));

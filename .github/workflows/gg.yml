@@ -107,7 +107,7 @@ jobs:
             source $HOME/.cargo/env
           fi
 
-          export VER=${{needs.version.outputs.version}}
+          export VERSION=${{needs.version.outputs.version}}
           
           cargo build --release --target=${{ matrix.target }}
           #--target=${{ matrix.target}}
