@@ -35,13 +35,13 @@ by the desired executable and its required dependencies:
 
 ## Executable table
 
-| Executable | Depends on | Version from                                                 | Download url from                                                    | Set environment variables |
-|------------|------------|--------------------------------------------------------------|----------------------------------------------------------------------|---------------------------|
-| gradle     | java       | `distrivutionUrl`                                            | `distributionUrl` in<br/> `gradle/wrapper/gradle-wrapper.properties` |
-| node       |            | `engines` in `package.json`<br/> Contents of `.nvmrc`        |                                                                      |
-| npm        | node       | node version                                                 |                                                                      |
-| npx        | node       | node version                                                 |                                                                      |
-| java       |            | `jdkVersion` from `gradle/wrapper/gradle-wrapper.properties` |                                                                      | JAVA_HOME                 |
+| Executable | Part of | Depends on | Version from                                                 | Download url from                                                    | Set environment variables |
+|------------|---------|------------|--------------------------------------------------------------|----------------------------------------------------------------------|---------------------------|
+| **node**   |         |            | `engines` in `package.json`<br/> Contents of `.nvmrc`        |                                                                      |
+| **npm**    | node    |            | node version                                                 |                                                                      |
+| **npx**    | node    |            | node version                                                 |                                                                      |
+| **gradle** |         | java       | `distrivutionUrl`                                            | `distributionUrl` in<br/> `gradle/wrapper/gradle-wrapper.properties` |
+| **java**   |         |            | `jdkVersion` from `gradle/wrapper/gradle-wrapper.properties` |                                                                      | JAVA_HOME                 |
 
 ## Examples
 
