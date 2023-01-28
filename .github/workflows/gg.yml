@@ -76,8 +76,6 @@ jobs:
         include:
           - container: alpine
             target: x86_64-unknown-linux-musl
-          - container: ubuntu:16.04
-            target: x86_64-unknown-linux-gnu
 
     runs-on: ubuntu-latest
     needs: version
@@ -110,7 +108,6 @@ jobs:
           export VERSION=${{needs.version.outputs.version}}
           
           cargo build --release --target=${{ matrix.target }}
-          #--target=${{ matrix.target}}
           find . -type f -name stage4.exe -exec cp {} ../stage4 \;
           find . -type f -name stage4 -exec cp {} ../stage4 \;
 
@@ -119,6 +116,12 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: stage4_${{ matrix.target }}
+          path: stage4
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: stage4_x86_64-unknown-linux-gnu
           path: stage4
 
 
