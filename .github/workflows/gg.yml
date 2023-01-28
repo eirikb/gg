@@ -498,7 +498,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        container: [ ubuntu, debian, alpine, archlinux, ubuntu:14.04 ]
+        container: [ ubuntu, debian, alpine, archlinux, 'ubuntu:14.04' ]
 
     runs-on: ubuntu-latest
     container: ${{ matrix.container }}
