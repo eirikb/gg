@@ -76,7 +76,7 @@ async fn main() -> ExitCode {
 
     if no_clap.update {
         println!("Updating gg.cmd...");
-        let url = "https://github.com/eirikb/m/releases/latest/download/gg.cmd";
+        let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
         download(url, "gg.cmd").await;
         return ExitCode::from(0);
     }
