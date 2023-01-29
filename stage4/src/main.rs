@@ -83,7 +83,7 @@ async fn main() -> ExitCode {
 
     debug!(target: "main", "{:?}", &no_clap);
 
-    let system = fs::read_to_string("./.cache/gg/system").unwrap_or(String::from("x86_64-linux-musl")).trim().to_string();
+    let system = fs::read_to_string("./.cache/gg/system").unwrap_or(String::from("x86_64-linux")).trim().to_string();
     info!("System is {system}");
 
     let target = target::parse_target(&system);
