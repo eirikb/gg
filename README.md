@@ -44,7 +44,7 @@ by the desired executable and its required dependencies:
 
 ## On gradlew
 
-With support for `distributionUrl` in `gradle.properties` you can replace gradlew with a single `gg.cmd` and can
+With support for `distributionUrl` in `gradle.properties` you can replace gradlew with a single gg.cmd and can
 delete these files:
 
 * gradle/wrapper/gradle-wrapper.jar
@@ -52,25 +52,41 @@ delete these files:
 * gradlew
 * gradlew.bat
 
+## On nvm
+
+gg.cmd does not need to be installed beforehand, it is just a file in your repo that everyone can run.  
+gg.cmd is a wrapper and will not tamper with system installations of Node.js.
+
+```bash
+nvm i 14
+npm start
+```
+
+vs
+
+```bash
+./gg.cmd npm@14 start
+```
+
 ## Examples
 
 Here are a few examples of how gg.cmd can make your life easier:
 
 ### Execute gradle
 
-```
+```bash
 ./gg.cmd gradle build
 ```
 
-### Execute specific version of Node
+### Execute specific version of Node.js
 
-```
+```bash
 ./gg.cmd node@14
 ```
 
 ### Execute specific version of Gradle and the required version of JVM/JDK
 
-```
+```bash
 ./gg.cmd gradle@6:java@17 clean build
 ```
 
