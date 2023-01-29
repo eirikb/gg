@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::process::Command;
 use log::{debug, info};
+use regex::Regex;
 use semver::{Version, VersionReq};
 use crate::{cmd_to_executor, download_unpack_and_all_that_stuff, NoClap};
 use crate::target::Target;
@@ -50,6 +51,30 @@ pub trait Executor {
     }
 }
 
+fn get_download_url(download_urls: &Vec<Download>, version_req: Option<VersionReq>) -> &str {
+    let version_fix_regex = Regex::new("^v").unwrap();
+    let urls_with_version = download_urls.iter().map(|u|
+        (u, Version::parse(&version_fix_regex.replace(u.version.as_str(), "")
+        ).unwrap_or(Version::new(0, 0, 0)))).collect::<Vec<_>>();
+    let url = urls_with_version.iter().find(|(d, v)|
+        if let Some(v_r) = &version_req {
+            v_r.matches(v)
+        } else { false }
+    );
+    let url = if let Some(url) = url {
+        url.0
+    } else {
+        let u = urls_with_version.iter().max_by_key(|(d, v)| v.clone());
+        if let Some(u) = u {
+            u.0
+        } else {
+            &download_urls[0]
+        }
+    };
+    info!("Url is {:?}", &url);
+    return url.download_url.as_str();
+}
+
 pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, String> {
     if let Some(app_path) = executor.custom_prep() {
         return Ok(app_path);
@@ -75,15 +100,11 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
         panic!("Did not find any download URL!");
     }
 
-    let url = urls.iter().find(|url| executor.get_version_req().unwrap_or(VersionReq::default()).matches(&Version::parse(url.version.as_str()).unwrap_or(Version::new(0, 0, 0)))).unwrap_or(&urls[0]);
-
-    info!("Url is {:?}", &url);
-
-    let url_string = url.clone().download_url;
-    debug!("{:?}", url_string.as_str());
+    let url_string = get_download_url(&urls, executor.get_version_req());
+    debug!("{:?}", url_string);
 
     let cache_path = format!(".cache/{path}");
-    download_unpack_and_all_that_stuff(url_string.as_str(), cache_path.as_str()).await;
+    download_unpack_and_all_that_stuff(url_string, cache_path.as_str()).await;
 
     get_app_path(bin, path.as_str())
 }
