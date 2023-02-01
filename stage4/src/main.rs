@@ -24,6 +24,7 @@ mod executor;
 mod no_clap;
 mod custom_command;
 mod cmd_to_executor;
+mod version;
 
 
 fn print_help(ver: &str) {
@@ -83,7 +84,7 @@ async fn main() -> ExitCode {
 
     debug!(target: "main", "{:?}", &no_clap);
 
-    let system = fs::read_to_string("./.cache/gg/system").unwrap_or(String::from("x86_64-linux")).trim().to_string();
+    let system = fs::read_to_string("./.cache/gg/system").unwrap_or(String::from("x86_64-linux-gnu")).trim().to_string();
     info!("System is {system}");
 
     let target = target::parse_target(&system);
@@ -95,7 +96,7 @@ async fn main() -> ExitCode {
     let version_req_map2 = no_clap.version_req_map.clone();
 
     for x in &version_req_map2 {
-        let executor = cmd_to_executor(x.0.to_string(), version_req_map.clone());
+        let executor = cmd_to_executor(x.0.to_string());
         if let Some(executor) = executor {
             for x in executor.get_deps() {
                 if !version_req_map.contains_key(x) {
@@ -110,7 +111,7 @@ async fn main() -> ExitCode {
         let executor: Option<Box<dyn Executor>> = if no_clap.clone().custom_cmd {
             Some(Box::new(CustomCommand { cmd }))
         } else {
-            cmd_to_executor(cmd, version_req_map.clone())
+            cmd_to_executor(cmd)
         };
 
         if executor.is_some() {

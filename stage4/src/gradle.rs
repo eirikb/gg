@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs::File;
 use std::future::Future;
 use std::io::BufReader;
@@ -6,16 +7,15 @@ use std::pin::Pin;
 use java_properties::read;
 use regex::Regex;
 use scraper::{Html, Selector};
-use semver::VersionReq;
+use semver::{Version, VersionReq};
 
 use crate::{Executor};
 use crate::executor::{AppInput, Download};
+use crate::version::GGVersion;
 
 use super::target;
 
-pub struct Gradle {
-    pub version_req: Option<VersionReq>,
-}
+pub struct Gradle {}
 
 trait HelloWorld {
     fn get_version_from_gradle_url(&self) -> Option<String>;
@@ -51,9 +51,6 @@ fn get_distribution_url() -> Option<String> {
 
 impl Executor for Gradle {
     fn get_version_req(&self) -> Option<VersionReq> {
-        if let Some(v) = &self.version_req {
-            return Some(v.clone());
-        }
         if let Some(distribution_url) = get_distribution_url() {
             if let Some(version) = distribution_url.get_version_from_gradle_url() {
                 return VersionReq::parse(version.as_str()).ok();
@@ -66,11 +63,9 @@ impl Executor for Gradle {
         Box::pin(async move {
             if let Some(distribution_url) = get_distribution_url() {
                 if let Some(version) = distribution_url.get_version_from_gradle_url() {
-                    return vec![Download {
-                        download_url: distribution_url,
-                        lts: false,
-                        version,
-                    }];
+                    return vec![
+                        Download::new(distribution_url, version.as_str())
+                    ];
                 }
             }
 
@@ -82,11 +77,10 @@ impl Executor for Gradle {
             let document = Html::parse_document(body.as_str());
             document.select(&Selector::parse("a[name]").unwrap()).map(|link| {
                 let version = link.value().attr("name").unwrap_or("").to_string();
-                Download {
-                    download_url: format!("https://services.gradle.org/distributions/gradle-{version}-bin.zip"),
-                    lts: false,
-                    version,
-                }
+                Download::new(
+                    format!("https://services.gradle.org/distributions/gradle-{version}-bin.zip"),
+                    version.as_str(),
+                )
             }).collect()
         })
     }

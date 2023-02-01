@@ -11,14 +11,14 @@ pub enum Os { Windows, Linux, Mac }
 #[derive(PartialEq)]
 #[derive(Debug)]
 #[derive(Copy, Clone)]
-pub enum Variant { Musl, Gnu, Msvc, None }
+pub enum Variant { Musl, Gnu, Msvc }
 
 #[derive(Debug)]
 #[derive(Copy, Clone)]
 pub struct Target {
     pub arch: Arch,
     pub os: Os,
-    pub variant: Variant
+    pub variant: Option<Variant>,
 }
 
 pub fn parse_target(input: &str) -> Target {
@@ -35,10 +35,10 @@ pub fn parse_target(input: &str) -> Target {
             _ => Os::Linux
         },
         variant: match input.to_lowercase() {
-            x if x.contains("musl") => Variant::Musl,
-            x if x.contains("gnu") => Variant::Gnu,
-            x if x.contains("msvc") => Variant::Msvc,
-            _ => Variant::None
+            x if x.contains("musl") => Some(Variant::Musl),
+            x if x.contains("gnu") => Some(Variant::Gnu),
+            x if x.contains("msvc") => Some(Variant::Msvc),
+            _ => None
         },
     };
 }

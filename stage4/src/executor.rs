@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -8,7 +8,8 @@ use log::{debug, info};
 use regex::Regex;
 use semver::{Version, VersionReq};
 use crate::{cmd_to_executor, download_unpack_and_all_that_stuff, NoClap};
-use crate::target::Target;
+use crate::target::{Arch, Os, Target, Variant};
+use crate::version::{GGVersion, GGVersionReq};
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct AppPath {
@@ -29,9 +30,25 @@ pub struct AppInput {
 
 #[derive(Debug, Clone)]
 pub struct Download {
-    pub version: String,
-    pub lts: bool,
+    pub version: Option<Version>,
+    pub tags: HashSet<String>,
     pub download_url: String,
+    pub arch: Option<Arch>,
+    pub os: Option<Os>,
+    pub variant: Option<Variant>,
+}
+
+impl Download {
+    pub fn new(download_url: String, version: &str) -> Download {
+        return Download {
+            download_url,
+            version: Version::parse(version).ok(),
+            os: None,
+            arch: None,
+            variant: None,
+            tags: HashSet::new(),
+        };
+    }
 }
 
 pub trait Executor {
@@ -51,25 +68,26 @@ pub trait Executor {
     }
 }
 
-fn get_download_url(download_urls: &Vec<Download>, version_req: Option<VersionReq>) -> &str {
-    let version_fix_regex = Regex::new("^v").unwrap();
-    let urls_with_version = download_urls.iter().map(|u|
-        (u, Version::parse(&version_fix_regex.replace(u.version.as_str(), "")
-        ).unwrap_or(Version::new(0, 0, 0)))).collect::<Vec<_>>();
-    let url = urls_with_version.iter().find(|(d, v)|
-        if let Some(v_r) = &version_req {
-            v_r.matches(v)
-        } else { false }
+fn get_download_url(download_urls: &Vec<Download>, version_req: GGVersionReq) -> &str {
+    // let urls_with_version = download_urls.iter().map(|u|
+    //     (u, Version::parse(&version_fix_regex.replace(u.version.as_str(), "")
+    //     ).unwrap_or(Version::new(0, 0, 0)))).collect::<Vec<_>>();
+    let url = download_urls.iter().find(|d|
+true
+                                            // version_req.version_req.matches(d.version)
+                                        // if let Some(v_r) = &version_req {
+                                        //     v_r. matches(v)
+                                        // } else { false }
     );
     let url = if let Some(url) = url {
-        url.0
+        url
     } else {
-        let u = urls_with_version.iter().max_by_key(|(d, v)| v.clone());
-        if let Some(u) = u {
-            u.0
-        } else {
+        // let u = download_urls.into_iter().max_by_key(|d| d.version.version.clone());
+        // if let Some(u) = u {
+        //     u
+        // } else {
             &download_urls[0]
-        }
+        // }
     };
     info!("Url is {:?}", &url);
     return url.download_url.as_str();
@@ -100,7 +118,9 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
         panic!("Did not find any download URL!");
     }
 
-    let url_string = get_download_url(&urls, executor.get_version_req());
+    // TODO:
+    let url_string = &urls[0].download_url;
+    //get_download_url(&urls, executor.get_version_req());
     debug!("{:?}", url_string);
 
     let cache_path = format!(".cache/{path}");
@@ -115,7 +135,7 @@ pub async fn try_execute(executor: &dyn Executor, input: &AppInput, version_req_
     let mut path_vars: Vec<String> = vec!();
     let mut env_vars: HashMap<String, String> = HashMap::new();
     for (cmd, _) in &version_req_map {
-        if let Some(executor) = cmd_to_executor(cmd.to_string(), version_req_map.clone()) {
+        if let Some(executor) = cmd_to_executor(cmd.to_string()) {
             let res = prep(&*executor, input).await;
             if let Ok(app_path) = res {
                 path_vars.push(app_path.parent_bin_path());

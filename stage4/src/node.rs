@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::future::Future;
 use std::pin::Pin;
@@ -13,6 +13,7 @@ use regex::Regex;
 
 use crate::executor::{AppInput, Download, Executor};
 use crate::target::{Arch, Os, Target, Variant};
+use crate::version::GGVersion;
 
 type Root = Vec<Root2>;
 
@@ -40,7 +41,6 @@ struct Root2 {
 }
 
 pub struct Node {
-    pub version_req: Option<VersionReq>,
     pub cmd: String,
 }
 
@@ -69,9 +69,6 @@ fn get_package_version() -> Option<Box<VersionReq>> {
 
 impl Executor for Node {
     fn get_version_req(&self) -> Option<VersionReq> {
-        if let Some(v) = &self.version_req {
-            return Some(v.clone());
-        }
         if let Some(v) = get_package_version() {
             Some(*v)
         } else {
@@ -130,7 +127,14 @@ async fn official_downloads(target: &Target) -> Vec<Download> {
         }).collect();
         if fields.contains_key("Version") {
             let version = fields["Version"].to_string();
-            return Some(Download { version: version.clone(), download_url: format!("https://nodejs.org/download/release/v{version}/node-v{version}-{file}"), lts: fields.contains_key("LTS") && fields["LTS"].len() > 0 });
+            let lts = fields.contains_key("LTS") && fields["LTS"].len() > 0;
+            let set: HashSet<String> = if lts {
+                ["lts".to_string()].iter().cloned().collect()
+            } else {
+                HashSet::new()
+            };
+
+            return Some(Download::new(format!("https://nodejs.org/download/release/v{version}/node-v{version}-{file}"), version.as_str()));
         }
         None
     }).collect()
@@ -140,9 +144,9 @@ async fn unofficial_downloads(target: &Target) -> Vec<Download> {
     let file = match (target.os, target.arch, target.variant) {
         (Os::Windows, Arch::Arm64, _) => "win-arm64-zip",
         (Os::Windows, _, _) => "win-x64-zip",
-        (Os::Linux, Arch::Armv7, Variant::Musl) => "linux-armv7l-musl",
-        (Os::Linux, Arch::Arm64, Variant::Musl) => "linux-arm64-musl",
-        (Os::Linux, Arch::X86_64, Variant::Musl) => "linux-x64-musl",
+        (Os::Linux, Arch::Armv7, Some(Variant::Musl)) => "linux-armv7l-musl",
+        (Os::Linux, Arch::Arm64, Some(Variant::Musl)) => "linux-arm64-musl",
+        (Os::Linux, Arch::X86_64, Some(Variant::Musl)) => "linux-x64-musl",
         (Os::Linux, Arch::Armv7, _) => "linux-armv7l",
         (Os::Linux, Arch::Arm64, _) => "linux-arm64",
         _ => "linux-x64",
@@ -163,18 +167,18 @@ async fn unofficial_downloads(target: &Target) -> Vec<Download> {
             file.to_string() + ".tar.gz"
         };
         let version = r.clone().version;
-        Download {
-            version: version.clone(),
-            lts,
-            download_url:
-            String::from(format!("https://unofficial-builds.nodejs.org/download/release/{version}/node-{version}-{file_fix}")),
-        }
+        let set: HashSet<String> = if lts {
+            ["lts".to_string()].iter().cloned().collect()
+        } else {
+            HashSet::new()
+        };
+        return Download::new(format!("https://unofficial-builds.nodejs.org/download/release/{version}/node-{version}-{file_fix}"), version.as_str());
     }).collect()
 }
 
 async fn get_node_urls(target: &Target) -> Vec<Download> {
     match (target.os, target.arch, target.variant) {
-        (Os::Linux, _, Variant::Musl) => unofficial_downloads(target).await,
+        (Os::Linux, _, Some(Variant::Musl)) => unofficial_downloads(target).await,
         (Os::Windows, Arch::Arm64, _) => unofficial_downloads(target).await,
         _ => official_downloads(target).await
     }
