@@ -5,7 +5,7 @@ use std::pin::Pin;
 use log::info;
 
 use scraper::{Html, Selector};
-use semver::VersionReq;
+use semver::{Version, VersionReq};
 use serde::Deserialize;
 use serde::Serialize;
 use package_json::PackageJsonManager;
@@ -13,7 +13,6 @@ use regex::Regex;
 
 use crate::executor::{AppInput, Download, Executor};
 use crate::target::{Arch, Os, Target, Variant};
-use crate::version::GGVersion;
 
 type Root = Vec<Root2>;
 
@@ -128,13 +127,20 @@ async fn official_downloads(target: &Target) -> Vec<Download> {
         if fields.contains_key("Version") {
             let version = fields["Version"].to_string();
             let lts = fields.contains_key("LTS") && fields["LTS"].len() > 0;
-            let set: HashSet<String> = if lts {
+            let tags: HashSet<String> = if lts {
                 ["lts".to_string()].iter().cloned().collect()
             } else {
                 HashSet::new()
             };
 
-            return Some(Download::new(format!("https://nodejs.org/download/release/v{version}/node-v{version}-{file}"), version.as_str()));
+            return Some(Download {
+                download_url: format!("https://nodejs.org/download/release/v{version}/node-v{version}-{file}"),
+                version: Version::parse(version.as_str()).ok(),
+                tags,
+                arch: None,
+                os: None,
+                variant: None,
+            });
         }
         None
     }).collect()
@@ -167,12 +173,19 @@ async fn unofficial_downloads(target: &Target) -> Vec<Download> {
             file.to_string() + ".tar.gz"
         };
         let version = r.clone().version;
-        let set: HashSet<String> = if lts {
+        let tags: HashSet<String> = if lts {
             ["lts".to_string()].iter().cloned().collect()
         } else {
             HashSet::new()
         };
-        return Download::new(format!("https://unofficial-builds.nodejs.org/download/release/{version}/node-{version}-{file_fix}"), version.as_str());
+        return Download {
+            download_url: format!("https://unofficial-builds.nodejs.org/download/release/{version}/node-{version}-{file_fix}"),
+            version: Version::parse(version.as_str()).ok(),
+            tags,
+            arch: None,
+            os: None,
+            variant: None,
+        };
     }).collect()
 }
 

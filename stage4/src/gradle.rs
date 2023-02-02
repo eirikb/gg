@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::fs::File;
 use std::future::Future;
 use std::io::BufReader;
@@ -7,11 +6,10 @@ use std::pin::Pin;
 use java_properties::read;
 use regex::Regex;
 use scraper::{Html, Selector};
-use semver::{Version, VersionReq};
+use semver::VersionReq;
 
-use crate::{Executor};
+use crate::Executor;
 use crate::executor::{AppInput, Download};
-use crate::version::GGVersion;
 
 use super::target;
 

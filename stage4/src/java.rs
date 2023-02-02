@@ -1,18 +1,17 @@
 use std::collections::{HashMap, HashSet};
-use std::fs::{File};
+use std::fs::File;
 use std::future::Future;
 use std::io::BufReader;
 use std::pin::Pin;
+
 use java_properties::read;
 use semver::{Version, VersionReq};
-
 use serde::Deserialize;
 use serde::Serialize;
 
 use crate::Executor;
 use crate::executor::{AppInput, AppPath, Download};
 use crate::target::{Arch, Os, Target, Variant};
-use crate::version::GGVersion;
 
 type Root = Vec<Root2>;
 
@@ -94,7 +93,7 @@ impl Executor for Java {
     }
 }
 
-async fn get_java_download_urls(target: &Target) -> Vec<Download> {
+async fn get_java_download_urls(_target: &Target) -> Vec<Download> {
     let json = reqwest::get("https://www.azul.com/wp-admin/admin-ajax.php?action=bundles&endpoint=community&use_stage=false&include_fields=java_version,release_status,abi,arch,bundle_type,cpu_gen,ext,features,hw_bitness,javafx,latest,os,support_term").await.unwrap().text().await.unwrap();
     let root: Root = serde_json::from_str(json.as_str()).expect("JSON was not well-formatted");
     root.iter().map(|node| {
@@ -114,10 +113,11 @@ async fn get_java_download_urls(target: &Target) -> Vec<Download> {
         } else {
             None
         };
-        let ext = match target.os {
-            Os::Windows => "zip",
-            _ => "tar.gz",
-        };
+        // TODO: ext?!
+        // let ext = match target.os {
+        //     Os::Windows => "zip",
+        //     _ => "tar.gz",
+        // };
         Download {
             download_url: n.url,
             version:

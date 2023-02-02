@@ -4,12 +4,12 @@ use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::process::Command;
+
 use log::{debug, info};
-use regex::Regex;
 use semver::{Version, VersionReq};
+
 use crate::{cmd_to_executor, download_unpack_and_all_that_stuff, NoClap};
 use crate::target::{Arch, Os, Target, Variant};
-use crate::version::{GGVersion, GGVersionReq};
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct AppPath {

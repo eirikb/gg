@@ -1,19 +1,19 @@
 use std::fs;
-use std::process::{ExitCode};
+use std::process::ExitCode;
 
 use log::{debug, info};
 use semver::VersionReq;
 
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
-use crate::bloody_indiana_jones::download;
 
+use crate::bloody_indiana_jones::download;
+use crate::cmd_to_executor::cmd_to_executor;
+use crate::custom_command::CustomCommand;
 use crate::executor::{AppInput, Executor, try_execute};
 use crate::gradle::Gradle;
 use crate::java::Java;
 use crate::no_clap::NoClap;
 use crate::node::Node;
-use crate::custom_command::CustomCommand;
-use crate::cmd_to_executor::cmd_to_executor;
 
 mod target;
 mod bloody_indiana_jones;
@@ -24,8 +24,6 @@ mod executor;
 mod no_clap;
 mod custom_command;
 mod cmd_to_executor;
-mod version;
-
 
 fn print_help(ver: &str) {
     println!(r"gg.cmd
