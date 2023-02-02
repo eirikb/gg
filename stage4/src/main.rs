@@ -28,7 +28,7 @@ mod version;
 
 
 fn print_help(ver: &str) {
-    println!(r"gg.cmd - The Ultimate Executable Manager
+    println!(r"gg.cmd
 https://github.com/eirikb/gg
 
 Version: {ver}

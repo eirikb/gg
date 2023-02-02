@@ -68,32 +68,21 @@ pub trait Executor {
     }
 }
 
-fn get_download_url(download_urls: &Vec<Download>, version_req: GGVersionReq) -> &str {
-    // let urls_with_version = download_urls.iter().map(|u|
-    //     (u, Version::parse(&version_fix_regex.replace(u.version.as_str(), "")
-    //     ).unwrap_or(Version::new(0, 0, 0)))).collect::<Vec<_>>();
-    let url = download_urls.iter().find(|d|
-true
-                                            // version_req.version_req.matches(d.version)
-                                        // if let Some(v_r) = &version_req {
-                                        //     v_r. matches(v)
-                                        // } else { false }
-    );
-    let url = if let Some(url) = url {
-        url
+fn get_version_req(input: &AppInput, executor: &dyn Executor, version_req_map: &HashMap<String, Option<VersionReq>>) -> Option<VersionReq> {
+    let version_req = executor.get_version_req();
+    return if let Some(version_req) = version_req {
+        Some(version_req)
     } else {
-        // let u = download_urls.into_iter().max_by_key(|d| d.version.version.clone());
-        // if let Some(u) = u {
-        //     u
-        // } else {
-            &download_urls[0]
-        // }
+        if let Some(cmd) = &input.no_clap.cmd {
+            if let Some(v_q) = version_req_map.get(cmd) {
+                return v_q.clone();
+            }
+        };
+        None
     };
-    info!("Url is {:?}", &url);
-    return url.download_url.as_str();
 }
 
-pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, String> {
+pub async fn prep(executor: &dyn Executor, input: &AppInput, version_req_map: &HashMap<String, Option<VersionReq>>) -> Result<AppPath, String> {
     if let Some(app_path) = executor.custom_prep() {
         return Ok(app_path);
     }
@@ -118,9 +107,46 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
         panic!("Did not find any download URL!");
     }
 
-    // TODO:
-    let url_string = &urls[0].download_url;
-    //get_download_url(&urls, executor.get_version_req());
+    let version_req = get_version_req(input, executor, version_req_map);
+    let urls_match_target_and_tags = urls.iter().filter(|u| {
+        if let Some(uvar) = u.variant {
+            if let Some(tvar) = input.target.variant {
+                if uvar != tvar {
+                    return false;
+                }
+            }
+        }
+        if u.os.is_some() && u.os.unwrap() != input.target.os {
+            return false;
+        }
+        if u.arch.is_some() && u.arch.unwrap() != input.target.arch {
+            return false;
+        }
+        for tag in &u.tags {
+            if !u.tags.contains(tag) {
+                return false;
+            }
+        }
+        return true;
+    }).collect::<Vec<_>>();
+
+    let url = urls_match_target_and_tags.iter().find(|u| {
+        if let Some(version) = &u.version {
+            if let Some(version_req) = &version_req {
+                if version_req.matches(version) {
+                    return true;
+                }
+            }
+        }
+        return true;
+    });
+
+    let url_string = if let Some(url) = url {
+        &url.download_url
+    } else {
+        &urls[0].download_url
+    };
+
     debug!("{:?}", url_string);
 
     let cache_path = format!(".cache/{path}");
@@ -136,7 +162,7 @@ pub async fn try_execute(executor: &dyn Executor, input: &AppInput, version_req_
     let mut env_vars: HashMap<String, String> = HashMap::new();
     for (cmd, _) in &version_req_map {
         if let Some(executor) = cmd_to_executor(cmd.to_string()) {
-            let res = prep(&*executor, input).await;
+            let res = prep(&*executor, input, &version_req_map).await;
             if let Ok(app_path) = res {
                 path_vars.push(app_path.parent_bin_path());
                 env_vars.clone_from(&(&*executor).get_env(app_path));
@@ -146,7 +172,7 @@ pub async fn try_execute(executor: &dyn Executor, input: &AppInput, version_req_
         }
     }
 
-    let app_path = prep(executor, input).await?.clone();
+    let app_path = prep(executor, input, &version_req_map).await?.clone();
     debug!("path is {:?}", app_path);
     if app_path.bin.exists() {
         return if try_run(input, app_path, path_vars, env_vars).await.unwrap() {
