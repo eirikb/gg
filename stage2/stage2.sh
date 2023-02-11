@@ -1,5 +1,5 @@
 echo 1
-if which powershell &>/dev/null; then
+if command -v powershell &>/dev/null; then
 echo 2
   echo found
   which powershell
