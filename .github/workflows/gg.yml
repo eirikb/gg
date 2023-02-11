@@ -428,7 +428,7 @@ jobs:
           # mv .cache/gg/stage3_x86_64-pc-windows-msvc .cache/gg/stage3_zz_x86_64-pc-windows-msvc
           cp _stage2/stage2.sh .cache/gg/
           cp _stage2/stage2.ps1 .cache/gg/
-          cp hashes .cache/gg/
+          cp hashes/hashes .cache/gg/
           chmod +x .cache/gg/stage2.sh
           tar -zpvcf gg.tgz .cache
           
