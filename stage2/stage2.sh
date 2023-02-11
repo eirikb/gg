@@ -1,7 +1,10 @@
 echo 1
-if command -v powershell &>/dev/null; then
+if command -v powershell; then
 echo 2
   echo found
+  command -v powershell
+  command powershell
+  echo what $(command -v powershell)
   which powershell
   powershell ./.cache/gg/stage2.ps1 "$@"
   exit $?
