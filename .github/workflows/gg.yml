@@ -31,7 +31,7 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            target: x86_64-pc-windows-msvc
+            target: x86_64-pc-windows-gnu
           - os: macos-latest
             target: x86_64-apple-darwin
 
@@ -57,9 +57,9 @@ jobs:
           cd stage42
           export VERSION=${{needs.version.outputs.version}}
           
-          #rustup target add ${{ matrix.target }}
-          #cargo build --release --target=${{ matrix.target }}
+          rustup target add ${{ matrix.target }}
           cargo build --release --target=${{ matrix.target }}
+          #cargo build --release --target=${{ matrix.target }}
           find . -type f -name stage4.exe -exec cp {} ../stage4 \;
           find . -type f -name stage4 -exec cp {} ../stage4 \;
 
