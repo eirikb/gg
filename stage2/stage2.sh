@@ -1,4 +1,6 @@
 if which powershell &>/dev/null; then
+  echo found
+  which powershell
   powershell ./.cache/gg/stage2.ps1 "$@"
   exit $?
 fi
