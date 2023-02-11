@@ -1,6 +1,6 @@
 Write-Host "Time to GOGOGO"
 
-$stage4 = ".cache\gg\stage4.exe"
+$stage4 = ".\.cache\gg\stage4.exe"
 
 function Run()
 {
@@ -18,6 +18,7 @@ function Run()
     $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $htArgs
     echo $proc
     Wait-Process -InputObject $proc
+    echo $proc
     exit $proc.ExitCode
 }
 

@@ -57,7 +57,8 @@ jobs:
           cd stage42
           export VERSION=${{needs.version.outputs.version}}
           
-          rustup target add ${{ matrix.target }}
+          #rustup target add ${{ matrix.target }}
+          #cargo build --release --target=${{ matrix.target }}
           cargo build --release --target=${{ matrix.target }}
           find . -type f -name stage4.exe -exec cp {} ../stage4 \;
           find . -type f -name stage4 -exec cp {} ../stage4 \;
