@@ -1,9 +1,12 @@
+echo 1
 if which powershell &>/dev/null; then
+echo 2
   echo found
   which powershell
   powershell ./.cache/gg/stage2.ps1 "$@"
   exit $?
 fi
+echo 3
 
 if [ ! -f .cache/gg/stage4 ]; then
   cd .cache/gg || exit
