@@ -1,8 +1,9 @@
 Write-Host "Time to GOGOGO"
 
 ls .cache
-    $proc = Start-Process ".\.cache\gg\stage4" -WorkingDirectory "$(Get-Location)" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
-    Wait-Process -InputObject $proc
+cat .cache/gg/hashes
+#$proc = Start-Process ".\.cache\gg\stage4" -WorkingDirectory "$(Get-Location)" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
+#Wait-Process -InputObject $proc
 
 #if (Test-Path .cache\gg\stage4) {
 #    return Start-Process .cache\gg\stage4 $args

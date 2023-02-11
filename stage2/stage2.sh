@@ -1,3 +1,8 @@
+if which powershell &>/dev/null; then
+  powershell ./.cache/gg/stage2.ps1 "$@"
+  exit $?
+fi
+
 if [ ! -f .cache/gg/stage4 ]; then
   cd .cache/gg || exit
   for stage3 in stage3*; do
