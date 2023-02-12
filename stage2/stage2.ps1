@@ -2,29 +2,11 @@ Write-Host "Time to GOGOGO"
 
 $stage4 = ".\.cache\gg\stage4.exe"
 
-function Run()
-{
-    echo run
-    $htArgs = if ($Args.Count)
-    {
-        @{ Args = $Args }
-    }
-    else
-    {
-        @{ }
-    }
-    Write-Host $htArgs
-    Write-Host $stage4
-    $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $htArgs
-    echo $proc
-    Wait-Process -InputObject $proc
-    echo $proc
-    exit $proc.ExitCode
-}
-
 if (Test-Path $stage4)
 {
-    Run
+    $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
+    Wait-Process -InputObject $proc
+    exit $proc.ExitCode
 }
 
 $arch = $Env:PROCESSOR_ARCHITECTURE
@@ -44,7 +26,9 @@ if ($hash)
     Invoke-WebRequest "https://gg.eirikb.no/$hash" -OutFile $stage4
     if (Test-Path $stage4)
     {
-        Run
+        $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
+        Wait-Process -InputObject $proc
+        exit $proc.ExitCode
     }
     else
     {
