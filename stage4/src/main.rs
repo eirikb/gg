@@ -60,7 +60,6 @@ Supported systems:
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    static_vcruntime::metabuild();
     let ver = option_env!("VERSION").unwrap_or("dev");
 
     let no_clap = NoClap::new();
