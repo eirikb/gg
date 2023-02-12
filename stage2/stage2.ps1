@@ -1,5 +1,7 @@
 Write-Host "Time to GOGOGO"
 
+Write-Host args $args
+
 $stage4 = ".\.cache\gg\stage4.exe"
 
 if (Test-Path $stage4)
