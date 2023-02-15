@@ -1,15 +1,8 @@
-echo 1
-if command -v powershell; then
-echo 2
-  echo found
-  command -v powershell
-  command powershell
-  echo what $(command -v powershell)
+if [[ "$OSTYPE" == "cygwin" || "$OSTYPE" == "msys" ]]; then
   which powershell
   powershell ./.cache/gg/stage2.ps1 "$@"
   exit $?
 fi
-echo 3
 
 if [ ! -f .cache/gg/stage4 ]; then
   cd .cache/gg || exit
@@ -30,5 +23,5 @@ if [ -f ./.cache/gg/stage4 ]; then
   exit $?
 fi
 
-echo "Your system is not supported"
+echo "Your system is not supported. Please check out https://github.com/eirikb/gg"
 exit 1
