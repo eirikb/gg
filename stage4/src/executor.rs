@@ -56,10 +56,13 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
     }
 
     let bin = executor.get_bin(input);
-    let path = (executor.get_name().to_string() + executor.get_version_req().unwrap_or(VersionReq::default()).to_string().as_str()).replace("*", "_star_").replace("^", "_hat_");
+    let path_path = Path::new(executor.get_name()).join(
+        executor.get_name().to_string() + &executor.get_version_req().unwrap_or(VersionReq::default()).to_string().as_str().replace("*", "_star_").replace("^", "_hat_")
+    );
+    let path = path_path.to_str().unwrap();
     info!( "Trying to find {bin} in {path}");
 
-    let app_path: Result<AppPath, String> = get_app_path(bin, path.as_str());
+    let app_path: Result<AppPath, String> = get_app_path(bin, path);
 
     match app_path {
         Ok(app_path_ok) if app_path_ok.bin.exists() => return Ok(app_path_ok),
@@ -85,7 +88,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
     let cache_path = format!(".cache/{path}");
     download_unpack_and_all_that_stuff(url_string.as_str(), cache_path.as_str()).await;
 
-    get_app_path(bin, path.as_str())
+    get_app_path(bin, path)
 }
 
 pub async fn try_execute(executor: &dyn Executor, input: &AppInput, version_req_map: HashMap<String, Option<VersionReq>>) -> Result<(), String> {
@@ -123,28 +126,17 @@ fn get_app_path(bin: &str, path: &str) -> Result<AppPath, String> {
         .join(".cache")
         .join(path);
 
-    let dir_entry = path
-        .read_dir()
-        .map_err(|_| ".cache not found")?
-        .next()
-        .ok_or("")?;
+    let bin_path = path.join(bin);
 
-    let app_path = dir_entry
-        .map_err(|_| "app dir not found")?
-        .path();
-
-
-    let bin_path = app_path.join(bin);
-
-    Ok(AppPath { app: app_path, bin: bin_path })
+    Ok(AppPath { app: path, bin: bin_path })
 }
 
 async fn try_run(input: &AppInput, app_path: AppPath, path_vars: Vec<String>, env_vars: HashMap<String, String>) -> Result<bool, String> {
     let bin_path = app_path.bin.to_str().unwrap_or("");
-    info!("Executing: {:?}", bin_path);
+    info!("Executing: {:?}. With args:{:?}", bin_path,&input.no_clap.app_args);
     let path_string = &env::var("PATH").unwrap_or("".to_string());
     let parent_bin_path = app_path.parent_bin_path();
-    let paths = path_vars.join(":");
+    let paths = env::join_paths(path_vars).unwrap().to_str().unwrap().to_string();
     let all_paths = vec!(parent_bin_path, paths, path_string.to_string()).join(":");
     debug!("PATH: {all_paths}");
     let mut command = Command::new(&bin_path);

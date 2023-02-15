@@ -81,10 +81,10 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
         }
         Some("zip") => {
             info!("Decompressing Zip");
-            debug!("Path is {}", &path);
+            info!("Path is {}", &path);
             let part = path.split("/").last().unwrap_or("unknown");
-            let part_path = format!(".cache/{part}/{part}");
-            debug!("path_path {}", &part_path);
+            let part_path = format!(".cache/node/{part}");
+            info!("path_path {}", &part_path);
             create_dir_all(&part_path).expect("Unable to create download dir");
             let target_dir = PathBuf::from(&part_path);
             zip_extract::extract(File::open(file_path).unwrap(), &target_dir, true).unwrap();
