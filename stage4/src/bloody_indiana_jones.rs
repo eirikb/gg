@@ -1,5 +1,5 @@
 use std::cmp::min;
-use std::fs::{create_dir_all, File};
+use std::fs::{create_dir_all, File, read_dir, remove_dir, rename};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use futures_util::StreamExt;
@@ -101,6 +101,32 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
             archive.unpack(path).expect("Unable to extract");
         }
         _ => {}
+    }
+
+    let parent_path = Path::new(&path);
+    let entries = read_dir(&path);
+    if let Ok(entries) = entries {
+        let entries = entries.collect::<Vec<_>>();
+        if entries.len() == 1 {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    if entry.path().is_dir() {
+                        debug!("Extracted files are contained in sub-folder. Moving them up");
+                        let parent = entry.path();
+                        if let Ok(entries) = read_dir(&parent) {
+                            for entry in entries {
+                                if let Ok(entry) = entry {
+                                    let path = entry.path();
+                                    let new_path = parent_path.join(path.file_name().unwrap());
+                                    rename(&path, new_path).unwrap();
+                                }
+                            }
+                            remove_dir(parent).ok();
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
