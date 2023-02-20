@@ -3,5 +3,5 @@ if [ -f ./.cache/gg/stage2.sh ]; then
   exit
 fi
 
-tail -c +418 gg.cmd | tar -zpx && ./.cache/gg/stage2.sh "$@"
+tail -c +BBB gg.cmd | tar -zpx && ./.cache/gg/stage2.sh "$@"
 exit
