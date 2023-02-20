@@ -22,7 +22,7 @@ Write-Host $hashes
 $hash = ($hashes | Where-Object { $_ -match "$arch.*windows" })
 if ($hash)
 {
-    Write-Host "$hash-windows" > .cache\gg\system
+    "$arch-windows" | Out-File .cache\gg\system -Encoding ascii
     Write-Host "Found hash $hash"
     $hash = $hash.split("=")[1]
     Write-Host "Actual hash $hash"
