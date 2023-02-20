@@ -59,6 +59,7 @@ jobs:
           
           rustup target add ${{ matrix.target }}
           cargo build --release --target=${{ matrix.target }}
+          #cargo build --release --target=${{ matrix.target }}
           find . -type f -name stage4.exe -exec cp {} ../stage4 \;
           find . -type f -name stage4 -exec cp {} ../stage4 \;
 
@@ -199,12 +200,14 @@ jobs:
         run: |
           mkdir hash
           mkdir out
+          touch hashes
           for dir in stage4_*
           do
             file=$dir/stage4
             hash=$(sha512sum $file | awk '{ print $1 }')
             cp $file out/$hash
             echo $hash > hash/hash_$dir
+            echo $dir=$hash >> hashes
           done
 
       - name: Upload hash artifact
@@ -212,6 +215,12 @@ jobs:
         with:
           name: hash
           path: hash
+
+      - name: Upload hash artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: hashes
+          path: hashes
 
       - uses: LanceMcCarthy/Action-AzureBlobUpload@v1.9.0
         with:
@@ -228,8 +237,8 @@ jobs:
         include:
           - os: ubuntu-18.04
             target: x86_64-unknown-linux-gnu
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
+          #- os: windows-latest
+            #target: x86_64-pc-windows-msvc
           - os: macos-latest
             target: x86_64-apple-darwin
 
@@ -401,6 +410,7 @@ jobs:
 
       - name: gg.cmd
         run: |
+          du -a
           sudo apt-get install dos2unix
           mv stage1 _stage1
           mv stage2 _stage2
@@ -416,9 +426,10 @@ jobs:
             done
           done
           # Prevent wine from trying to run (if installed on users PC)
-          mv .cache/gg/stage3_x86_64-pc-windows-msvc .cache/gg/stage3_zz_x86_64-pc-windows-msvc
+          # mv .cache/gg/stage3_x86_64-pc-windows-msvc .cache/gg/stage3_zz_x86_64-pc-windows-msvc
           cp _stage2/stage2.sh .cache/gg/
           cp _stage2/stage2.ps1 .cache/gg/
+          cp hashes/hashes .cache/gg/
           chmod +x .cache/gg/stage2.sh
           tar -zpvcf gg.tgz .cache
           
