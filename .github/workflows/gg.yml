@@ -52,7 +52,7 @@ jobs:
         shell: bash
         run: |
           echo "-----------------------------"
-          du -a ~/.cargo
+          du -a ~/
           echo "-----------------------------"
           du -a
           mkdir -p stage42
@@ -98,7 +98,7 @@ jobs:
       - name: cargo pls
         run: |
           echo "-----------------------------"
-          du -a ~/.cargo
+          du -a ~/
           echo "-----------------------------"
           du -a
           mkdir -p stage42
