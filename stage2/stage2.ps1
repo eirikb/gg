@@ -2,7 +2,7 @@ Write-Host "Time to GOGOGO"
 
 Write-Host args $args
 
-$stage4 = ".\.cache\gg\stage4.exe"
+$stage4 = ".\.cache\gg-VERVER\stage4.exe"
 
 if (Test-Path $stage4)
 {
@@ -17,12 +17,12 @@ if ($arch -Eq "AMD64")
     $arch = "x86_64"
 }
 
-$hashes = (Get-Content .cache/gg/hashes).Split("`n")
+$hashes = (Get-Content .cache/gg-VERVER/hashes).Split("`n")
 Write-Host $hashes
 $hash = ($hashes | Where-Object { $_ -match "$arch.*windows" })
 if ($hash)
 {
-    "$arch-windows" | Out-File .cache\gg\system -Encoding ascii
+    "$arch-windows" | Out-File .cache\gg-VERVER\system -Encoding ascii
     Write-Host "Found hash $hash"
     $hash = $hash.split("=")[1]
     Write-Host "Actual hash $hash"

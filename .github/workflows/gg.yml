@@ -411,33 +411,30 @@ jobs:
           mv stage1 _stage1
           mv stage2 _stage2
           mv stage3 _stage3
-          rm -rf .cache/gg
-          mkdir -p .cache/gg
+          VERSION=${{needs.version.outputs.version}}
+          rm -rf .cache/gg-$VERSION
+          mkdir -p .cache/gg-$VERSION
           rm -rf stage1
           for dir in stage3*; do
             echo "dir is $dir"
             for file in "$dir"/*; do
               echo "file is $file"
-              cp "$file" .cache/gg/
+              cp "$file" .cache/gg-$VERSION/
             done
           done
           # Prevent wine from trying to run (if installed on users PC)
           # mv .cache/gg/stage3_x86_64-pc-windows-msvc .cache/gg/stage3_zz_x86_64-pc-windows-msvc
-          cp _stage2/stage2.sh .cache/gg/
-          cp _stage2/stage2.ps1 .cache/gg/
-          cp hashes/hashes .cache/gg/
-          chmod +x .cache/gg/stage2.sh
+          sed -i "s/VERVER/$VERSION/g" _stage2/stage2.*
+          cp _stage2/stage2.sh .cache/gg-$VERSION/
+          cp _stage2/stage2.ps1 .cache/gg-$VERSION/
+          cp hashes/hashes .cache/gg-$VERSION/
+          chmod +x .cache/gg-$VERSION/stage2.sh
           tar -zpvcf gg.tgz .cache
           
           echo "OK ${{needs.version.outputs.version}}"
-          VERSION=${{needs.version.outputs.version}}
           echo "version is $VERSION"
           echo bat is 
-          cat _stage1/stage1.bat
-          echo "here we go..."
-          sed -i "s/: VERSION:/: VERSION: $VERSION/" _stage1/stage1.bat
-          echo bat is  now
-          cat _stage1/stage1.bat
+          sed -i "s/VERVER/$VERSION/g" _stage1/stage1.*
           unix2dos _stage1/stage1.bat
           cat _stage1/stage1.bat _stage1/stage1.sh > 1
           a=$(du -cb 1 | tail -n 1 | awk '{print $1}')
@@ -469,6 +466,7 @@ jobs:
 
       - name: Run!
         run: |
+          set -x
           file gg.cmd
           head gg.cmd
           sh gg.cmd node@14 -e 'console.log(1)'
@@ -521,6 +519,7 @@ jobs:
 
       - name: Run!
         run: |
+          set -x
           if [ "${{ matrix.container }}" == "alpine" ]; then
             apk add libstdc++
           fi
