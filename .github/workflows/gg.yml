@@ -46,7 +46,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             stage42/target
-          key: cache1-OS-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: cache1-OS-${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo pls
         shell: bash
@@ -93,7 +93,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             stage42/target
-          key: cache1-container-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: cache1-container-${{ matrix.container }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo pls
         run: |
@@ -293,7 +293,7 @@ jobs:
         include:
           - container: alpine
             target: x86_64-unknown-linux-musl
-          - container: ubuntu:18.04
+          - container: conanio/gcc5
             target: x86_64-unknown-linux-gnu
 
     runs-on: ubuntu-20.04
@@ -318,7 +318,10 @@ jobs:
       - name: Makus
         run: |
           cd stage3
-          apk add build-base cmake
+          if [ "${{ matrix.container }}" == "alpine" ]
+          then
+            apk add build-base cmake
+          fi
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
           find . -type f \( -name stage3 -o -name stage3.exe \) -exec cp {} ../stage3_${{ matrix.target }} \;
