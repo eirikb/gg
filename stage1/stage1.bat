@@ -1,8 +1,8 @@
 : <<BATCH
     @echo off
-    : VERSION:
-    powershell -c "sc m2 ([byte[]](gc gg.cmd -Encoding Byte | select -Skip 417)) -Encoding Byte"
+    : VERSION: VERVER
+    powershell -c "sc m2 ([byte[]](gc gg.cmd -Encoding Byte | select -Skip AAA)) -Encoding Byte"
     tar -zxf m2
-    powershell -executionpolicy bypass -file .cache\gg\stage2.ps1 %*
+    powershell -executionpolicy bypass -file .cache\gg-VERVER\stage2.ps1 %*
     exit /b
 BATCH

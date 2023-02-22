@@ -1,5 +1,5 @@
 use std::cmp::min;
-use std::fs::{create_dir_all, File};
+use std::fs::{create_dir_all, File, read_dir, remove_dir, rename};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use futures_util::StreamExt;
@@ -53,15 +53,17 @@ pub async fn download(url: &str, file_path: &str) {
 pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
     info!("Downloading {url}");
 
-    create_dir_all(".cache/gg/downloads").expect("Unable to create download dir");
+    let ver = option_env!("VERSION").unwrap_or("dev");
+    let downloads_dir = &format!(".cache/gg-{ver}/downloads");
+    create_dir_all(downloads_dir).expect("Unable to create download dir");
     let file_name = get_file_name(url);
-    let file_path = &format!(".cache/gg/downloads/{file_name}");
+    let file_path = &format!("{downloads_dir}/{file_name}");
     download(url, file_path.as_str()).await;
 
     info!("Extracting {file_name}");
     let ext = Path::new(&file_name).extension().unwrap().to_str();
     let file_buf_reader = tokio::io::BufReader::new(tokio::fs::File::open(file_path).await.unwrap());
-    let file_path_decomp = &Path::new(&format!(".cache/gg/downloads/{file_name}")).with_extension("").to_str().unwrap().to_string();
+    let file_path_decomp = &Path::new(&format!("{downloads_dir}/{file_name}")).with_extension("").to_str().unwrap().to_string();
     let mut file_writer = tokio::io::BufWriter::new(tokio::fs::File::create(file_path_decomp).await.unwrap());
 
     match ext {
@@ -81,10 +83,10 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
         }
         Some("zip") => {
             info!("Decompressing Zip");
-            debug!("Path is {}", &path);
+            info!("Path is {}", &path);
             let part = path.split("/").last().unwrap_or("unknown");
-            let part_path = format!(".cache/{part}/{part}");
-            debug!("path_path {}", &part_path);
+            let part_path = format!(".cache/{part}");
+            info!("path_path {}", &part_path);
             create_dir_all(&part_path).expect("Unable to create download dir");
             let target_dir = PathBuf::from(&part_path);
             zip_extract::extract(File::open(file_path).unwrap(), &target_dir, true).unwrap();
@@ -92,7 +94,7 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
         _ => ()
     }
 
-    let file_name = Path::new(&format!(".cache/gg/downloads/{file_name}")).with_extension("").to_str().unwrap().to_string();
+    let file_name = Path::new(&format!(".cache/gg-{ver}/downloads/{file_name}")).with_extension("").to_str().unwrap().to_string();
 
     match Path::new(&file_name).extension().unwrap().to_str() {
         Some("tar") => {
@@ -101,6 +103,32 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
             archive.unpack(path).expect("Unable to extract");
         }
         _ => {}
+    }
+
+    let parent_path = Path::new(&path);
+    let entries = read_dir(&path);
+    if let Ok(entries) = entries {
+        let entries = entries.collect::<Vec<_>>();
+        if entries.len() == 1 {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    if entry.path().is_dir() {
+                        debug!("Extracted files are contained in sub-folder. Moving them up");
+                        let parent = entry.path();
+                        if let Ok(entries) = read_dir(&parent) {
+                            for entry in entries {
+                                if let Ok(entry) = entry {
+                                    let path = entry.path();
+                                    let new_path = parent_path.join(path.file_name().unwrap());
+                                    rename(&path, new_path).unwrap();
+                                }
+                            }
+                            remove_dir(parent).ok();
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
