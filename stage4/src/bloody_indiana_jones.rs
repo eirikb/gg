@@ -53,15 +53,17 @@ pub async fn download(url: &str, file_path: &str) {
 pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
     info!("Downloading {url}");
 
-    create_dir_all(".cache/gg/downloads").expect("Unable to create download dir");
+    let ver = option_env!("VERSION").unwrap_or("dev");
+    let downloads_dir = &format!(".cache/gg-{ver}/downloads");
+    create_dir_all(downloads_dir).expect("Unable to create download dir");
     let file_name = get_file_name(url);
-    let file_path = &format!(".cache/gg/downloads/{file_name}");
+    let file_path = &format!("{downloads_dir}/{file_name}");
     download(url, file_path.as_str()).await;
 
     info!("Extracting {file_name}");
     let ext = Path::new(&file_name).extension().unwrap().to_str();
     let file_buf_reader = tokio::io::BufReader::new(tokio::fs::File::open(file_path).await.unwrap());
-    let file_path_decomp = &Path::new(&format!(".cache/gg/downloads/{file_name}")).with_extension("").to_str().unwrap().to_string();
+    let file_path_decomp = &Path::new(&format!("{downloads_dir}/{file_name}")).with_extension("").to_str().unwrap().to_string();
     let mut file_writer = tokio::io::BufWriter::new(tokio::fs::File::create(file_path_decomp).await.unwrap());
 
     match ext {
@@ -92,7 +94,7 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
         _ => ()
     }
 
-    let file_name = Path::new(&format!(".cache/gg/downloads/{file_name}")).with_extension("").to_str().unwrap().to_string();
+    let file_name = Path::new(&format!(".cache/gg-{ver}/downloads/{file_name}")).with_extension("").to_str().unwrap().to_string();
 
     match Path::new(&file_name).extension().unwrap().to_str() {
         Some("tar") => {

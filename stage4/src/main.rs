@@ -1,5 +1,4 @@
 use std::fs;
-use std::fs::remove_file;
 use std::process::{ExitCode};
 
 use log::{debug, info};
@@ -78,15 +77,13 @@ async fn main() -> ExitCode {
     if no_clap.update {
         println!("Updating gg.cmd...");
         let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
-        let _ = remove_file(".cache/gg/stage2.sh");
-        let _ = remove_file(".cache/gg/stage2.ps1");
         download(url, "gg.cmd").await;
         return ExitCode::from(0);
     }
 
     debug!(target: "main", "{:?}", &no_clap);
 
-    let system = fs::read_to_string("./.cache/gg/system").unwrap_or(String::from("x86_64-linux")).trim().to_string();
+    let system = fs::read_to_string(format!("./.cache/gg-{ver}/system")).unwrap_or(String::from("x86_64-linux")).trim().to_string();
     info!("System is {system}");
 
     let target = target::parse_target(&system);
