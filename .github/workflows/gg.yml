@@ -46,11 +46,15 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             stage42/target
-          key: cache1-OS-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: cache1-OS-${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo pls
         shell: bash
         run: |
+          echo "-----------------------------"
+          du -a ~/
+          echo "-----------------------------"
+          du -a
           mkdir -p stage42
           mv stage4/* stage42
           rm -rf stage4
@@ -59,7 +63,6 @@ jobs:
           
           rustup target add ${{ matrix.target }}
           cargo build --release --target=${{ matrix.target }}
-          #cargo build --release --target=${{ matrix.target }}
           find . -type f -name stage4.exe -exec cp {} ../stage4 \;
           find . -type f -name stage4 -exec cp {} ../stage4 \;
 
@@ -90,10 +93,14 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             stage42/target
-          key: cache1-container-${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: cache1-container-${{ matrix.container }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: cargo pls
         run: |
+          echo "-----------------------------"
+          du -a ~/
+          echo "-----------------------------"
+          du -a
           mkdir -p stage42
           mv stage4/* stage42
           rm -rf stage4
@@ -135,7 +142,7 @@ jobs:
           - arch: armv7
             target: armv7-unknown-linux-musl
 
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     needs: version
     steps:
       - uses: actions/checkout@v2.1.0
@@ -235,12 +242,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-18.04
-            target: x86_64-unknown-linux-gnu
-          #- os: windows-latest
-            #target: x86_64-pc-windows-msvc
           - os: macos-latest
             target: x86_64-apple-darwin
+            # TODO: Version too new
+          - os: ubuntu-20.04
+            target: x86_64-unknown-linux-gnu
 
     runs-on: ${{ matrix.os }}
 
@@ -290,6 +296,8 @@ jobs:
         include:
           - container: alpine
             target: x86_64-unknown-linux-musl
+    #          - container: conanio/gcc5
+    #            target: x86_64-unknown-linux-gnu
 
     runs-on: ubuntu-20.04
     container: ${{ matrix.container }}
@@ -313,7 +321,10 @@ jobs:
       - name: Makus
         run: |
           cd stage3
-          apk add build-base cmake
+          if [ "${{ matrix.container }}" == "alpine" ]
+          then
+            apk add build-base cmake
+          fi
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
           find . -type f \( -name stage3 -o -name stage3.exe \) -exec cp {} ../stage3_${{ matrix.target }} \;
@@ -410,42 +421,42 @@ jobs:
 
       - name: gg.cmd
         run: |
-          du -a
           sudo apt-get install dos2unix
           mv stage1 _stage1
           mv stage2 _stage2
           mv stage3 _stage3
-          rm -rf .cache/gg
-          mkdir -p .cache/gg
+          VERSION=${{needs.version.outputs.version}}
+          rm -rf .cache/gg-$VERSION
+          mkdir -p .cache/gg-$VERSION
           rm -rf stage1
           for dir in stage3*; do
             echo "dir is $dir"
             for file in "$dir"/*; do
               echo "file is $file"
-              cp "$file" .cache/gg/
+              cp "$file" .cache/gg-$VERSION/
             done
           done
           # Prevent wine from trying to run (if installed on users PC)
           # mv .cache/gg/stage3_x86_64-pc-windows-msvc .cache/gg/stage3_zz_x86_64-pc-windows-msvc
-          cp _stage2/stage2.sh .cache/gg/
-          cp _stage2/stage2.ps1 .cache/gg/
-          cp hashes/hashes .cache/gg/
-          chmod +x .cache/gg/stage2.sh
+          sed -i "s/VERVER/$VERSION/g" _stage2/stage2.*
+          cp _stage2/stage2.sh .cache/gg-$VERSION/
+          cp _stage2/stage2.ps1 .cache/gg-$VERSION/
+          cp hashes/hashes .cache/gg-$VERSION/
+          chmod +x .cache/gg-$VERSION/stage2.sh
           tar -zpvcf gg.tgz .cache
           
           echo "OK ${{needs.version.outputs.version}}"
-          VERSION=${{needs.version.outputs.version}}
           echo "version is $VERSION"
           echo bat is 
-          cat _stage1/stage1.bat
-          echo "here we go..."
-          ver="$(printf '%-25s' "$VERSION")"
-          echo "$ver sion?"
-          sed -i "s/: VERSION:/: VERSION: $ver/" _stage1/stage1.bat
-          echo bat is  now
-          cat _stage1/stage1.bat
+          sed -i "s/VERVER/$VERSION/g" _stage1/stage1.*
           unix2dos _stage1/stage1.bat
-          cat _stage1/stage1.bat _stage1/stage1.sh gg.tgz > gg.cmd
+          cat _stage1/stage1.bat _stage1/stage1.sh > 1
+          a=$(du -cb 1 | tail -n 1 | awk '{print $1}')
+          b=a
+          ((b++))
+          sed -i "s/AAA/$a/" 1;
+          sed -i "s/BBB/$b/" 1;
+          cat 1 gg.tgz > gg.cmd
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
@@ -521,6 +532,7 @@ jobs:
 
       - name: Run!
         run: |
+          set -x
           if [ "${{ matrix.container }}" == "alpine" ]; then
             apk add libstdc++
           fi
