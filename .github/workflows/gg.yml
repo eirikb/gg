@@ -484,14 +484,14 @@ jobs:
           set -x
           file gg.cmd
           head gg.cmd
-          sh gg.cmd -vv node@14 -e 'console.log(1)'
+          sh gg.cmd -v node@14 -e 'console.log(1)'
           echo "Nice, let's try again"
-          sh gg.cmd -vv node@14 -e 'console.log(1)'
-          sh gg.cmd -vv node@14 -v
-          sh gg.cmd -vv npm:node@14 -v
-          sh gg.cmd -vv npx:node@14 -v
-          sh gg.cmd -vv java -version
-          sh gg.cmd -vv java -version
+          sh gg.cmd -v node@14 -e 'console.log(1)'
+          sh gg.cmd -v node@14 -v
+          sh gg.cmd -v npm:node@14 -v
+          sh gg.cmd -v npx:node@14 -v
+          sh gg.cmd -v java -version
+          sh gg.cmd -v java -version
 
   test-batch:
     needs: stage1
@@ -509,13 +509,13 @@ jobs:
       - name: Run!
         shell: cmd
         run: |
-          .\gg.cmd -vv node@14 -e 'console.log(1)'
-          .\gg.cmd -vv node@14 -e 'console.log(1)'
-          .\gg.cmd -vv node@14 -v
-          .\gg.cmd -vv npm:node@14 -v
-          .\gg.cmd -vv npx:node@14 -v
-          .\gg.cmd -vv java -version
-          .\gg.cmd -vv java -version
+          .\gg.cmd -v node@14 -e 'console.log(1)'
+          .\gg.cmd -v node@14 -e 'console.log(1)'
+          .\gg.cmd -v node@14 -v
+          .\gg.cmd -v npm:node@14 -v
+          .\gg.cmd -v npx:node@14 -v
+          .\gg.cmd -v java -version
+          .\gg.cmd -v java -version
 
 
   test-container:
@@ -540,12 +540,12 @@ jobs:
           fi
           sh gg.cmd node@14 -e 'console.log(1)'
           echo "Nice, let's try again"
-          sh gg.cmd -vv node@14 -e 'console.log(1)'
-          sh gg.cmd -vv node@14 -v
-          sh gg.cmd -vv npm:node@14 -v
-          sh gg.cmd -vv npx:node@14 -v
-          sh gg.cmd -vv java -version
-          sh gg.cmd -vv java -version
+          sh gg.cmd -v node@14 -e 'console.log(1)'
+          sh gg.cmd -v node@14 -v
+          sh gg.cmd -v npm:node@14 -v
+          sh gg.cmd -v npx:node@14 -v
+          sh gg.cmd -v java -version
+          sh gg.cmd -v java -version
 
 
   test-arch:
