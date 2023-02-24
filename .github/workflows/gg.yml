@@ -490,8 +490,8 @@ jobs:
           sh gg.cmd -v node@14 -v
           sh gg.cmd -v npm:node@14 -v
           sh gg.cmd -v npx:node@14 -v
-          sh gg.cmd -v java -version
-          sh gg.cmd -v java -version
+          sh gg.cmd -v java@11 -version
+          sh gg.cmd -v java@11 -version
 
   test-batch:
     needs: stage1
@@ -514,8 +514,8 @@ jobs:
           .\gg.cmd -v node@14 -v
           .\gg.cmd -v npm:node@14 -v
           .\gg.cmd -v npx:node@14 -v
-          .\gg.cmd -v java -version
-          .\gg.cmd -v java -version
+          .\gg.cmd -v java@11 -version
+          .\gg.cmd -v java@11 -version
 
 
   test-container:
@@ -544,8 +544,8 @@ jobs:
           sh gg.cmd -v node@14 -v
           sh gg.cmd -v npm:node@14 -v
           sh gg.cmd -v npx:node@14 -v
-          sh gg.cmd -v java -version
-          sh gg.cmd -v java -version
+          sh gg.cmd -v java@11 -version
+          sh gg.cmd -v java@11 -version
 
 
   test-arch:
@@ -577,7 +577,7 @@ jobs:
           run: |
             uname -a
             cd /ok
-            sh gg.cmd java -version
+            sh gg.cmd java@11 -version
 
 
   release:
