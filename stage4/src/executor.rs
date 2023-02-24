@@ -141,7 +141,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, version_req_map: &H
                 }
             }
         }
-        return true;
+        return false;
     });
 
     let url_string = if let Some(url) = url {
