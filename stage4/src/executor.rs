@@ -147,7 +147,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, version_req_map: &H
     let url_string = if let Some(url) = url {
         &url.download_url
     } else {
-        &urls[0].download_url
+        &urls_match_target_and_tags[0].download_url
     };
 
     debug!("{:?}", url_string);
