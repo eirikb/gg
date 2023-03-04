@@ -98,6 +98,15 @@ async fn get_java_download_urls(_target: &Target) -> Vec<Download> {
     let root: Root = serde_json::from_str(json.as_str()).expect("JSON was not well-formatted");
     root.iter().map(|node| {
         let n = node.clone();
+        let mut tags = HashSet::new();
+        println!("{:?} - {:?} - {:?} - {:?} - {:?}", n.bundle_type, n.features, n.javafx, n.support_term, n.release_status);
+        tags.insert(n.bundle_type);
+        tags.insert(n.support_term);
+        tags.insert(n.release_status);
+
+        for feature in n.features {
+            tags.insert(feature);
+        }
         let os = Some(match node.os.as_str() {
             "windows" => Os::Windows,
             x if x.contains("linux") => Os::Linux,
