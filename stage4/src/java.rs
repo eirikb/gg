@@ -134,7 +134,7 @@ async fn get_java_download_urls(_target: &Target) -> Vec<Download> {
             os,
             arch,
             variant,
-            tags: HashSet::new(),
+            tags,
         }
     }).collect()
 }
