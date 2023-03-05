@@ -173,19 +173,19 @@ mod tests {
         assert_eq!(false, no_clap.version);
     }
 
-    // #[test]
-    // fn include_tags() {
-    //     let no_clap = NoClap::parse(["node@10:gradle@1.2.3+hello+world", "no", "problem"].map(String::from).to_vec());
-    //     assert_eq!(true, no_clap.cmd.is_some());
-    //     assert_eq!("node", no_clap.cmd.unwrap());
-    //     assert_eq!(["no", "problem"].map(String::from).to_vec(), no_clap.app_args);
-    //     let mut map = HashMap::new();
-    //     map.insert("node".to_string(), VersionReq::parse("10").ok());
-    //     map.insert("gradle".to_string(), VersionReq::parse("1.2.3").ok());
-    //     assert_eq!(map, no_clap.version_req_map);
-    //     let mut set = HashSet::new();
-    //     set.insert("hello".to_string());
-    //     set.insert("world".to_string());
-    //     assert_eq!(set, no_clap.include_tags);
-    // }
+    #[test]
+    fn include_tags() {
+        let no_clap = NoClap::parse(["node@10:gradle@1.2.3+hello+world", "no", "problem"].map(String::from).to_vec());
+        assert_eq!(true, no_clap.cmd.is_some());
+        assert_eq!("node", no_clap.cmd.unwrap());
+        assert_eq!(["no", "problem"].map(String::from).to_vec(), no_clap.app_args);
+        let mut map = HashMap::new();
+        map.insert("node".to_string(), VersionReq::parse("10").ok());
+        map.insert("gradle".to_string(), VersionReq::parse("1.2.3").ok());
+        assert_eq!(map, no_clap.version_req_map);
+        let mut set = HashSet::new();
+        set.insert("hello".to_string());
+        set.insert("world".to_string());
+        assert_eq!(set, no_clap.include_tags);
+    }
 }
