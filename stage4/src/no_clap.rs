@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::env;
 
 use regex::Regex;
@@ -16,8 +16,6 @@ pub struct NoClap {
     pub help: bool,
     pub version: bool,
     pub update: bool,
-    pub include_tags: HashSet<String>,
-    pub exclude_tags: HashSet<String>,
 }
 
 impl NoClap {
@@ -62,12 +60,9 @@ impl NoClap {
             None
         };
 
-        let include_tags = HashSet::new();
-        let exclude_tags = HashSet::new();
-
         let version_req_map: HashMap<String, Option<VersionReq>> = version_reqs_iter.into_iter().collect();
 
-        Self { gg_args, app_args, log_level, cmd, version_req_map, help, version, custom_cmd, update, include_tags, exclude_tags }
+        Self { gg_args, app_args, log_level, cmd, version_req_map, help, version, custom_cmd, update }
     }
 }
 
@@ -171,21 +166,5 @@ mod tests {
         assert_eq!(true, no_clap.cmd.is_none());
         assert_eq!(true, no_clap.update);
         assert_eq!(false, no_clap.version);
-    }
-
-    #[test]
-    fn include_tags() {
-        let no_clap = NoClap::parse(["node@10:gradle@1.2.3+hello+world", "no", "problem"].map(String::from).to_vec());
-        assert_eq!(true, no_clap.cmd.is_some());
-        assert_eq!("node", no_clap.cmd.unwrap());
-        assert_eq!(["no", "problem"].map(String::from).to_vec(), no_clap.app_args);
-        let mut map = HashMap::new();
-        map.insert("node".to_string(), VersionReq::parse("10").ok());
-        map.insert("gradle".to_string(), VersionReq::parse("1.2.3").ok());
-        assert_eq!(map, no_clap.version_req_map);
-        let mut set = HashSet::new();
-        set.insert("hello".to_string());
-        set.insert("world".to_string());
-        assert_eq!(set, no_clap.include_tags);
     }
 }
