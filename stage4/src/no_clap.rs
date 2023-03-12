@@ -199,6 +199,13 @@ mod tests {
     }
 
     #[test]
+    fn java() {
+        let no_clap = NoClap::parse(["-v", "java@11", "-version"].map(String::from).to_vec());
+        assert_eq!("java", no_clap.cmd().unwrap().cmd);
+        assert_eq!("11", no_clap.cmds[0].version.as_ref().unwrap());
+    }
+
+    #[test]
     fn include_tags() {
         let no_clap = NoClap::parse(["node@10:gradle@1.2.3+hello+world:java+azul", "no", "problem"].map(String::from).to_vec());
         assert_eq!(true, no_clap.cmd().is_some());
