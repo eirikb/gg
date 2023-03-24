@@ -73,23 +73,26 @@ fn get_version_req(input: &AppInput, executor: &dyn Executor, version_req_map: &
     return if let Some(version_req) = version_req {
         Some(version_req)
     } else {
-        if let Some(cmd) = &input.no_clap.cmd {
-            if let Some(v_q) = version_req_map.get(cmd) {
-                return v_q.clone();
-            }
-        };
+        // TODO:
+        // if let Some(cmd) = &input.no_clap.cmd {
+        //     if let Some(v_q) = version_req_map.get(cmd) {
+        //         return v_q.clone();
+        //     }
+        // };
         None
     };
 }
 
-pub async fn prep(executor: &dyn Executor, input: &AppInput, version_req_map: &HashMap<String, Option<VersionReq>>) -> Result<AppPath, String> {
+pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, String> {
     if let Some(app_path) = executor.custom_prep() {
         return Ok(app_path);
     }
 
     let bin = executor.get_bin(input);
+    let version_req = executor.get_version_req();//.unwrap_or(VersionReq::default());
+    let version_req_str = &version_req.as_ref().map(|v| v.to_string()).unwrap_or("na".to_string());
     let path_path = Path::new(executor.get_name()).join(
-        executor.get_name().to_string() + &executor.get_version_req().unwrap_or(VersionReq::default()).to_string().as_str().replace("*", "_star_").replace("^", "_hat_")
+        executor.get_name().to_string() + &version_req_str.as_str().replace("*", "_star_").replace("^", "_hat_")
     );
     let path = path_path.to_str().unwrap();
     info!( "Trying to find {bin} in {path}");
@@ -110,7 +113,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, version_req_map: &H
         panic!("Did not find any download URL!");
     }
 
-    let version_req = get_version_req(input, executor, version_req_map);
+    // let version_req = get_version_req(input, executor);
     let urls_match_target_and_tags = urls.iter().filter(|u| {
         if let Some(uvar) = u.variant {
             if let Some(tvar) = input.target.variant {
@@ -164,26 +167,26 @@ pub async fn try_execute(executor: &dyn Executor, input: &AppInput, version_req_
     let mut path_vars: Vec<String> = vec!();
     let mut env_vars: HashMap<String, String> = HashMap::new();
     for (cmd, _) in &version_req_map {
-        if let Some(executor) = cmd_to_executor(cmd.to_string()) {
-            let res = prep(&*executor, input, &version_req_map).await;
-            if let Ok(app_path) = res {
-                path_vars.push(app_path.parent_bin_path());
-                env_vars.clone_from(&(&*executor).get_env(app_path));
-            } else if let Err(e) = res {
-                println!("Unable to prep {}: {}", cmd, e);
-            }
-        }
+        // if let Some(executor) = cmd_to_executor(cmd.to_string()) {
+        //     let res = prep(&*executor, input, &version_req_map).await;
+        //     if let Ok(app_path) = res {
+        //         path_vars.push(app_path.parent_bin_path());
+        //         env_vars.clone_from(&(&*executor).get_env(app_path));
+        //     } else if let Err(e) = res {
+        //         println!("Unable to prep {}: {}", cmd, e);
+        //     }
+        // }
     }
 
-    let app_path = prep(executor, input, &version_req_map).await?.clone();
-    debug!("path is {:?}", app_path);
-    if app_path.bin.exists() {
-        return if try_run(input, app_path, path_vars, env_vars).await.unwrap() {
-            Ok(())
-        } else {
-            Err("Unable to execute".to_string())
-        };
-    }
+    // let app_path = prep(executor, input, &version_req_map).await?.clone();
+    // debug!("path is {:?}", app_path);
+    // if app_path.bin.exists() {
+    //     return if try_run(input, app_path, path_vars, env_vars).await.unwrap() {
+    //         Ok(())
+    //     } else {
+    //         Err("Unable to execute".to_string())
+    //     };
+    // }
     Ok(())
 }
 

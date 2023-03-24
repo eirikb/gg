@@ -6,10 +6,10 @@ use regex::{Match, Regex};
 
 #[derive(Debug, Clone)]
 pub struct NoClapCmd {
-    cmd: String,
-    version: Option<String>,
-    include_tags: HashSet<String>,
-    exclude_tags: HashSet<String>,
+    pub cmd: String,
+    pub version: Option<String>,
+    pub include_tags: HashSet<String>,
+    pub exclude_tags: HashSet<String>,
 }
 
 /// Why not clap? Yes

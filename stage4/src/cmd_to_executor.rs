@@ -1,11 +1,12 @@
 use crate::{Executor, Gradle, Java, Node};
 
-pub fn cmd_to_executor(cmd: String) -> Option<Box<dyn Executor>> {
-    match cmd.as_str() {
-        "node" | "npm" | "npx" => Some(Box::new(Node { cmd })),
-        "gradle" => Some(Box::new(Gradle {})),
-        "java" => Some(Box::new(Java {})),
-        _ => None
+impl dyn Executor {
+    pub fn from_cmd(cmd: &str) -> Option<Box<Self>> {
+        match cmd {
+            "node" | "npm" | "npx" => Some(Box::new(Node { cmd: cmd.to_string() })),
+            "gradle" => Some(Box::new(Gradle {})),
+            "java" => Some(Box::new(Java {})),
+            _ => None
+        }
     }
 }
-
