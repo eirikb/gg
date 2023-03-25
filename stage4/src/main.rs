@@ -2,7 +2,7 @@ use std::fs;
 use std::process::ExitCode;
 
 use futures_util::StreamExt;
-use log::{debug, info};
+use log::{debug, info, log};
 
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
 
@@ -21,7 +21,6 @@ mod java;
 mod executor;
 mod no_clap;
 mod custom_command;
-mod cmd_to_executor;
 
 fn print_help(ver: &str) {
     println!(r"gg.cmd
@@ -101,8 +100,9 @@ async fn main() -> ExitCode {
     // }
 
 
+    let input = &AppInput { target, no_clap: no_clap.clone() };
     return if let Some(cmd) = no_clap.cmds.first() {
-        let mut executors = no_clap.cmds.iter().filter_map(|cmd| Executor::from_cmd(&cmd.cmd)).collect::<Vec<Box<dyn Executor>>>();
+        let mut executors = no_clap.cmds.iter().filter_map(|cmd| Executor::new(&cmd.cmd)).collect::<Vec<Box<dyn Executor>>>();
 
         let mut look_for_deps = true;
         while look_for_deps {
@@ -111,7 +111,7 @@ async fn main() -> ExitCode {
             for x in &executors {
                 for dep_name in x.get_deps() {
                     if !executors.iter().any(|e| &e.get_name().to_string() == dep_name) {
-                        if let Some(e) = Executor::from_cmd(dep_name) {
+                        if let Some(e) = Executor::new(dep_name) {
                             look_for_deps = true;
                             to_add.push(e);
                         }
@@ -122,9 +122,18 @@ async fn main() -> ExitCode {
                 executors.push(x);
             }
         }
-        let input = &AppInput { target, no_clap };
-        for executor in &executors {
-            prep(&**executor, &input).await.expect("Prep failed");
+
+        let first = executors.first();
+        if let Some(first) = executors.first() {
+            for x in executors.iter().skip(1) {
+                prep(&**x, &input).await.expect("Prep failed");
+            }
+            let app_path = prep(&**first, &input).await.expect("Prep failed");
+
+            dbg!(&app_path);
+        } else {
+            println!("No executor found!");
+            ExitCode::from(1);
         }
 
 

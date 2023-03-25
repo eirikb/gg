@@ -8,7 +8,7 @@ use std::process::Command;
 use log::{debug, info};
 use semver::{Version, VersionReq};
 
-use crate::{cmd_to_executor, download_unpack_and_all_that_stuff, NoClap};
+use crate::{download_unpack_and_all_that_stuff, Gradle, Java, NoClap, Node};
 use crate::target::{Arch, Os, Target, Variant};
 
 #[derive(PartialEq, Debug, Clone)]
@@ -48,6 +48,17 @@ impl Download {
             variant: None,
             tags: HashSet::new(),
         };
+    }
+}
+
+impl dyn Executor {
+    pub fn new(cmd: &str) -> Option<Box<Self>> {
+        match cmd {
+            "node" | "npm" | "npx" => Some(Box::new(Node { cmd: cmd.to_string() })),
+            "gradle" => Some(Box::new(Gradle {})),
+            "java" => Some(Box::new(Java {})),
+            _ => None
+        }
     }
 }
 
