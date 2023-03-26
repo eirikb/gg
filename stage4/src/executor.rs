@@ -212,7 +212,7 @@ fn get_app_path(bin: &str, path: &str) -> Result<AppPath, String> {
     Ok(AppPath { app: path, bin: bin_path })
 }
 
-async fn try_run(input: &AppInput, app_path: AppPath, path_vars: Vec<String>, env_vars: HashMap<String, String>) -> Result<bool, String> {
+pub async fn try_run(input: &AppInput, app_path: AppPath, path_vars: Vec<String>, env_vars: HashMap<String, String>) -> Result<bool, String> {
     let bin_path = app_path.bin.to_str().unwrap_or("");
     info!("Executing: {:?}. With args:{:?}", bin_path,&input.no_clap.app_args);
     let path_string = &env::var("PATH").unwrap_or("".to_string());

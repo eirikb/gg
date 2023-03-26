@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::process::ExitCode;
 
@@ -7,7 +8,7 @@ use log::{debug, info, log};
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
 
 use crate::bloody_indiana_jones::download;
-use crate::executor::{AppInput, Executor, prep};
+use crate::executor::{AppInput, Executor, prep, try_run};
 use crate::gradle::Gradle;
 use crate::java::Java;
 use crate::no_clap::NoClap;
@@ -125,12 +126,35 @@ async fn main() -> ExitCode {
 
         let first = executors.first();
         if let Some(first) = executors.first() {
+            let mut env_vars: HashMap<String, String> = HashMap::new();
+            let mut path_vars: Vec<String> = vec!();
+
             for x in executors.iter().skip(1) {
-                prep(&**x, &input).await.expect("Prep failed");
+                let app_path = prep(&**x, &input).await.expect("Prep failed");
+                path_vars.push(app_path.parent_bin_path());
+                for (key, value) in x.get_env(app_path) {
+                    env_vars.insert(key, value);
+                }
             }
             let app_path = prep(&**first, &input).await.expect("Prep failed");
+            for (key, value) in first.get_env(app_path.clone()) {
+                path_vars.push(app_path.clone().parent_bin_path());
+                env_vars.insert(key, value);
+            }
 
+            dbg!(&env_vars);
             dbg!(&app_path);
+            if app_path.bin.exists() {
+                if try_run(input, app_path, path_vars, env_vars).await.unwrap() {
+                    // Ok(())
+                } else {
+                    println!("Unable to execute");
+                    ExitCode::from(1);
+                };
+            } else {
+                println!("Binary not found!");
+                ExitCode::from(1);
+            }
         } else {
             println!("No executor found!");
             ExitCode::from(1);
