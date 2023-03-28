@@ -29,12 +29,12 @@ struct Root2 {
     pub version: String,
     pub date: String,
     pub files: Vec<String>,
-    pub npm: String,
+    pub npm: Option<String>,
     pub v8: String,
-    pub uv: String,
-    pub zlib: String,
-    pub openssl: String,
-    pub modules: String,
+    pub uv: Option<String>,
+    pub zlib: Option<String>,
+    pub openssl: Option<String>,
+    pub modules: Option<String>,
     pub lts: LTS,
     pub security: bool,
 }
@@ -99,54 +99,15 @@ impl Executor for Node {
     }
 }
 
-async fn official_downloads(target: &Target) -> Vec<Download> {
-    let file = match (target.os, target.arch) {
-        (Os::Windows, _) => "win-x64.zip",
-        (Os::Linux, Arch::Armv7) => "linux-armv7l.tar.gz",
-        (Os::Linux, Arch::Arm64) => "linux-arm64.tar.gz",
-        (Os::Linux, _) => "linux-x64.tar.gz",
-        (Os::Mac, Arch::Arm64) => "darwin-arm64.tar.gz",
-        (Os::Mac, _) => "darwin-x64.tar.gz",
-    };
-    let body = reqwest::get("https://nodejs.org/en/download/releases/").await
-        .expect("Unable to connect to nodejs.org").text().await
-        .expect("Unable to download nodejs list of versions");
-
-    let document = Html::parse_document(body.as_str());
-    let rows = Selector::parse("#tbVersions tbody tr").unwrap();
-
-    document.select(&rows).filter_map(|row| {
-        let fields: HashMap<String, String> = row.select(&Selector::parse("td").unwrap()).filter_map(|td| {
-            let value = td.value();
-            let data_label = value.attr("data-label");
-            match data_label {
-                Some(data_label) => Some((data_label.trim().to_string(), td.text().next().unwrap_or("").replace("Node.js", "").trim().to_string())),
-                _ => None
-            }
-        }).collect();
-        if fields.contains_key("Version") {
-            let version = fields["Version"].to_string();
-            let lts = fields.contains_key("LTS") && fields["LTS"].len() > 0;
-            let tags: HashSet<String> = if lts {
-                ["lts".to_string()].iter().cloned().collect()
-            } else {
-                HashSet::new()
-            };
-
-            return Some(Download {
-                download_url: format!("https://nodejs.org/download/release/v{version}/node-v{version}-{file}"),
-                version: Version::parse(version.as_str()).ok(),
-                tags,
-                arch: None,
-                os: None,
-                variant: None,
-            });
-        }
-        None
-    }).collect()
+async fn unofficial_downloads(target: &Target) -> Vec<Download> {
+    return download_urls("unofficial-builds.nodejs.org", target).await;
 }
 
-async fn unofficial_downloads(target: &Target) -> Vec<Download> {
+async fn official_downloads(target: &Target) -> Vec<Download> {
+    return download_urls("nodejs.org", target).await;
+}
+
+async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
     let file = match (target.os, target.arch, target.variant) {
         (Os::Windows, Arch::Arm64, _) => "win-arm64-zip",
         (Os::Windows, _, _) => "win-x64-zip",
@@ -157,10 +118,10 @@ async fn unofficial_downloads(target: &Target) -> Vec<Download> {
         (Os::Linux, Arch::Arm64, _) => "linux-arm64",
         _ => "linux-x64",
     };
-    let json = reqwest::get("https://unofficial-builds.nodejs.org/download/release/index.json").await.unwrap().text().await.unwrap();
+    let json = reqwest::get(format!("https://{host}/download/release/index.json")).await.unwrap().text().await.unwrap();
     let root: Root = serde_json::from_str(json.as_str()).expect("JSON was not well-formatted");
 
-    root.iter().rev().filter(|r|
+    root.iter().filter(|r|
         r.files.contains(&file.to_string())
     ).map(|r| {
         let lts = match r.lts {
@@ -178,9 +139,11 @@ async fn unofficial_downloads(target: &Target) -> Vec<Download> {
         } else {
             HashSet::new()
         };
+        let string = version.replace("v", "");
+        let result = Version::parse(string.as_str());
         return Download {
-            download_url: format!("https://unofficial-builds.nodejs.org/download/release/{version}/node-{version}-{file_fix}"),
-            version: Version::parse(version.as_str()).ok(),
+            download_url: format!("https://{host}/download/release/{version}/node-{version}-{file_fix}"),
+            version: result.ok(),
             tags,
             arch: None,
             os: None,
