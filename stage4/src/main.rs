@@ -158,18 +158,18 @@ async fn main() -> ExitCode {
             dbg!(&app_path);
             if app_path.bin.exists() {
                 if try_run(input, app_path, path_vars, env_vars).await.unwrap() {
-                    ExitCode::from(0);
+                    return ExitCode::from(0);
                 } else {
                     println!("Unable to execute");
-                    ExitCode::from(1);
+                    return ExitCode::from(1);
                 };
             } else {
                 println!("Binary not found!");
-                ExitCode::from(1);
+                return ExitCode::from(1);
             }
         } else {
             println!("No executor found!");
-            ExitCode::from(1);
+            return ExitCode::from(1);
         }
 
 
