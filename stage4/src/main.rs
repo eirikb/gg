@@ -158,7 +158,7 @@ async fn main() -> ExitCode {
             dbg!(&app_path);
             if app_path.bin.exists() {
                 if try_run(input, app_path, path_vars, env_vars).await.unwrap() {
-                    // Ok(())
+                    ExitCode::from(0);
                 } else {
                     println!("Unable to execute");
                     ExitCode::from(1);
