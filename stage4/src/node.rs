@@ -11,7 +11,7 @@ use serde::Serialize;
 use package_json::PackageJsonManager;
 use regex::Regex;
 
-use crate::executor::{AppInput, Download, Executor};
+use crate::executor::{AppInput, Download, Executor, ExecutorCmd};
 use crate::target::{Arch, Os, Target, Variant};
 
 type Root = Vec<Root2>;
@@ -40,7 +40,7 @@ struct Root2 {
 }
 
 pub struct Node {
-    pub cmd: String,
+    pub executor_cmd: ExecutorCmd,
 }
 
 fn get_package_version() -> Option<Box<VersionReq>> {
@@ -67,6 +67,10 @@ fn get_package_version() -> Option<Box<VersionReq>> {
 }
 
 impl Executor for Node {
+    fn get_executor_cmd(&self) -> &ExecutorCmd {
+        &self.executor_cmd
+    }
+
     fn get_version_req(&self) -> Option<VersionReq> {
         if let Some(v) = get_package_version() {
             Some(*v)
@@ -81,12 +85,12 @@ impl Executor for Node {
 
     fn get_bin(&self, input: &AppInput) -> &str {
         match &input.target.os {
-            Os::Windows => match self.cmd.as_str() {
+            Os::Windows => match self.executor_cmd.cmd.as_str() {
                 "node" => "node.exe",
                 "npm" => "npm.cmd",
                 _ => "npx.cmd",
             },
-            _ => match self.cmd.as_str() {
+            _ => match self.executor_cmd.cmd.as_str() {
                 "node" => "bin/node",
                 "npm" => "bin/npm",
                 _ => "bin/npx"

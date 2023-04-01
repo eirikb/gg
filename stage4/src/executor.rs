@@ -51,18 +51,27 @@ impl Download {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ExecutorCmd {
+    pub cmd: String,
+    pub version: Option<VersionReq>,
+    pub include_tags: HashSet<String>,
+    pub exclude_tags: HashSet<String>,
+}
+
 impl dyn Executor {
-    pub fn new(cmd: &str) -> Option<Box<Self>> {
-        match cmd {
-            "node" | "npm" | "npx" => Some(Box::new(Node { cmd: cmd.to_string() })),
-            "gradle" => Some(Box::new(Gradle {})),
-            "java" => Some(Box::new(Java {})),
+    pub fn new(executor_cmd: ExecutorCmd) -> Option<Box<Self>> {
+        match executor_cmd.cmd.as_str() {
+            "node" | "npm" | "npx" => Some(Box::new(Node { executor_cmd })),
+            "gradle" => Some(Box::new(Gradle { executor_cmd })),
+            "java" => Some(Box::new(Java { executor_cmd })),
             _ => None
         }
     }
 }
 
 pub trait Executor {
+    fn get_executor_cmd(&self) -> &ExecutorCmd;
     fn get_version_req(&self) -> Option<VersionReq>;
     fn get_download_urls<'a>(&'a self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>>;
     fn get_bin(&self, input: &AppInput) -> &str;
@@ -79,21 +88,6 @@ pub trait Executor {
     }
 }
 
-fn get_version_req(input: &AppInput, executor: &dyn Executor, version_req_map: &HashMap<String, Option<VersionReq>>) -> Option<VersionReq> {
-    let version_req = executor.get_version_req();
-    return if let Some(version_req) = version_req {
-        Some(version_req)
-    } else {
-        // TODO:
-        // if let Some(cmd) = &input.no_clap.cmd {
-        //     if let Some(v_q) = version_req_map.get(cmd) {
-        //         return v_q.clone();
-        //     }
-        // };
-        None
-    };
-}
-
 pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, String> {
     if let Some(app_path) = executor.custom_prep() {
         return Ok(app_path);
@@ -101,7 +95,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
 
     let bin = executor.get_bin(input);
     let version_req = executor.get_version_req();//.unwrap_or(VersionReq::default());
-    let version_req_str = &version_req.as_ref().map(|v| v.to_string()).unwrap_or("na".to_string());
+    let version_req_str = &version_req.as_ref().map(|v| v.to_string()).unwrap_or("_star".to_string());
     let path_path = Path::new(executor.get_name()).join(
         executor.get_name().to_string() + &version_req_str.as_str().replace("*", "_star_").replace("^", "_hat_")
     );
@@ -124,8 +118,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
         panic!("Did not find any download URL!");
     }
 
-    // let version_req = get_version_req(input, executor);
-    let urls_match_target_and_tags = urls.iter().filter(|u| {
+    let urls_match = urls.iter().filter(|u| {
         if let Some(uvar) = u.variant {
             if let Some(tvar) = input.target.variant {
                 if uvar != tvar {
@@ -139,29 +132,34 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
         if u.arch.is_some() && u.arch.unwrap() != input.target.arch {
             return false;
         }
-        for tag in &u.tags {
-            if !u.tags.contains(tag) {
+        let cmd = executor.get_executor_cmd();
+        for tag in &cmd.include_tags {
+            if !u.tags.contains(tag.as_str()) {
                 return false;
             }
         }
-        return true;
-    }).collect::<Vec<_>>();
-
-    let url = urls_match_target_and_tags.iter().find(|u| {
-        if let Some(version) = &u.version {
-            if let Some(version_req) = &version_req {
+        for tag in &cmd.exclude_tags {
+            if u.tags.contains(tag.as_str()) {
+                return false;
+            }
+        }
+        if let Some(version_req) = &cmd.version {
+            if let Some(version) = &u.version {
                 if version_req.matches(version) {
                     return true;
                 }
             }
+            return false;
         }
-        return false;
-    });
+        return true;
+    }).collect::<Vec<_>>();
+
+    let url = urls_match.first();
 
     let url_string = if let Some(url) = url {
         &url.download_url
     } else {
-        &urls_match_target_and_tags[0].download_url
+        ""
     };
 
     debug!("{:?}", url_string);

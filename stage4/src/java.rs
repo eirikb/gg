@@ -10,7 +10,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::Executor;
-use crate::executor::{AppInput, AppPath, Download};
+use crate::executor::{AppInput, AppPath, Download, ExecutorCmd};
 use crate::target::{Arch, Os, Target, Variant};
 
 type Root = Vec<Root2>;
@@ -46,7 +46,9 @@ struct Root2 {
     pub url: String,
 }
 
-pub struct Java {}
+pub struct Java {
+    pub executor_cmd: ExecutorCmd,
+}
 
 fn get_jdk_version() -> Option<String> {
     if let Ok(file) = File::open("gradle/wrapper/gradle-wrapper.properties") {
@@ -63,6 +65,10 @@ fn get_jdk_version() -> Option<String> {
 }
 
 impl Executor for Java {
+    fn get_executor_cmd(&self) -> &ExecutorCmd {
+        &self.executor_cmd
+    }
+
     fn get_version_req(&self) -> Option<VersionReq> {
         if let Some(jdk_version) = get_jdk_version() {
             if let Ok(version) = VersionReq::parse(jdk_version.as_str()) {

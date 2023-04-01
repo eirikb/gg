@@ -9,11 +9,13 @@ use scraper::{Html, Selector};
 use semver::VersionReq;
 
 use crate::Executor;
-use crate::executor::{AppInput, Download};
+use crate::executor::{AppInput, Download, ExecutorCmd};
 
 use super::target;
 
-pub struct Gradle {}
+pub struct Gradle {
+    pub executor_cmd: ExecutorCmd
+}
 
 trait HelloWorld {
     fn get_version_from_gradle_url(&self) -> Option<String>;
@@ -48,6 +50,10 @@ fn get_distribution_url() -> Option<String> {
 }
 
 impl Executor for Gradle {
+    fn get_executor_cmd(&self) -> &ExecutorCmd {
+        return &self.executor_cmd;
+    }
+
     fn get_version_req(&self) -> Option<VersionReq> {
         if let Some(distribution_url) = get_distribution_url() {
             if let Some(version) = distribution_url.get_version_from_gradle_url() {

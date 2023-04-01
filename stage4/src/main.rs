@@ -4,11 +4,13 @@ use std::process::ExitCode;
 
 use futures_util::StreamExt;
 use log::{debug, info, log};
+use reqwest::Version;
+use semver::VersionReq;
 
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
 
 use crate::bloody_indiana_jones::download;
-use crate::executor::{AppInput, Executor, prep, try_run};
+use crate::executor::{AppInput, Executor, ExecutorCmd, prep, try_run};
 use crate::gradle::Gradle;
 use crate::java::Java;
 use crate::no_clap::NoClap;
@@ -103,7 +105,12 @@ async fn main() -> ExitCode {
 
     let input = &AppInput { target, no_clap: no_clap.clone() };
     return if let Some(cmd) = no_clap.cmds.first() {
-        let mut executors = no_clap.cmds.iter().filter_map(|cmd| Executor::new(&cmd.cmd)).collect::<Vec<Box<dyn Executor>>>();
+        let mut executors = no_clap.cmds.iter().filter_map(|cmd| Executor::new(ExecutorCmd {
+            cmd: cmd.cmd.to_string(),
+            version: VersionReq::parse(cmd.version.clone().unwrap_or("".to_string()).as_str()).ok(),
+            include_tags: cmd.include_tags.clone(),
+            exclude_tags: cmd.exclude_tags.clone(),
+        })).collect::<Vec<Box<dyn Executor>>>();
 
         let mut look_for_deps = true;
         while look_for_deps {
@@ -112,7 +119,12 @@ async fn main() -> ExitCode {
             for x in &executors {
                 for dep_name in x.get_deps() {
                     if !executors.iter().any(|e| &e.get_name().to_string() == dep_name) {
-                        if let Some(e) = Executor::new(dep_name) {
+                        if let Some(e) = Executor::new(ExecutorCmd {
+                            cmd: dep_name.to_string(),
+                            version: None,
+                            include_tags: Default::default(),
+                            exclude_tags: Default::default(),
+                        }) {
                             look_for_deps = true;
                             to_add.push(e);
                         }
