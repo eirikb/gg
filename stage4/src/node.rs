@@ -120,6 +120,9 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
         (Os::Linux, Arch::X86_64, Some(Variant::Musl)) => "linux-x64-musl",
         (Os::Linux, Arch::Armv7, _) => "linux-armv7l",
         (Os::Linux, Arch::Arm64, _) => "linux-arm64",
+        (Os::Mac, Arch::Armv7, _) => "osx-armv7l-tar",
+        (Os::Mac, Arch::X86_64, _) => "osx-x64-tar",
+        (Os::Mac, Arch::Arm64, _) => "osx-arm64-tar",
         _ => "linux-x64",
     };
     let json = reqwest::get(format!("https://{host}/download/release/index.json")).await.unwrap().text().await.unwrap();
@@ -136,7 +139,7 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
             file.replace("-zip", ".zip")
         } else {
             file.to_string() + ".tar.gz"
-        };
+        }.replace("osx", "darwin").replace("-tar", "");
         let version = r.clone().version;
         let tags: HashSet<String> = if lts {
             ["lts".to_string()].iter().cloned().collect()
