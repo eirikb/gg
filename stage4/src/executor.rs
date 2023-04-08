@@ -132,6 +132,15 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
         if u.arch.is_some() && u.arch.unwrap() != input.target.arch {
             return false;
         }
+
+        if !(match input.target.os {
+            Os::Windows => u.download_url.ends_with(".zip"),
+            Os::Linux => u.download_url.ends_with(".tar.gz"),
+            Os::Mac => u.download_url.ends_with(".tar.gz")
+        }) {
+            return false;
+        }
+
         let cmd = executor.get_executor_cmd();
         for tag in &cmd.include_tags {
             if !u.tags.contains(tag.as_str()) {
