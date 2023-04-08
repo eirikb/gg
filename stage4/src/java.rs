@@ -105,7 +105,6 @@ async fn get_java_download_urls(_target: &Target) -> Vec<Download> {
     root.iter().map(|node| {
         let n = node.clone();
         let mut tags = HashSet::new();
-        println!("{:?} - {:?} - {:?} - {:?} - {:?}", n.bundle_type, n.features, n.javafx, n.support_term, n.release_status);
         tags.insert(n.bundle_type);
         tags.insert(n.support_term);
         tags.insert(n.release_status);
