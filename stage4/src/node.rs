@@ -140,6 +140,7 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
         } else {
             file.to_string() + ".tar.gz"
         }.replace("osx", "darwin").replace("-tar", "");
+
         let version = r.clone().version;
         let tags: HashSet<String> = if lts {
             ["lts".to_string()].iter().cloned().collect()
@@ -152,8 +153,9 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
             download_url: format!("https://{host}/download/release/{version}/node-{version}-{file_fix}"),
             version: result.ok(),
             tags,
-            arch: None,
-            os: None,
+            // Arch and Os are mapped by target Arch/Os
+            arch: Some(Arch::Any),
+            os: Some(Os::Any),
             variant: None,
         };
     }).collect()
