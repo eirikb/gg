@@ -94,7 +94,13 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
     }
 
     let bin = executor.get_bin(input);
-    let version_req = executor.get_version_req();//.unwrap_or(VersionReq::default());
+    let version_req = if let Some(ver) = &executor.get_executor_cmd().version {
+        Some(ver.clone())
+    } else if let Some(ver) = executor.get_version_req() {
+        Some(ver)
+    } else {
+        None
+    };
     let version_req_str = &version_req.as_ref().map(|v| v.to_string()).unwrap_or("_star".to_string());
     let path_path = Path::new(executor.get_name()).join(
         executor.get_name().to_string() + &version_req_str.as_str().replace("*", "_star_").replace("^", "_hat_")
