@@ -43,8 +43,8 @@ impl Download {
         return Download {
             download_url,
             version: Version::parse(version).ok(),
-            os: None,
-            arch: None,
+            os: Some(Os::Any),
+            arch: Some(Arch::Any),
             variant: None,
             tags: HashSet::new(),
         };
@@ -132,17 +132,26 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
                 }
             }
         }
-        if u.os.is_some() && u.os.unwrap() != input.target.os {
+        if let Some(os) = u.os {
+            if os != Os::Any && os != input.target.os {
+                return false;
+            }
+        } else {
             return false;
         }
-        if u.arch.is_some() && u.arch.unwrap() != input.target.arch {
+        if let Some(arch) = u.arch {
+            if arch != Arch::Any && arch != input.target.arch {
+                return false;
+            }
+        } else {
             return false;
         }
 
         if !(match input.target.os {
             Os::Windows => u.download_url.ends_with(".zip"),
             Os::Linux => u.download_url.ends_with(".tar.gz"),
-            Os::Mac => u.download_url.ends_with(".tar.gz")
+            Os::Mac => u.download_url.ends_with(".tar.gz"),
+            Os::Any => u.download_url.ends_with(".tar.gz")
         }) {
             return false;
         }

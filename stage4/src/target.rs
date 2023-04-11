@@ -1,12 +1,12 @@
 #[derive(PartialEq)]
 #[derive(Debug)]
 #[derive(Copy, Clone)]
-pub enum Arch { X86_64, Armv7, Arm64 }
+pub enum Arch { X86_64, Armv7, Arm64, Any }
 
 #[derive(PartialEq)]
 #[derive(Debug)]
 #[derive(Copy, Clone)]
-pub enum Os { Windows, Linux, Mac }
+pub enum Os { Windows, Linux, Mac, Any }
 
 #[derive(PartialEq)]
 #[derive(Debug)]
