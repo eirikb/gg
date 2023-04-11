@@ -471,7 +471,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        os: [ ubuntu-18.04, ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022, macOS-11, macOS-12 ]
+        os: [ ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022, macOS-11, macOS-12 ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -524,7 +524,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        container: [ ubuntu, debian, alpine, archlinux, 'ubuntu:14.04' ]
+        container: [ ubuntu, debian, alpine, archlinux, 'ubuntu:14.04', 'ubuntu:18.04' ]
 
     runs-on: ubuntu-latest
     container: ${{ matrix.container }}
