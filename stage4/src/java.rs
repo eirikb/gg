@@ -94,6 +94,10 @@ impl Executor for Java {
         "java"
     }
 
+    fn get_default_include_tags(&self) -> HashSet<String> {
+        vec!["jdk"].into_iter().map(|s| s.to_string()).collect()
+    }
+
     fn get_env(&self, app_path: AppPath) -> HashMap<String, String> {
         [(String::from("JAVA_HOME"), app_path.app.to_str().unwrap().to_string())].iter().cloned().collect()
     }

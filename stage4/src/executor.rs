@@ -79,6 +79,12 @@ pub trait Executor {
     fn get_deps(&self) -> Vec<&str> {
         vec![]
     }
+    fn get_default_include_tags(&self) -> HashSet<String> {
+        HashSet::new()
+    }
+    fn get_default_exclude_tags(&self) -> HashSet<String> {
+        HashSet::new()
+    }
     fn get_env(&self, _app_path: AppPath) -> HashMap<String, String> {
         HashMap::new()
     }
@@ -162,7 +168,17 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
                 return false;
             }
         }
+        for tag in &executor.get_default_include_tags() {
+            if !u.tags.contains(tag.as_str()) {
+                return false;
+            }
+        }
         for tag in &cmd.exclude_tags {
+            if u.tags.contains(tag.as_str()) {
+                return false;
+            }
+        }
+        for tag in executor.get_default_exclude_tags() {
             if u.tags.contains(tag.as_str()) {
                 return false;
             }
