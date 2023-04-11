@@ -490,8 +490,8 @@ jobs:
           echo "Nice, let's try again"
           sh gg.cmd -v node@14 -e 'console.log(1)'
           sh gg.cmd -v node@14 -v
-          sh gg.cmd -v npm:node@14 -v
-          sh gg.cmd -v npx:node@14 -v
+          sh gg.cmd -v npm@14 -v
+          sh gg.cmd -v npx@14 -v
           sh gg.cmd -v java@11 -version
           sh gg.cmd -v java@11 -version
 
@@ -514,8 +514,8 @@ jobs:
           .\gg.cmd -v node@14 -e 'console.log(1)'
           .\gg.cmd -v node@14 -e 'console.log(1)'
           .\gg.cmd -v node@14 -v
-          .\gg.cmd -v npm:node@14 -v
-          .\gg.cmd -v npx:node@14 -v
+          .\gg.cmd -v npm@14 -v
+          .\gg.cmd -v npx@14 -v
           .\gg.cmd -v java@11 -version
           .\gg.cmd -v java@11 -version
 
@@ -544,8 +544,8 @@ jobs:
           echo "Nice, let's try again"
           sh gg.cmd -v node@14 -e 'console.log(1)'
           sh gg.cmd -v node@14 -v
-          sh gg.cmd -v npm:node@14 -v
-          sh gg.cmd -v npx:node@14 -v
+          sh gg.cmd -v npm@14 -v
+          sh gg.cmd -v npx@14 -v
           sh gg.cmd -v java@11 -version
           sh gg.cmd -v java@11 -version
 
