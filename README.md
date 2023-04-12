@@ -29,7 +29,13 @@ followed
 by the desired executable and its required dependencies:
 
 ```bash
-./gg.cmd [gg options] <executable name>@<version>:<dependent executable name>@<version> [executable arguments]
+./gg.cmd [gg options] <executable name>@<version><+include_tags><-exclude_tags>:<dependent executable name>@<version><+include_tags><-exclude_tags> [executable arguments]
+```
+
+### Example
+
+```bash
+sh gg.cmd -v gradle@7:java+lts build
 ```
 
 ## Support table
