@@ -131,14 +131,16 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
     }
 
     let urls_match = urls.iter().filter(|u| {
-        if let Some(u_var) = u.variant {
-            if let Some(t_var) = input.target.variant
-            {
+        if let Some(t_var) = input.target.variant {
+            if let Some(u_var) = u.variant {
                 if u_var != t_var {
                     return false;
                 }
+            } else {
+                return false;
             }
         }
+
         if let Some(os) = u.os {
             if os != Os::Any && os != input.target.os {
                 return false;
