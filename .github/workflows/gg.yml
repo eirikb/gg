@@ -51,10 +51,6 @@ jobs:
       - name: cargo pls
         shell: bash
         run: |
-          echo "-----------------------------"
-          du -a ~/
-          echo "-----------------------------"
-          du -a
           mkdir -p stage42
           mv stage4/* stage42
           rm -rf stage4
@@ -98,10 +94,6 @@ jobs:
 
       - name: cargo pls
         run: |
-          echo "-----------------------------"
-          du -a ~/
-          echo "-----------------------------"
-          du -a
           mkdir -p stage42
           mv stage4/* stage42
           rm -rf stage4
