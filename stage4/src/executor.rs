@@ -131,10 +131,13 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
     }
 
     let urls_match = urls.iter().filter(|u| {
-        if let Some(uvar) = u.variant {
-            if let Some(tvar) = input.target.variant {
-                if uvar != tvar {
-                    return false;
+        if let Some(u_var) = u.variant {
+            if u_var != Variant::Any {
+                if let Some(t_var) = input.target.variant
+                {
+                    if u_var != t_var {
+                        return false;
+                    }
                 }
             }
         }
@@ -160,14 +163,6 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
             Os::Any => u.download_url.ends_with(".tar.gz")
         }) {
             return false;
-        }
-
-        if let Some(variant) = input.target.variant {
-            if let Some(var) = u.variant {
-                return variant == var;
-            } else {
-                return false;
-            }
         }
 
         let cmd = executor.get_executor_cmd();

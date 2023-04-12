@@ -129,7 +129,7 @@ async fn get_java_download_urls(_target: &Target) -> Vec<Download> {
         let variant = if node.os.as_str().contains("musl") {
             Some(Variant::Musl)
         } else {
-            None
+            Some(Variant::Any)
         };
         // TODO: ext?!
         // let ext = match target.os {

@@ -156,7 +156,7 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
             // Arch and Os are mapped by target Arch/Os
             arch: Some(Arch::Any),
             os: Some(Os::Any),
-            variant: None,
+            variant: Some(Variant::Any),
         };
     }).collect()
 }
