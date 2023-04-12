@@ -11,7 +11,7 @@ pub enum Os { Windows, Linux, Mac, Any }
 #[derive(PartialEq)]
 #[derive(Debug)]
 #[derive(Copy, Clone)]
-pub enum Variant { Musl, Gnu, Msvc, Any }
+pub enum Variant { Musl }
 
 #[derive(Debug)]
 #[derive(Copy, Clone)]
@@ -36,8 +36,6 @@ pub fn parse_target(input: &str) -> Target {
         },
         variant: match input.to_lowercase() {
             x if x.contains("musl") => Some(Variant::Musl),
-            x if x.contains("gnu") => Some(Variant::Gnu),
-            x if x.contains("msvc") => Some(Variant::Msvc),
             _ => None
         },
     };

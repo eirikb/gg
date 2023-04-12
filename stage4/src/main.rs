@@ -82,11 +82,10 @@ async fn main() -> ExitCode {
 
     debug!(target: "main", "{:?}", &no_clap);
 
-    let system = fs::read_to_string(format!("./.cache/gg-{ver}/system")).unwrap_or(String::from("x86_64-linux")).trim().to_string();
-    info!("System is {system}");
-
+    let system = fs::read_to_string(format!("./.cache/gg-{ver}/system")).unwrap_or(String::from("stage3_x86_64-unknown-linux-musl")).trim().to_string();
     let target = target::parse_target(&system);
-    debug!(target: "main", "{:?}", &target);
+
+    info!("System is {system}. {:?}", &target);
 
     // let mut version_req_map = no_clap.version_req_map.clone();
     // let version_req_map2 = no_clap.version_req_map.clone();
