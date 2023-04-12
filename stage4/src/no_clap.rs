@@ -1,6 +1,5 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::env;
-use std::io::empty;
 
 use regex::{Match, Regex};
 
@@ -22,12 +21,6 @@ pub struct NoClap {
     pub help: bool,
     pub version: bool,
     pub update: bool,
-}
-
-impl NoClap {
-    pub fn cmd(&self) -> Option<&NoClapCmd> {
-        self.cmds.first()
-    }
 }
 
 impl NoClap {

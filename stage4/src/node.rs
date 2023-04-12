@@ -1,15 +1,14 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::fs;
 use std::future::Future;
 use std::pin::Pin;
-use log::info;
 
-use scraper::{Html, Selector};
+use log::info;
+use package_json::PackageJsonManager;
+use regex::Regex;
 use semver::{Version, VersionReq};
 use serde::Deserialize;
 use serde::Serialize;
-use package_json::PackageJsonManager;
-use regex::Regex;
 
 use crate::executor::{AppInput, Download, Executor, ExecutorCmd};
 use crate::target::{Arch, Os, Target, Variant};

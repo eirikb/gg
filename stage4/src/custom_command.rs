@@ -1,6 +1,5 @@
 use std::future::Future;
 use std::pin::Pin;
-use futures_util::future::err;
 use which::{which};
 
 use semver::VersionReq;

@@ -211,35 +211,6 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
     get_app_path(bin, path)
 }
 
-pub async fn try_execute(executor: &dyn Executor, input: &AppInput, version_req_map: HashMap<String, Option<VersionReq>>) -> Result<(), String> {
-    debug!("Prepping all");
-
-    let mut path_vars: Vec<String> = vec!();
-    let mut env_vars: HashMap<String, String> = HashMap::new();
-    for (cmd, _) in &version_req_map {
-        // if let Some(executor) = cmd_to_executor(cmd.to_string()) {
-        //     let res = prep(&*executor, input, &version_req_map).await;
-        //     if let Ok(app_path) = res {
-        //         path_vars.push(app_path.parent_bin_path());
-        //         env_vars.clone_from(&(&*executor).get_env(app_path));
-        //     } else if let Err(e) = res {
-        //         println!("Unable to prep {}: {}", cmd, e);
-        //     }
-        // }
-    }
-
-    // let app_path = prep(executor, input, &version_req_map).await?.clone();
-    // debug!("path is {:?}", app_path);
-    // if app_path.bin.exists() {
-    //     return if try_run(input, app_path, path_vars, env_vars).await.unwrap() {
-    //         Ok(())
-    //     } else {
-    //         Err("Unable to execute".to_string())
-    //     };
-    // }
-    Ok(())
-}
-
 fn get_app_path(bin: &str, path: &str) -> Result<AppPath, String> {
     let path = env::current_dir()
         .map_err(|_| "Current dir not found")?

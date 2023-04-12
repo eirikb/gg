@@ -2,9 +2,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::process::ExitCode;
 
-use futures_util::StreamExt;
-use log::{debug, info, log};
-use reqwest::Version;
+use log::{debug, info};
 use semver::VersionReq;
 
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
@@ -103,8 +101,8 @@ async fn main() -> ExitCode {
 
 
     let input = &AppInput { target, no_clap: no_clap.clone() };
-    return if let Some(cmd) = no_clap.cmds.first() {
-        let mut executors = no_clap.cmds.iter().filter_map(|cmd| Executor::new(ExecutorCmd {
+    return if no_clap.cmds.first().is_some() {
+        let mut executors = no_clap.cmds.iter().filter_map(|cmd| <dyn Executor>::new(ExecutorCmd {
             cmd: cmd.cmd.to_string(),
             version: VersionReq::parse(cmd.version.clone().unwrap_or("".to_string()).as_str()).ok(),
             include_tags: cmd.include_tags.clone(),
@@ -118,7 +116,7 @@ async fn main() -> ExitCode {
             for x in &executors {
                 for dep_name in x.get_deps() {
                     if !executors.iter().any(|e| &e.get_name().to_string() == dep_name) {
-                        if let Some(e) = Executor::new(ExecutorCmd {
+                        if let Some(e) = <dyn Executor>::new(ExecutorCmd {
                             cmd: dep_name.to_string(),
                             version: None,
                             include_tags: Default::default(),
@@ -135,7 +133,6 @@ async fn main() -> ExitCode {
             }
         }
 
-        let first = executors.first();
         if let Some(first) = executors.first() {
             let mut env_vars: HashMap<String, String> = HashMap::new();
             let mut path_vars: Vec<String> = vec!();
@@ -211,7 +208,7 @@ async fn main() -> ExitCode {
         // } else {
         //     println!("Unable to find an executor for command. Try -h. Tip: If you just want to execute an arbitrary command try -c");
         // }
-        ExitCode::from(1)
+        // ExitCode::from(1)
     } else {
         println!("Missing command. Try -h");
         print_help(ver);
