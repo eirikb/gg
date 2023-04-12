@@ -467,7 +467,8 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022, macOS-11, macOS-12 ]
-        cmd: ${{ fromJson(env.CMDS) }}
+        cmd:
+          options: ${{ fromJson(env.CMDS) }}
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -489,7 +490,8 @@ jobs:
     strategy:
       matrix:
         os: [ windows-2019, windows-2022 ]
-        cmd: ${{ fromJson(env.CMDS) }}
+        cmd:
+          options: ${{ fromJson(env.CMDS) }}
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -511,7 +513,8 @@ jobs:
     strategy:
       matrix:
         container: [ ubuntu, debian, alpine, archlinux, 'ubuntu:14.04', 'ubuntu:18.04' ]
-        cmd: ${{ fromJson(env.CMDS) }}
+        cmd:
+          options: ${{ fromJson(env.CMDS) }}
 
     runs-on: ubuntu-latest
     container: ${{ matrix.container }}
