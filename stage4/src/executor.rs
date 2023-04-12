@@ -156,13 +156,15 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
             return false;
         }
 
-        if !(match input.target.os {
-            Os::Windows => u.download_url.ends_with(".zip"),
-            Os::Linux => u.download_url.ends_with(".tar.gz"),
-            Os::Mac => u.download_url.ends_with(".tar.gz"),
-            Os::Any => u.download_url.ends_with(".tar.gz")
-        }) {
-            return false;
+        if let Some(os) = u.os {
+            if os != Os::Any && !(match input.target.os {
+                Os::Windows => u.download_url.ends_with(".zip"),
+                Os::Linux => u.download_url.ends_with(".tar.gz"),
+                Os::Mac => u.download_url.ends_with(".tar.gz"),
+                Os::Any => u.download_url.ends_with(".tar.gz")
+            }) {
+                return false;
+            }
         }
 
         let cmd = executor.get_executor_cmd();
