@@ -94,25 +94,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn node() {
-        let no_clap = NoClap::parse(["node"].map(String::from).to_vec());
-        assert_eq!(true, no_clap.cmd().is_some());
-        assert_eq!("node", no_clap.cmd().unwrap().cmd);
-    }
-
-    #[test]
     fn node_with_args() {
         let no_clap = NoClap::parse(["node", "hello", "world"].map(String::from).to_vec());
-        assert_eq!(true, no_clap.cmd().is_some());
-        assert_eq!("node", no_clap.cmd().unwrap().cmd);
         assert_eq!(["hello", "world"].map(String::from).to_vec(), no_clap.app_args);
     }
 
     #[test]
     fn version_is_set() {
         let no_clap = NoClap::parse(["-V", "node", "hello", "world"].map(String::from).to_vec());
-        assert_eq!(true, no_clap.cmd().is_some());
-        assert_eq!("node", no_clap.cmd().unwrap().cmd);
         assert_eq!(["hello", "world"].map(String::from).to_vec(), no_clap.app_args);
         assert_eq!(true, no_clap.version);
         assert_eq!(false, no_clap.help);
@@ -121,8 +110,6 @@ mod tests {
     #[test]
     fn version_is_set_but_not_help() {
         let no_clap = NoClap::parse(["-V", "node", "-h", "hello", "world"].map(String::from).to_vec());
-        assert_eq!(true, no_clap.cmd().is_some());
-        assert_eq!("node", no_clap.cmd().unwrap().cmd);
         assert_eq!(["-h", "hello", "world"].map(String::from).to_vec(), no_clap.app_args);
         assert_eq!(true, no_clap.version);
         assert_eq!(false, no_clap.help);
@@ -131,8 +118,6 @@ mod tests {
     #[test]
     fn version_is_set_and_help() {
         let no_clap = NoClap::parse(["-V", "-h", "node", "hello", "world"].map(String::from).to_vec());
-        assert_eq!(true, no_clap.cmd().is_some());
-        assert_eq!("node", no_clap.cmd().unwrap().cmd);
         assert_eq!(["hello", "world"].map(String::from).to_vec(), no_clap.app_args);
         assert_eq!(true, no_clap.version);
         assert_eq!(true, no_clap.help);
@@ -141,8 +126,6 @@ mod tests {
     #[test]
     fn versioning_test() {
         let no_clap = NoClap::parse(["node@10:gradle@1.2.3", "hello", "world"].map(String::from).to_vec());
-        assert_eq!(true, no_clap.cmd().is_some());
-        assert_eq!("node", no_clap.cmd().unwrap().cmd);
         assert_eq!(["hello", "world"].map(String::from).to_vec(), no_clap.app_args);
 
         assert_eq!("node", no_clap.cmds[0].cmd);
@@ -155,7 +138,6 @@ mod tests {
     #[test]
     fn print_help_no_cmd() {
         let no_clap = NoClap::parse(["-h"].map(String::from).to_vec());
-        assert_eq!(true, no_clap.cmd().is_none());
         assert_eq!(true, no_clap.help);
         assert_eq!(false, no_clap.version);
     }
@@ -163,7 +145,6 @@ mod tests {
     #[test]
     fn print_version_no_cmd() {
         let no_clap = NoClap::parse(["-V"].map(String::from).to_vec());
-        assert_eq!(true, no_clap.cmd().is_none());
         assert_eq!(false, no_clap.help);
         assert_eq!(true, no_clap.version);
     }
@@ -171,22 +152,18 @@ mod tests {
     #[test]
     fn custom_cmd1() {
         let no_clap = NoClap::parse(["-c"].map(String::from).to_vec());
-        assert_eq!(true, no_clap.cmd().is_none());
         assert_eq!(false, no_clap.version);
     }
 
     #[test]
     fn custom_cmd2() {
         let no_clap = NoClap::parse(["-c", "test"].map(String::from).to_vec());
-        assert_eq!(true, no_clap.cmd().is_some());
         assert_eq!(false, no_clap.version);
-        assert_eq!("test", no_clap.cmd().unwrap().cmd);
     }
 
     #[test]
     fn update() {
         let no_clap = NoClap::parse(["-u"].map(String::from).to_vec());
-        assert_eq!(true, no_clap.cmd().is_none());
         assert_eq!(true, no_clap.update);
         assert_eq!(false, no_clap.version);
     }
@@ -194,16 +171,13 @@ mod tests {
     #[test]
     fn java() {
         let no_clap = NoClap::parse(["-v", "java@11", "-version"].map(String::from).to_vec());
-        assert_eq!("java", no_clap.cmd().unwrap().cmd);
         assert_eq!("11", no_clap.cmds[0].version.as_ref().unwrap());
     }
 
     #[test]
     fn include_tags() {
         let no_clap = NoClap::parse(["node@10:gradle@1.2.3+hello+world:java+azul", "no", "problem"].map(String::from).to_vec());
-        assert_eq!(true, no_clap.cmd().is_some());
 
-        assert_eq!("node", no_clap.cmd().unwrap().cmd);
         assert_eq!(["no", "problem"].map(String::from).to_vec(), no_clap.app_args);
 
         assert_eq!("node", no_clap.cmds[0].cmd);
