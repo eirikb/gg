@@ -162,6 +162,14 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
             return false;
         }
 
+        if let Some(variant) = input.target.variant {
+            if let Some(var) = u.variant {
+                return variant == var;
+            } else {
+                return false;
+            }
+        }
+
         let cmd = executor.get_executor_cmd();
         for tag in &cmd.include_tags {
             if !u.tags.contains(tag.as_str()) {
