@@ -93,7 +93,7 @@ impl Executor for Gradle {
 
     fn get_bin(&self, input: &AppInput) -> &str {
         match &input.target.os {
-            target::Os::Windows => "bin/gradle.exe",
+            target::Os::Windows => "bin/gradle.bat",
             _ => "bin/gradle"
         }
     }
