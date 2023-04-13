@@ -29,18 +29,22 @@ followed
 by the desired executable and its required dependencies:
 
 ```bash
-./gg.cmd [gg options] <executable name>@<version>:<dependent executable name>@<version> [executable arguments]
+./gg.cmd [gg options] <executable name>@<version><+include_tags><-exclude_tags>:<dependent executable name>@<version><+include_tags><-exclude_tags> [executable arguments]
+```
+
+### Example
+
+```bash
+sh gg.cmd -v gradle@7:java+lts build
 ```
 
 ## Support table
 
-| Executable | Part of | Depends on | Version from                                                                                         | Download url from                                                                                                  | Set environment variables |
-|------------|---------|------------|------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|---------------------------|
-| **node**   |         |            | `engines` in `package.json`<br/> Contents of `.nvmrc`                                                |                                                                                                                    |
-| **npm**    | node    |            | node version                                                                                         |                                                                                                                    |
-| **npx**    | node    |            | node version                                                                                         |                                                                                                                    |
-| **gradle** |         | java       | `distributionUrl` in `gradle/wrapper/gradle-wrapper.properties`                                      | `distributionUrl` in<br/> `gradle/wrapper/gradle-wrapper.properties`<br/> `distributionUrl` in `gradle.properties` |
-| **java**   |         |            | `jdkVersion` in `gradle/wrapper/gradle-wrapper.properties` <br/> `jdkVersion` in `gradle.properties` |                                                                                                                    | JAVA_HOME                 |
+| Executable | Supports            | Depends on | Version from                                                                                         | Download url from                                                                                                  | Set environment variables | Available tags                                                                     | Default tags |
+|------------|---------------------|------------|------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|---------------------------|------------------------------------------------------------------------------------|--------------|
+| **node**   | **npm**<br/>**npx** |            | `engines` in `package.json`<br/> Contents of `.nvmrc`                                                |                                                                                                                    | lts                       |                                                                                    |
+| **gradle** |                     | java       | `distributionUrl` in `gradle/wrapper/gradle-wrapper.properties`                                      | `distributionUrl` in<br/> `gradle/wrapper/gradle-wrapper.properties`<br/> `distributionUrl` in `gradle.properties` |                           |                                                                                    |
+| **java**   |                     |            | `jdkVersion` in `gradle/wrapper/gradle-wrapper.properties` <br/> `jdkVersion` in `gradle.properties` |                                                                                                                    | JAVA_HOME                 | jdk<br/>jre<br/>lts<br/>sts<br/>mts<br/>ea<br/>ga<br/>headless<br/>headfull<br/>fx | +jdk         |
 
 ## On gradlew
 

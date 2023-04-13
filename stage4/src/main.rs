@@ -1,19 +1,18 @@
+use std::collections::HashMap;
 use std::fs;
-use std::process::{ExitCode};
+use std::process::ExitCode;
 
 use log::{debug, info};
 use semver::VersionReq;
 
 use bloody_indiana_jones::download_unpack_and_all_that_stuff;
-use crate::bloody_indiana_jones::download;
 
-use crate::executor::{AppInput, Executor, try_execute};
+use crate::bloody_indiana_jones::download;
+use crate::executor::{AppInput, Executor, ExecutorCmd, prep, try_run};
 use crate::gradle::Gradle;
 use crate::java::Java;
 use crate::no_clap::NoClap;
 use crate::node::Node;
-use crate::custom_command::CustomCommand;
-use crate::cmd_to_executor::cmd_to_executor;
 
 mod target;
 mod bloody_indiana_jones;
@@ -23,11 +22,9 @@ mod java;
 mod executor;
 mod no_clap;
 mod custom_command;
-mod cmd_to_executor;
-
 
 fn print_help(ver: &str) {
-    println!(r"gg.cmd - The Ultimate Executable Manager
+    println!(r"gg.cmd
 https://github.com/eirikb/gg
 
 Version: {ver}
@@ -84,46 +81,75 @@ async fn main() -> ExitCode {
     debug!(target: "main", "{:?}", &no_clap);
 
     let system = fs::read_to_string(format!("./.cache/gg-{ver}/system")).unwrap_or(String::from("x86_64-linux")).trim().to_string();
-    info!("System is {system}");
-
     let target = target::parse_target(&system);
-    debug!(target: "main", "{:?}", &target);
 
-    debug!(target: "main", "{:?}", &no_clap.version_req_map);
+    info!("System is {system}. {:?}", &target);
 
-    let mut version_req_map = no_clap.version_req_map.clone();
-    let version_req_map2 = no_clap.version_req_map.clone();
+    let input = &AppInput { target, no_clap: no_clap.clone() };
+    return if no_clap.cmds.first().is_some() {
+        let mut executors = no_clap.cmds.iter().filter_map(|cmd| <dyn Executor>::new(ExecutorCmd {
+            cmd: cmd.cmd.to_string(),
+            version: VersionReq::parse(cmd.version.clone().unwrap_or("".to_string()).as_str()).ok(),
+            include_tags: cmd.include_tags.clone(),
+            exclude_tags: cmd.exclude_tags.clone(),
+        })).collect::<Vec<Box<dyn Executor>>>();
 
-    for x in &version_req_map2 {
-        let executor = cmd_to_executor(x.0.to_string(), version_req_map.clone());
-        if let Some(executor) = executor {
-            for x in executor.get_deps() {
-                if !version_req_map.contains_key(x) {
-                    version_req_map.insert(x.to_string(), Some(VersionReq::default()));
+        let mut look_for_deps = true;
+        while look_for_deps {
+            look_for_deps = false;
+            let mut to_add = Vec::new();
+            for x in &executors {
+                for dep_name in x.get_deps() {
+                    if !executors.iter().any(|e| &e.get_name().to_string() == dep_name) {
+                        if let Some(e) = <dyn Executor>::new(ExecutorCmd {
+                            cmd: dep_name.to_string(),
+                            version: None,
+                            include_tags: Default::default(),
+                            exclude_tags: Default::default(),
+                        }) {
+                            look_for_deps = true;
+                            to_add.push(e);
+                        }
+                    }
                 }
             }
+            for x in to_add {
+                executors.push(x);
+            }
         }
-    }
 
+        if let Some(first) = executors.first() {
+            let mut env_vars: HashMap<String, String> = HashMap::new();
+            let mut path_vars: Vec<String> = vec!();
 
-    return if let Some(cmd) = no_clap.clone().cmd {
-        let executor: Option<Box<dyn Executor>> = if no_clap.clone().custom_cmd {
-            Some(Box::new(CustomCommand { cmd }))
-        } else {
-            cmd_to_executor(cmd, version_req_map.clone())
-        };
+            for x in executors.iter().skip(1) {
+                let app_path = prep(&**x, &input).await.expect("Prep failed");
+                path_vars.push(app_path.parent_bin_path());
+                for (key, value) in x.get_env(app_path) {
+                    env_vars.insert(key, value);
+                }
+            }
+            let app_path = prep(&**first, &input).await.expect("Prep failed");
+            for (key, value) in first.get_env(app_path.clone()) {
+                path_vars.push(app_path.clone().parent_bin_path());
+                env_vars.insert(key, value);
+            }
 
-        if executor.is_some() {
-            let c = no_clap.clone();
-            return ExitCode::from(if let Ok(_) = try_execute(&*executor.unwrap(), &AppInput { target, no_clap: c }, version_req_map).await {
-                0
+            if app_path.bin.exists() {
+                if try_run(input, app_path, path_vars, env_vars).await.unwrap() {
+                    return ExitCode::from(0);
+                } else {
+                    println!("Unable to execute");
+                    return ExitCode::from(1);
+                };
             } else {
-                1
-            });
+                println!("Binary not found!");
+                return ExitCode::from(1);
+            }
         } else {
-            println!("Unable to find an executor for command. Try -h. Tip: If you just want to execute an arbitrary command try -c");
+            println!("No executor found!");
+            return ExitCode::from(1);
         }
-        ExitCode::from(1)
     } else {
         println!("Missing command. Try -h");
         print_help(ver);

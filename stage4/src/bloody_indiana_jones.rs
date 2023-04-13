@@ -2,8 +2,9 @@ use std::cmp::min;
 use std::fs::{create_dir_all, File, read_dir, remove_dir, rename};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+
 use futures_util::StreamExt;
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::ProgressBar;
 use log::{debug, info};
 
 fn get_file_name(url: &str) -> String {
@@ -23,9 +24,6 @@ pub async fn download(url: &str, file_path: &str) {
     debug!("Total size {:?}", total_size);
 
     let pb = ProgressBar::new(total_size);
-    pb.set_style(ProgressStyle::default_bar()
-        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
-        .unwrap());
     pb.set_message(format!("Downloading {}", url));
 
     let file_name = get_file_name(url);
@@ -84,11 +82,8 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
         Some("zip") => {
             info!("Decompressing Zip");
             info!("Path is {}", &path);
-            let part = path.split("/").last().unwrap_or("unknown");
-            let part_path = format!(".cache/{part}");
-            info!("path_path {}", &part_path);
-            create_dir_all(&part_path).expect("Unable to create download dir");
-            let target_dir = PathBuf::from(&part_path);
+            create_dir_all(&path).expect("Unable to create download dir");
+            let target_dir = PathBuf::from(&path);
             zip_extract::extract(File::open(file_path).unwrap(), &target_dir, true).unwrap();
         }
         _ => ()

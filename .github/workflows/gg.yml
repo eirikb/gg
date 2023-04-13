@@ -51,10 +51,6 @@ jobs:
       - name: cargo pls
         shell: bash
         run: |
-          echo "-----------------------------"
-          du -a ~/
-          echo "-----------------------------"
-          du -a
           mkdir -p stage42
           mv stage4/* stage42
           rm -rf stage4
@@ -62,6 +58,7 @@ jobs:
           export VERSION=${{needs.version.outputs.version}}
           
           rustup target add ${{ matrix.target }}
+          cargo test
           cargo build --release --target=${{ matrix.target }}
           find . -type f -name stage4.exe -exec cp {} ../stage4 \;
           find . -type f -name stage4 -exec cp {} ../stage4 \;
@@ -97,10 +94,6 @@ jobs:
 
       - name: cargo pls
         run: |
-          echo "-----------------------------"
-          du -a ~/
-          echo "-----------------------------"
-          du -a
           mkdir -p stage42
           mv stage4/* stage42
           rm -rf stage4
@@ -115,6 +108,7 @@ jobs:
 
           export VERSION=${{needs.version.outputs.version}}
           
+          cargo test
           cargo build --release --target=${{ matrix.target }}
           find . -type f -name stage4.exe -exec cp {} ../stage4 \;
           find . -type f -name stage4 -exec cp {} ../stage4 \;
@@ -469,7 +463,8 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        os: [ ubuntu-18.04, ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022, macOS-11, macOS-12 ]
+        os: [ ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022, macOS-11, macOS-12 ]
+        cmd: [ "node@14 -v", "node@14 -e 'console.log(1)'", "npm@14 -v", "npx@14 -v", "java -version", "java@11 -version", "java@+lts -version", "gradle@7 -version", "gradle -version" ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -479,23 +474,19 @@ jobs:
           name: gg.cmd
 
       - name: Run!
+        shell: bash
         run: |
-          file gg.cmd
-          head gg.cmd
-          sh gg.cmd node@14 -e 'console.log(1)'
+          set -x
+          sh gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
-          sh gg.cmd node@14 -e 'console.log(1)'
-          sh gg.cmd node@14 -v
-          sh gg.cmd npm:node@14 -v
-          sh gg.cmd npx:node@14 -v
-          sh gg.cmd java -version
-          sh gg.cmd java -version
+          sh gg.cmd -v ${{ matrix.cmd }}
 
   test-batch:
     needs: stage1
     strategy:
       matrix:
         os: [ windows-2019, windows-2022 ]
+        cmd: [ "node@14 -v", "node@14 -e 'console.log(1)'", "npm@14 -v", "npx@14 -v", "java -version", "java@11 -version", "java@+lts -version", "gradle@7 -version", "gradle -version" ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -507,20 +498,17 @@ jobs:
       - name: Run!
         shell: cmd
         run: |
-          .\gg.cmd -vvv node@14 -e 'console.log(1)'
-          .\gg.cmd -vvv node@14 -e 'console.log(1)'
-          .\gg.cmd -vvv node@14 -v
-          .\gg.cmd -vvv npm:node@14 -v
-          .\gg.cmd -vvv npx:node@14 -v
-          .\gg.cmd -vvv java -version
-          .\gg.cmd -vvv java -version
+          .\gg.cmd -v ${{ matrix.cmd }}
+          echo "Nice, let's try again"
+          .\gg.cmd -v ${{ matrix.cmd }}
 
 
   test-container:
     needs: stage1
     strategy:
       matrix:
-        container: [ ubuntu, debian, alpine, archlinux, 'ubuntu:14.04' ]
+        container: [ ubuntu, debian, alpine, archlinux, 'ubuntu:14.04', 'ubuntu:18.04' ]
+        cmd: [ "node@14 -v", "node@14 -e 'console.log(1)'", "npm@14 -v", "npx@14 -v", "java -version", "java@11 -version", "java@+lts -version", "gradle@7 -version", "gradle -version" ]
 
     runs-on: ubuntu-latest
     container: ${{ matrix.container }}
@@ -533,18 +521,15 @@ jobs:
       - name: Run!
         run: |
           set -x
+          
+          # This is required for nodejs to run - not gg.cmd! 
           if [ "${{ matrix.container }}" == "alpine" ]; then
             apk add libstdc++
           fi
-          sh gg.cmd node@14 -e 'console.log(1)'
+          
+          sh gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
-          sh gg.cmd node@14 -e 'console.log(1)'
-          sh gg.cmd node@14 -v
-          sh gg.cmd npm:node@14 -v
-          sh gg.cmd npx:node@14 -v
-          sh gg.cmd java -version
-          sh gg.cmd java -version
-
+          sh gg.cmd -v ${{ matrix.cmd }}
 
   test-arch:
     if: false
@@ -575,7 +560,7 @@ jobs:
           run: |
             uname -a
             cd /ok
-            sh gg.cmd java -version
+            sh gg.cmd java@11 -version
 
 
   release:

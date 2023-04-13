@@ -1,7 +1,3 @@
-Write-Host "Time to GOGOGO"
-
-Write-Host args $args
-
 $stage4 = ".\.cache\gg-VERVER\stage4.exe"
 
 if (Test-Path $stage4)
@@ -18,14 +14,11 @@ if ($arch -Eq "AMD64")
 }
 
 $hashes = (Get-Content .cache/gg-VERVER/hashes).Split("`n")
-Write-Host $hashes
 $hash = ($hashes | Where-Object { $_ -match "$arch.*windows" })
 if ($hash)
 {
     "$arch-windows" | Out-File .cache\gg-VERVER\system -Encoding ascii
-    Write-Host "Found hash $hash"
     $hash = $hash.split("=")[1]
-    Write-Host "Actual hash $hash"
     Invoke-WebRequest "https://gg.eirikb.no/$hash" -OutFile $stage4
     if (Test-Path $stage4)
     {

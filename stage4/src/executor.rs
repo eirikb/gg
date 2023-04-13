@@ -1,13 +1,15 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::process::Command;
+
 use log::{debug, info};
 use semver::{Version, VersionReq};
-use crate::{cmd_to_executor, download_unpack_and_all_that_stuff, NoClap};
-use crate::target::Target;
+
+use crate::{download_unpack_and_all_that_stuff, Gradle, Java, NoClap, Node};
+use crate::target::{Arch, Os, Target, Variant};
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct AppPath {
@@ -28,18 +30,60 @@ pub struct AppInput {
 
 #[derive(Debug, Clone)]
 pub struct Download {
-    pub version: String,
-    pub lts: bool,
+    pub version: Option<Version>,
+    pub tags: HashSet<String>,
     pub download_url: String,
+    pub arch: Option<Arch>,
+    pub os: Option<Os>,
+    pub variant: Option<Variant>,
+}
+
+impl Download {
+    pub fn new(download_url: String, version: &str, variant: Option<Variant>) -> Download {
+        return Download {
+            download_url,
+            version: Version::parse(version).ok(),
+            os: Some(Os::Any),
+            arch: Some(Arch::Any),
+            variant,
+            tags: HashSet::new(),
+        };
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ExecutorCmd {
+    pub cmd: String,
+    pub version: Option<VersionReq>,
+    pub include_tags: HashSet<String>,
+    pub exclude_tags: HashSet<String>,
+}
+
+impl dyn Executor {
+    pub fn new(executor_cmd: ExecutorCmd) -> Option<Box<Self>> {
+        match executor_cmd.cmd.as_str() {
+            "node" | "npm" | "npx" => Some(Box::new(Node { executor_cmd })),
+            "gradle" => Some(Box::new(Gradle { executor_cmd })),
+            "java" => Some(Box::new(Java { executor_cmd })),
+            _ => None
+        }
+    }
 }
 
 pub trait Executor {
+    fn get_executor_cmd(&self) -> &ExecutorCmd;
     fn get_version_req(&self) -> Option<VersionReq>;
     fn get_download_urls<'a>(&'a self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>>;
     fn get_bin(&self, input: &AppInput) -> &str;
     fn get_name(&self) -> &str;
     fn get_deps(&self) -> Vec<&str> {
         vec![]
+    }
+    fn get_default_include_tags(&self) -> HashSet<String> {
+        HashSet::new()
+    }
+    fn get_default_exclude_tags(&self) -> HashSet<String> {
+        HashSet::new()
     }
     fn get_env(&self, _app_path: AppPath) -> HashMap<String, String> {
         HashMap::new()
@@ -56,8 +100,16 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
     }
 
     let bin = executor.get_bin(input);
+    let version_req = if let Some(ver) = &executor.get_executor_cmd().version {
+        Some(ver.clone())
+    } else if let Some(ver) = executor.get_version_req() {
+        Some(ver)
+    } else {
+        None
+    };
+    let version_req_str = &version_req.as_ref().map(|v| v.to_string()).unwrap_or("_star".to_string());
     let path_path = Path::new(executor.get_name()).join(
-        executor.get_name().to_string() + &executor.get_version_req().unwrap_or(VersionReq::default()).to_string().as_str().replace("*", "_star_").replace("^", "_hat_")
+        executor.get_name().to_string() + &version_req_str.as_str().replace("*", "_star_").replace("^", "_hat_")
     );
     let path = path_path.to_str().unwrap();
     info!( "Trying to find {bin} in {path}");
@@ -78,46 +130,89 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
         panic!("Did not find any download URL!");
     }
 
-    let url = urls.iter().find(|url| executor.get_version_req().unwrap_or(VersionReq::default()).matches(&Version::parse(url.version.as_str()).unwrap_or(Version::new(0, 0, 0)))).unwrap_or(&urls[0]);
-
-    info!("Url is {:?}", &url);
-
-    let url_string = url.clone().download_url;
-    debug!("{:?}", url_string.as_str());
-
-    let cache_path = format!(".cache/{path}");
-    download_unpack_and_all_that_stuff(url_string.as_str(), cache_path.as_str()).await;
-
-    get_app_path(bin, path)
-}
-
-pub async fn try_execute(executor: &dyn Executor, input: &AppInput, version_req_map: HashMap<String, Option<VersionReq>>) -> Result<(), String> {
-    debug!("Prepping all");
-
-    let mut path_vars: Vec<String> = vec!();
-    let mut env_vars: HashMap<String, String> = HashMap::new();
-    for (cmd, _) in &version_req_map {
-        if let Some(executor) = cmd_to_executor(cmd.to_string(), version_req_map.clone()) {
-            let res = prep(&*executor, input).await;
-            if let Ok(app_path) = res {
-                path_vars.push(app_path.parent_bin_path());
-                env_vars.clone_from(&(&*executor).get_env(app_path));
-            } else if let Err(e) = res {
-                println!("Unable to prep {}: {}", cmd, e);
+    let urls_match = urls.iter().filter(|u| {
+        if let Some(t_var) = input.target.variant {
+            if let Some(u_var) = u.variant {
+                if u_var != Variant::Any && u_var != t_var {
+                    return false;
+                }
+            } else {
+                return false;
             }
         }
-    }
 
-    let app_path = prep(executor, input).await?.clone();
-    debug!("path is {:?}", app_path);
-    if app_path.bin.exists() {
-        return if try_run(input, app_path, path_vars, env_vars).await.unwrap() {
-            Ok(())
+        if let Some(os) = u.os {
+            if os != Os::Any && os != input.target.os {
+                return false;
+            }
         } else {
-            Err("Unable to execute".to_string())
-        };
-    }
-    Ok(())
+            return false;
+        }
+        if let Some(arch) = u.arch {
+            if arch != Arch::Any && arch != input.target.arch {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        if let Some(os) = u.os {
+            if os != Os::Any && !(match input.target.os {
+                Os::Windows => u.download_url.ends_with(".zip"),
+                Os::Linux => u.download_url.ends_with(".tar.gz"),
+                Os::Mac => u.download_url.ends_with(".tar.gz"),
+                Os::Any => u.download_url.ends_with(".tar.gz")
+            }) {
+                return false;
+            }
+        }
+
+        let cmd = executor.get_executor_cmd();
+        for tag in &cmd.include_tags {
+            if !u.tags.contains(tag.as_str()) {
+                return false;
+            }
+        }
+        for tag in &executor.get_default_include_tags() {
+            if !u.tags.contains(tag.as_str()) {
+                return false;
+            }
+        }
+        for tag in &cmd.exclude_tags {
+            if u.tags.contains(tag.as_str()) {
+                return false;
+            }
+        }
+        for tag in executor.get_default_exclude_tags() {
+            if u.tags.contains(tag.as_str()) {
+                return false;
+            }
+        }
+        if let Some(version_req) = &cmd.version {
+            if let Some(version) = &u.version {
+                if version_req.matches(version) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return true;
+    }).collect::<Vec<_>>();
+
+    let url = urls_match.first();
+
+    let url_string = if let Some(url) = url {
+        &url.download_url
+    } else {
+        ""
+    };
+
+    debug!("{:?}", url_string);
+
+    let cache_path = format!(".cache/{path}");
+    download_unpack_and_all_that_stuff(url_string, cache_path.as_str()).await;
+
+    get_app_path(bin, path)
 }
 
 fn get_app_path(bin: &str, path: &str) -> Result<AppPath, String> {
@@ -131,7 +226,7 @@ fn get_app_path(bin: &str, path: &str) -> Result<AppPath, String> {
     Ok(AppPath { app: path, bin: bin_path })
 }
 
-async fn try_run(input: &AppInput, app_path: AppPath, path_vars: Vec<String>, env_vars: HashMap<String, String>) -> Result<bool, String> {
+pub async fn try_run(input: &AppInput, app_path: AppPath, path_vars: Vec<String>, env_vars: HashMap<String, String>) -> Result<bool, String> {
     let bin_path = app_path.bin.to_str().unwrap_or("");
     info!("Executing: {:?}. With args:{:?}", bin_path,&input.no_clap.app_args);
     let path_string = &env::var("PATH").unwrap_or("".to_string());
