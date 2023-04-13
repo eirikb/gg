@@ -150,8 +150,6 @@ async fn main() -> ExitCode {
                 env_vars.insert(key, value);
             }
 
-            dbg!(&env_vars);
-            dbg!(&app_path);
             if app_path.bin.exists() {
                 if try_run(input, app_path, path_vars, env_vars).await.unwrap() {
                     return ExitCode::from(0);
