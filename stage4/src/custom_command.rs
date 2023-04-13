@@ -1,10 +1,10 @@
 use std::future::Future;
 use std::pin::Pin;
-use which::{which};
 
 use semver::VersionReq;
+use which::which;
 
-use crate::{Executor};
+use crate::Executor;
 use crate::executor::{AppInput, AppPath, Download, ExecutorCmd};
 
 pub struct CustomCommand {

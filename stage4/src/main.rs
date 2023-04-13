@@ -85,21 +85,6 @@ async fn main() -> ExitCode {
 
     info!("System is {system}. {:?}", &target);
 
-    // let mut version_req_map = no_clap.version_req_map.clone();
-    // let version_req_map2 = no_clap.version_req_map.clone();
-
-    // for x in &version_req_map2 {
-    //     let executor = cmd_to_executor(x.0.to_string());
-    //     if let Some(executor) = executor {
-    //         for x in executor.get_deps() {
-    //             if !version_req_map.contains_key(x) {
-    //                 version_req_map.insert(x.to_string(), Some(VersionReq::default()));
-    //             }
-    //         }
-    //     }
-    // }
-
-
     let input = &AppInput { target, no_clap: no_clap.clone() };
     return if no_clap.cmds.first().is_some() {
         let mut executors = no_clap.cmds.iter().filter_map(|cmd| <dyn Executor>::new(ExecutorCmd {
@@ -165,48 +150,6 @@ async fn main() -> ExitCode {
             println!("No executor found!");
             return ExitCode::from(1);
         }
-
-
-        // let bah: Vec<_> = executors.iter().collect();
-        // let to_execute: Vec<_> = executors.iter_mut().collect();
-        // while let Some(executor) = to_execute.pop() {
-        //     for name in executor.get_deps() {
-        //         if !bah.iter().any(|e| e.get_name() == name) {
-        //             if let Some(dep_executor) = Executor::from_cmd(name) {
-        //                 executors.push(dep_executor);
-        //             }
-        //         }
-        //     }
-        // }
-        // // Run through deps once. Should be recursive
-        // for executor in executors.into_iter() {
-        //     for name in executor.get_deps() {
-        //         if !executors.into_iter().any(|e| e.get_name() == name) {
-        //             if let Some(dep_executor) = Executor::from_cmd(name) {
-        //                 executors.push(dep_executor);
-        //             }
-        //         }
-        //     }
-        // }
-
-
-        // let executor: Option<Box<dyn Executor>> = if no_clap.clone().custom_cmd {
-        //     Some(Box::new(CustomCommand { cmd }))
-        // } else {
-        //     cmd_to_executor(cmd)
-        // };
-
-        // if executor.is_some() {
-        //     // let c = no_clap.clone();
-        //     // return ExitCode::from(if let Ok(_) = try_execute(&*executor.unwrap(), &AppInput { target, no_clap: c }, version_req_map).await {
-        //     //     0
-        //     // } else {
-        //     //     1
-        //     // });
-        // } else {
-        //     println!("Unable to find an executor for command. Try -h. Tip: If you just want to execute an arbitrary command try -c");
-        // }
-        // ExitCode::from(1)
     } else {
         println!("Missing command. Try -h");
         print_help(ver);
