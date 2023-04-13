@@ -39,13 +39,13 @@ pub struct Download {
 }
 
 impl Download {
-    pub fn new(download_url: String, version: &str) -> Download {
+    pub fn new(download_url: String, version: &str, variant: Option<Variant>) -> Download {
         return Download {
             download_url,
             version: Version::parse(version).ok(),
             os: Some(Os::Any),
             arch: Some(Arch::Any),
-            variant: None,
+            variant,
             tags: HashSet::new(),
         };
     }
@@ -133,7 +133,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
     let urls_match = urls.iter().filter(|u| {
         if let Some(t_var) = input.target.variant {
             if let Some(u_var) = u.variant {
-                if u_var != t_var {
+                if u_var != Variant::Any && u_var != t_var {
                     return false;
                 }
             } else {

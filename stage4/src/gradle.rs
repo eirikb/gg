@@ -10,11 +10,12 @@ use semver::VersionReq;
 
 use crate::Executor;
 use crate::executor::{AppInput, Download, ExecutorCmd};
+use crate::target::Variant;
 
 use super::target;
 
 pub struct Gradle {
-    pub executor_cmd: ExecutorCmd
+    pub executor_cmd: ExecutorCmd,
 }
 
 trait HelloWorld {
@@ -68,7 +69,7 @@ impl Executor for Gradle {
             if let Some(distribution_url) = get_distribution_url() {
                 if let Some(version) = distribution_url.get_version_from_gradle_url() {
                     return vec![
-                        Download::new(distribution_url, version.as_str())
+                        Download::new(distribution_url, version.as_str(), Some(Variant::Any))
                     ];
                 }
             }
@@ -84,6 +85,7 @@ impl Executor for Gradle {
                 Download::new(
                     format!("https://services.gradle.org/distributions/gradle-{version}-bin.zip"),
                     version.as_str(),
+                    Some(Variant::Any),
                 )
             }).collect()
         })

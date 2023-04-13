@@ -11,7 +11,7 @@ pub enum Os { Windows, Linux, Mac, Any }
 #[derive(PartialEq)]
 #[derive(Debug)]
 #[derive(Copy, Clone)]
-pub enum Variant { Musl }
+pub enum Variant { Musl, Any }
 
 #[derive(Debug)]
 #[derive(Copy, Clone)]
