@@ -423,7 +423,7 @@ jobs:
           rm -rf .cache/gg-$VERSION
           mkdir -p .cache/gg-$VERSION
           rm -rf src
-          for dir in _stage3*; do
+          for dir in stage3*; do
             echo "dir is $dir"
             for file in "$dir"/*; do
               echo "file is $file"
