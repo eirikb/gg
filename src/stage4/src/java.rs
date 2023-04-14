@@ -95,7 +95,7 @@ impl Executor for Java {
     }
 
     fn get_default_include_tags(&self) -> HashSet<String> {
-        vec!["jdk"].into_iter().map(|s| s.to_string()).collect()
+        vec!["jdk", "ga"].into_iter().map(|s| s.to_string()).collect()
     }
 
     fn get_env(&self, app_path: AppPath) -> HashMap<String, String> {
