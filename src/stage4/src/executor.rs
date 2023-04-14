@@ -118,16 +118,19 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
     }
 
     let bin = executor.get_bin(input);
-    let version_req = if let Some(ver) = &executor.get_executor_cmd().version {
+    let executor_cmd = &executor.get_executor_cmd();
+    let version_req = if let Some(ver) = &executor_cmd.version {
         Some(ver.clone())
     } else if let Some(ver) = executor.get_version_req() {
         Some(ver)
     } else {
         None
     };
-    let version_req_str = &version_req.as_ref().map(|v| v.to_string()).unwrap_or("_star".to_string());
+    let version_req_str = &version_req.as_ref().map(|v| v.to_string()).unwrap_or("*".to_string());
     let path_path = Path::new(executor.get_name()).join(
         executor.get_name().to_string() + &version_req_str.as_str().replace("*", "_star_").replace("^", "_hat_")
+            + executor_cmd.include_tags.iter().map(|t| format!("i{t}")).collect::<Vec<String>>().join("_").as_str()
+            + executor_cmd.exclude_tags.iter().map(|t| format!("e{t}")).collect::<Vec<String>>().join("_").as_str()
     );
     let path = path_path.to_str().unwrap();
     info!( "Trying to find {bin} in {path}");
