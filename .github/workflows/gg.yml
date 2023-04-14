@@ -272,8 +272,8 @@ jobs:
           fi
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
-          find . -type f \( -name stage3 -o -name stage3.exe \) -exec cp {} ../stage3_${{ matrix.target }} \;
-          strip ../stage3_${{ matrix.target }}
+          find . -type f \( -name stage3 -o -name stage3.exe \) -exec cp {} ../../stage3_${{ matrix.target }} \;
+          strip ../../stage3_${{ matrix.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
@@ -321,8 +321,8 @@ jobs:
           fi
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
-          find . -type f \( -name stage3 -o -name stage3.exe \) -exec cp {} ../stage3_${{ matrix.target }} \;
-          strip ../stage3_${{ matrix.target }}
+          find . -type f \( -name stage3 -o -name stage3.exe \) -exec cp {} ../../stage3_${{ matrix.target }} \;
+          strip ../../stage3_${{ matrix.target }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
