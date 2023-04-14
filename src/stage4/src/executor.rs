@@ -151,7 +151,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
         panic!("Did not find any download URL!");
     }
 
-    let urls_match = urls.iter().filter(|u| {
+    let mut urls_match = urls.iter().filter(|u| {
         if let Some(t_var) = input.target.variant {
             if let Some(u_var) = u.variant {
                 if u_var != Variant::Any && u_var != t_var {
@@ -219,6 +219,8 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
         }
         return true;
     }).collect::<Vec<_>>();
+
+    urls_match.sort_by(|a, b| b.version.cmp(&a.version));
 
     let url = urls_match.first();
 
