@@ -52,8 +52,8 @@ jobs:
         shell: bash
         run: |
           mkdir -p stage42
-          mv stage4/* stage42
-          rm -rf stage4
+          mv src/stage4/* stage42
+          rm -rf src
           cd stage42
           export VERSION=${{needs.version.outputs.version}}
           
@@ -95,8 +95,8 @@ jobs:
       - name: cargo pls
         run: |
           mkdir -p stage42
-          mv stage4/* stage42
-          rm -rf stage4
+          mv src/stage4/* stage42
+          rm -rf src
           cd stage42
           if [ "${{ matrix.container }}" == "alpine" ]
           then
@@ -164,7 +164,7 @@ jobs:
             apt-get -y install cargo
 
           run: |
-            cd stage4
+            cd src/stage4
             cp -rp /cachus/* . || :
             echo "OK ${{needs.version.outputs.version}}"
             export VERSION=${{needs.version.outputs.version}}
@@ -178,7 +178,7 @@ jobs:
         run: |
           sudo chown -R $(id -u):$(id -g) $PWD/artifacts
           sudo chown -R $(id -u):$(id -g) .
-          rm -rf stage4
+          rm -rf src
           find $PWD/artifacts -type f -name stage4 -exec cp {} ./stage4 \;
 
       - if: github.ref == 'refs/heads/main'
@@ -259,12 +259,12 @@ jobs:
         run: |
           hash=$(cat hash/hash_stage4_${{ matrix.target }})
           echo "now hash is $hash"
-          echo "const char *hash = \"$hash\";" > stage3/const.h
+          echo "const char *hash = \"$hash\";" > src/stage3/const.h
 
       - name: Makus
         shell: bash
         run: |
-          cd stage3
+          cd src/stage3
           if [ "${{ matrix.target }}" == "x86_64-unknown-linux-musl" ]
           then
             sudo apt install musl-dev musl-tools
@@ -310,11 +310,11 @@ jobs:
         run: |
           hash=$(cat hash/hash_stage4_${{ matrix.target }})
           echo "now hash is $hash"
-          echo "const char *hash = \"$hash\";" > stage3/const.h
+          echo "const char *hash = \"$hash\";" > src/stage3/const.h
 
       - name: Makus
         run: |
-          cd stage3
+          cd src/stage3
           if [ "${{ matrix.container }}" == "alpine" ]
           then
             apk add build-base cmake
@@ -377,8 +377,8 @@ jobs:
             cd /yes
             hash=$(cat hash/hash_stage4_${{ matrix.target }})
             echo "now hash is $hash"
-            echo "const char *hash = \"$hash\";" > stage3/const.h
-            cd stage3
+            echo "const char *hash = \"$hash\";" > src/stage3/const.h
+            cd src/stage3
             if [ "${{ matrix.target }}" == "armv7-unknown-linux-musl" ]
             then
               export CC=musl-gcc
@@ -416,14 +416,14 @@ jobs:
       - name: gg.cmd
         run: |
           sudo apt-get install dos2unix
-          mv stage1 _stage1
-          mv stage2 _stage2
-          mv stage3 _stage3
+          mv src/stage1 _stage1
+          mv src/stage2 _stage2
+          mv src/stage3 _stage3
           VERSION=${{needs.version.outputs.version}}
           rm -rf .cache/gg-$VERSION
           mkdir -p .cache/gg-$VERSION
-          rm -rf stage1
-          for dir in stage3*; do
+          rm -rf src
+          for dir in _stage3*; do
             echo "dir is $dir"
             for file in "$dir"/*; do
               echo "file is $file"
