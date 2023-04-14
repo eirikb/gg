@@ -9,6 +9,7 @@ use log::{debug, info};
 use semver::{Version, VersionReq};
 
 use crate::{download_unpack_and_all_that_stuff, Gradle, Java, NoClap, Node};
+use crate::maven::Maven;
 use crate::target::{Arch, Os, Target, Variant};
 
 #[derive(PartialEq, Debug, Clone)]
@@ -26,6 +27,12 @@ impl AppPath {
 pub struct AppInput {
     pub target: Target,
     pub no_clap: NoClap,
+}
+
+impl AppInput {
+    pub fn dummy() -> Self {
+        Self { target: Target::parse(""), no_clap: NoClap::new() }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -59,12 +66,19 @@ pub struct ExecutorCmd {
     pub exclude_tags: HashSet<String>,
 }
 
+impl ExecutorCmd {
+    pub fn dummy() -> Self {
+        Self { cmd: String::new(), version: None, include_tags: HashSet::new(), exclude_tags: HashSet::new() }
+    }
+}
+
 impl dyn Executor {
     pub fn new(executor_cmd: ExecutorCmd) -> Option<Box<Self>> {
         match executor_cmd.cmd.as_str() {
             "node" | "npm" | "npx" => Some(Box::new(Node { executor_cmd })),
             "gradle" => Some(Box::new(Gradle { executor_cmd })),
             "java" => Some(Box::new(Java { executor_cmd })),
+            "maven" | "mvn" => Some(Box::new(Maven { executor_cmd })),
             _ => None
         }
     }
@@ -72,7 +86,9 @@ impl dyn Executor {
 
 pub trait Executor {
     fn get_executor_cmd(&self) -> &ExecutorCmd;
-    fn get_version_req(&self) -> Option<VersionReq>;
+    fn get_version_req(&self) -> Option<VersionReq> {
+        None
+    }
     fn get_download_urls<'a>(&'a self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>>;
     fn get_bin(&self, input: &AppInput) -> &str;
     fn get_name(&self) -> &str;

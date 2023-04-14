@@ -13,11 +13,13 @@ use crate::gradle::Gradle;
 use crate::java::Java;
 use crate::no_clap::NoClap;
 use crate::node::Node;
+use crate::target::Target;
 
 mod target;
 mod bloody_indiana_jones;
 mod node;
 mod gradle;
+mod maven;
 mod java;
 mod executor;
 mod no_clap;
@@ -46,11 +48,13 @@ Examples:
     ./gg.cmd gradle@6:java@17 clean build
     ./gg.cmd node@10 -e 'console.log(1)'
     ./gg.cmd -vv npm@14 start
+    ./gg.cmd java@-jdk+jre -version
 
 Supported systems:
     node (npm, npx will also work, version refers to node version)
     gradle
     java
+    maven
 ");
 }
 
@@ -81,7 +85,7 @@ async fn main() -> ExitCode {
     debug!(target: "main", "{:?}", &no_clap);
 
     let system = fs::read_to_string(format!("./.cache/gg-{ver}/system")).unwrap_or(String::from("x86_64-linux")).trim().to_string();
-    let target = target::parse_target(&system);
+    let target = Target::parse(&system);
 
     info!("System is {system}. {:?}", &target);
 
