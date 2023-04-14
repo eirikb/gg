@@ -29,6 +29,7 @@ pub struct AppInput {
     pub no_clap: NoClap,
 }
 
+#[cfg(test)]
 impl AppInput {
     pub fn dummy() -> Self {
         Self { target: Target::parse(""), no_clap: NoClap::new() }
@@ -66,6 +67,7 @@ pub struct ExecutorCmd {
     pub exclude_tags: HashSet<String>,
 }
 
+#[cfg(test)]
 impl ExecutorCmd {
     pub fn dummy() -> Self {
         Self { cmd: String::new(), version: None, include_tags: HashSet::new(), exclude_tags: HashSet::new() }
