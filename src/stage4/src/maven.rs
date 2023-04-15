@@ -9,8 +9,6 @@ use crate::Executor;
 use crate::executor::{AppInput, Download, ExecutorCmd};
 use crate::target::{Arch, Os, Variant};
 
-use super::target;
-
 pub struct Maven {
     pub executor_cmd: ExecutorCmd,
 }
@@ -57,7 +55,7 @@ impl Executor for Maven {
 
     fn get_bin(&self, input: &AppInput) -> &str {
         match &input.target.os {
-            target::Os::Windows => "bin/mvn.cmd",
+            Os::Windows => "bin/mvn.cmd",
             _ => "bin/mvn"
         }
     }
