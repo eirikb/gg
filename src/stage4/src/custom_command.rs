@@ -24,9 +24,8 @@ impl Executor for CustomCommand {
         Box::pin(async move { vec!() })
     }
 
-    // TODO:
-    fn get_bin(&self, _input: &AppInput) -> &str {
-        self.executor_cmd.cmd.as_str()
+    fn get_bin(&self, _input: &AppInput) -> Vec<&str> {
+        vec!(self.executor_cmd.cmd.as_str())
     }
 
     fn get_name(&self) -> &str {

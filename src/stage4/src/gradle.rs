@@ -91,11 +91,11 @@ impl Executor for Gradle {
         })
     }
 
-    fn get_bin(&self, input: &AppInput) -> &str {
-        match &input.target.os {
+    fn get_bin(&self, input: &AppInput) -> Vec<&str> {
+        vec!(match &input.target.os {
             target::Os::Windows => "bin/gradle.bat",
             _ => "bin/gradle"
-        }
+        })
     }
 
     fn get_name(&self) -> &str {

@@ -92,7 +92,7 @@ pub trait Executor {
         None
     }
     fn get_download_urls<'a>(&'a self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>>;
-    fn get_bin(&self, input: &AppInput) -> &str;
+    fn get_bin(&self, input: &AppInput) -> Vec<&str>;
     fn get_name(&self) -> &str;
     fn get_deps(&self) -> Vec<&str> {
         vec![]
@@ -112,12 +112,28 @@ pub trait Executor {
     }
 }
 
+fn get_executor_app_path(executor: &dyn Executor, input: &AppInput, path: &str) -> Option<AppPath> {
+    let bins = executor.get_bin(input);
+    let bin = bins.join(",");
+    info!( "Trying to find {bin} in {path}");
+    if let Some(p) = bins.iter().map(|bin| {
+        if let Ok(app_path) = get_app_path(bin, path) {
+            Some(app_path)
+        } else {
+            None
+        }
+    }).find(|p| p.is_some()) {
+        p
+    } else {
+        None
+    }
+}
+
 pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, String> {
     if let Some(app_path) = executor.custom_prep() {
         return Ok(app_path);
     }
 
-    let bin = executor.get_bin(input);
     let executor_cmd = &executor.get_executor_cmd();
     let version_req = if let Some(ver) = &executor_cmd.version {
         Some(ver.clone())
@@ -133,14 +149,15 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
             + executor_cmd.exclude_tags.iter().map(|t| format!("e{t}")).collect::<Vec<String>>().join("_").as_str()
     );
     let path = path_path.to_str().unwrap();
-    info!( "Trying to find {bin} in {path}");
 
-    let app_path: Result<AppPath, String> = get_app_path(bin, path);
+    let app_path = get_executor_app_path(executor, input, path);
+
+    let name = executor.get_name();
 
     match app_path {
-        Ok(app_path_ok) if app_path_ok.bin.exists() => return Ok(app_path_ok),
+        Some(app_path_ok) if app_path_ok.bin.exists() => return Ok(app_path_ok),
         _ => {
-            info!("App {bin} not found in cache. Download time");
+            info!("App {name} not found in cache. Download time");
         }
     }
 
@@ -235,7 +252,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
     let cache_path = format!(".cache/{path}");
     download_unpack_and_all_that_stuff(url_string, cache_path.as_str()).await;
 
-    get_app_path(bin, path)
+    get_executor_app_path(executor, input, path).ok_or("Binary not found".to_string())
 }
 
 fn get_app_path(bin: &str, path: &str) -> Result<AppPath, String> {
@@ -246,7 +263,11 @@ fn get_app_path(bin: &str, path: &str) -> Result<AppPath, String> {
 
     let bin_path = path.join(bin);
 
-    Ok(AppPath { app: path, bin: bin_path })
+    if bin_path.exists() {
+        Ok(AppPath { app: path, bin: bin_path })
+    } else {
+        Err("Binary not found".to_string())
+    }
 }
 
 pub async fn try_run(input: &AppInput, app_path: AppPath, path_vars: Vec<String>, env_vars: HashMap<String, String>) -> Result<bool, String> {

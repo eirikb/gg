@@ -14,7 +14,7 @@ pub struct Maven {
 }
 
 fn get_version(link: &str) -> String {
-    link.replace("apache-maven-", "").replace("maven-", "").replace("-bin.tar.gz", "").to_string()
+    link.replace("apache-maven-", "").replace("maven-", "").replace("-bin.tar.gz", "").replace(".tar.gz", "").to_string()
 }
 
 impl Executor for Maven {
@@ -32,7 +32,7 @@ impl Executor for Maven {
             let document = Html::parse_document(body.as_str());
             document.select(&Selector::parse("a").unwrap())
                 .map(|a| a.text().next().unwrap_or("").trim())
-                .filter(|link| link.contains("maven") && link.ends_with("-bin.tar.gz"))
+                .filter(|link| link.contains("maven") && link.ends_with("tar.gz"))
                 .map(|link| {
                     let mut tags = HashSet::new();
                     if link.contains("alpha") {
@@ -53,10 +53,10 @@ impl Executor for Maven {
         })
     }
 
-    fn get_bin(&self, input: &AppInput) -> &str {
+    fn get_bin(&self, input: &AppInput) -> Vec<&str> {
         match &input.target.os {
-            Os::Windows => "bin/mvn.cmd",
-            _ => "bin/mvn"
+            Os::Windows => vec!("bin/mvn.cmd", "bin/mvn.bat", "maven.bat"),
+            _ => vec!("bin/mvn", "bin/maven")
         }
     }
 
@@ -85,8 +85,7 @@ mod tests {
     fn test_get_version() {
         assert_eq!(get_version("1.0.0"), "1.0.0");
         assert_eq!(get_version("apache-maven-2.0.10-bin.tar.gz"), "2.0.10");
-        // Doesn't exist - maven 1 does not have the -bin postfix
-        assert_eq!(get_version("maven-1.0-beta-10-bin.tar.gz"), "1.0-beta-10");
+        assert_eq!(get_version("maven-1.0-beta-10.tar.gz"), "1.0-beta-10");
         assert_eq!(get_version("maven-2.0-alpha-2-bin.tar.gz"), "2.0-alpha-2");
     }
 }
