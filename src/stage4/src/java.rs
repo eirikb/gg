@@ -83,11 +83,11 @@ impl Executor for Java {
         Box::pin(async move { get_java_download_urls(&input.target).await })
     }
 
-    fn get_bin(&self, input: &AppInput) -> &str {
-        match &input.target.os {
+    fn get_bin(&self, input: &AppInput) -> Vec<&str> {
+        vec!(match &input.target.os {
             Os::Windows => "bin/java.exe",
             _ => "bin/java"
-        }
+        })
     }
 
     fn get_name(&self) -> &str {
