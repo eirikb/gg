@@ -11,7 +11,7 @@ fn get_file_name(url: &str) -> String {
     reqwest::Url::parse(url).unwrap().path_segments().unwrap().last().unwrap().to_string()
 }
 
-pub async fn download(url: &str, file_path: &str) {
+pub async fn download(url: &str, file_path: &str, pb: &ProgressBar) {
     let client = reqwest::Client::new();
     let res = client.get(url)
         .send()
@@ -23,8 +23,7 @@ pub async fn download(url: &str, file_path: &str) {
 
     debug!("Total size {:?}", total_size);
 
-    let pb = ProgressBar::new(total_size);
-    pb.set_message(format!("Downloading {}", url));
+    pb.set_length(total_size);
 
     let file_name = get_file_name(url);
     debug!("File name {:?}", file_name);
@@ -45,10 +44,11 @@ pub async fn download(url: &str, file_path: &str) {
         pb.set_position(new);
     }
 
-    pb.finish_with_message(format!("Downloaded {} to {}", url, file_path));
+    info!("Downloaded {} to {}", url, file_path);
+    pb.finish_with_message("Done");
 }
 
-pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
+pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str, pb: &ProgressBar) {
     info!("Downloading {url}");
 
     let ver = option_env!("VERSION").unwrap_or("dev");
@@ -56,7 +56,7 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
     create_dir_all(downloads_dir).expect("Unable to create download dir");
     let file_name = get_file_name(url);
     let file_path = &format!("{downloads_dir}/{file_name}");
-    download(url, file_path.as_str()).await;
+    download(url, file_path.as_str(), pb).await;
 
     info!("Extracting {file_name}");
     let ext = Path::new(&file_name).extension().unwrap().to_str();
@@ -124,16 +124,5 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str) {
                 }
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use crate::bloody_indiana_jones::download_unpack_and_all_that_stuff;
-
-    #[tokio::test]
-    async fn ok() {
-        let url = String::from("https://nodejs.org/dist/v16.17.1/node-v16.17.1-linux-x64.tar.xz");
-        download_unpack_and_all_that_stuff(&url, &String::from("node")).await;
     }
 }

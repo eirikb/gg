@@ -1,7 +1,10 @@
 use std::collections::HashMap;
+use std::fmt::Write;
 use std::fs;
 use std::process::ExitCode;
 
+use futures_util::future::join_all;
+use indicatif::{MultiProgress, ProgressBar, ProgressState, ProgressStyle};
 use log::{debug, info};
 use semver::VersionReq;
 
@@ -78,7 +81,8 @@ async fn main() -> ExitCode {
     if no_clap.update {
         println!("Updating gg.cmd...");
         let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
-        download(url, "gg.cmd").await;
+        let pb = ProgressBar::new(0);
+        download(url, "gg.cmd", &pb).await;
         return ExitCode::from(0);
     }
 
@@ -122,38 +126,49 @@ async fn main() -> ExitCode {
             }
         }
 
-        if let Some(first) = executors.first() {
+        return if executors.first().is_some() {
             let mut env_vars: HashMap<String, String> = HashMap::new();
             let mut path_vars: Vec<String> = vec!();
 
-            for x in executors.iter().skip(1) {
-                let app_path = prep(&**x, &input).await.expect("Prep failed");
-                path_vars.push(app_path.parent_bin_path());
-                for (key, value) in x.get_env(app_path) {
-                    env_vars.insert(key, value);
-                }
-            }
-            let app_path = prep(&**first, &input).await.expect("Prep failed");
-            for (key, value) in first.get_env(app_path.clone()) {
+            let m = MultiProgress::new();
+
+            let alles = executors.iter().enumerate().map(|(i, x)| {
+                let pb = m.insert(i, ProgressBar::new(1));
+                pb.set_style(ProgressStyle::with_template("{spinner:.green} {msg} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+                    .unwrap()
+                    .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
+                    .progress_chars("#>-"));
+                (x, pb)
+            }).map(|(x, pb)| async move {
+                let app_path = prep(&**x, &input, &pb).await.expect("Prep failed");
+                let p = app_path.clone();
+                (app_path, x.get_env(p))
+            });
+            println!("A");
+            let res = join_all(alles).await;
+            println!("B");
+
+            let (app_path, env) = &res[0];
+            for (key, value) in env {
                 path_vars.push(app_path.clone().parent_bin_path());
-                env_vars.insert(key, value);
+                env_vars.insert(key.to_string(), value.to_string());
             }
 
             if app_path.bin.exists() {
-                if try_run(input, app_path, path_vars, env_vars).await.unwrap() {
-                    return ExitCode::from(0);
+                if try_run(input, app_path.clone(), path_vars, env_vars).await.unwrap() {
+                    ExitCode::from(0)
                 } else {
                     println!("Unable to execute");
-                    return ExitCode::from(1);
-                };
+                    ExitCode::from(1)
+                }
             } else {
                 println!("Binary not found!");
-                return ExitCode::from(1);
+                ExitCode::from(1)
             }
         } else {
             println!("No executor found!");
-            return ExitCode::from(1);
-        }
+            ExitCode::from(1)
+        };
     } else {
         println!("Missing command. Try -h");
         print_help(ver);
