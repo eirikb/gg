@@ -148,11 +148,14 @@ async fn main() -> ExitCode {
             let res = join_all(alles).await;
             println!("B");
 
-            let (app_path, env) = &res[0];
-            for (key, value) in env {
-                path_vars.push(app_path.clone().parent_bin_path());
-                env_vars.insert(key.to_string(), value.to_string());
+            for (app_path, env) in res.clone() {
+                for (key, value) in env {
+                    path_vars.push(app_path.clone().parent_bin_path());
+                    env_vars.insert(key.to_string(), value.to_string());
+                }
             }
+
+            let (app_path, _) = &res[0];
 
             if app_path.bin.exists() {
                 if try_run(input, app_path.clone(), path_vars, env_vars).await.unwrap() {
