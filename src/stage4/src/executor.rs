@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::process::Command;
 
+use indicatif::ProgressBar;
 use log::{debug, info};
 use semver::{Version, VersionReq};
 
@@ -129,7 +130,7 @@ fn get_executor_app_path(executor: &dyn Executor, input: &AppInput, path: &str) 
     }
 }
 
-pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, String> {
+pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -> Result<AppPath, String> {
     if let Some(app_path) = executor.custom_prep() {
         return Ok(app_path);
     }
@@ -161,7 +162,10 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
         }
     }
 
+    pb.set_message(format!("{name}: Fetching versions"));
+
     let urls = executor.get_download_urls(input).await;
+    pb.set_message(format!("{name}: {} versions", &urls.len()));
     debug!( "{:?}", urls);
 
     if urls.is_empty() {
@@ -242,6 +246,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
     let url = urls_match.first();
 
     let url_string = if let Some(url) = url {
+        pb.set_message(format!("{name}: {}", url.version.clone().map(|v| v.to_string()).unwrap_or("".to_string())));
         &url.download_url
     } else {
         ""
@@ -250,7 +255,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput) -> Result<AppPath, 
     debug!("{:?}", url_string);
 
     let cache_path = format!(".cache/{path}");
-    download_unpack_and_all_that_stuff(url_string, cache_path.as_str()).await;
+    download_unpack_and_all_that_stuff(url_string, cache_path.as_str(), pb).await;
 
     get_executor_app_path(executor, input, path).ok_or("Binary not found".to_string())
 }
