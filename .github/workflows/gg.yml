@@ -104,7 +104,6 @@ jobs:
 
       - name: cargo pls
         run: |
-          set -x
           mkdir -p stage42
           mv src/stage4/* stage42
           rm -rf src
