@@ -82,7 +82,7 @@ jobs:
     needs: version
     container: ${{ matrix.container }}
     env:
-      CARGO_HOME: "/cache/cargo/"
+      CARGO_HOME: "/cache/cargo"
     steps:
       - uses: actions/checkout@v2
 
@@ -109,7 +109,7 @@ jobs:
             apk add build-base 
             apk add rustup
             rustup-init -y
-            source $HOME/.cargo/env
+            source /cache/cargo/env
           fi
 
           export VERSION=${{needs.version.outputs.version}}
