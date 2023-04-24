@@ -175,7 +175,7 @@ jobs:
 
           run: |
             cd src/stage4
-            mkdir -p /cachus/traget
+            mkdir -p /cachus/target
             cp -r /cachus/target target
             echo "OK ${{needs.version.outputs.version}}"
             export VERSION=${{needs.version.outputs.version}}
