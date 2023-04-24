@@ -153,11 +153,11 @@ jobs:
 
       - uses: actions/cache@v2
         with:
-          path: cachus
+          path: /cachus
           key: cache1-arch-cargo-x7-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: uraimo/run-on-arch-action@v2
-        if: github.ref == 'refs/heads/main'
+#        if: github.ref == 'refs/heads/main'
         name: Run commands
         id: runcmd
         with:
@@ -167,7 +167,7 @@ jobs:
           setup: mkdir -p "$PWD/artifacts"
           dockerRunArgs: |
             -v "$PWD/artifacts:/artifacts"
-            -v "$PWD/cachus:/cachus"
+            -v "/cachus:/cachus"
 
           install: |
             apt-get -y update
@@ -175,13 +175,12 @@ jobs:
 
           run: |
             cd src/stage4
-            cp -rp /cachus/* . || :
+            cp -r /cachus/target target
             echo "OK ${{needs.version.outputs.version}}"
             export VERSION=${{needs.version.outputs.version}}
             echo VERSION IS $VERSION
-            CARGO_HOME=ok cargo build --release
-            cp -rp target /cachus/
-            cp -rp ok /cachus/
+            CARGO_HOME=/cachus/cargo cargo build --release
+            cp -r target /cachus/
             cp target/release/stage4 /artifacts/
 
       - if: github.ref == 'refs/heads/main'
