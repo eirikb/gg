@@ -81,7 +81,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: version
     container: ${{ matrix.container }}
-    variables:
+    env:
       CARGO_HOME: "/cache/cargo/"
     steps:
       - uses: actions/checkout@v2
