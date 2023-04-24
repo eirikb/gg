@@ -11,7 +11,7 @@ file(
         SHOW_PROGRESS
 )
 
-execute_process(COMMAND git apply sha512-fix.diff WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+execute_process(COMMAND patch sha512.c sha512-fix.diff WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
 if (WIN32)
     add_executable(stage3 main-win.c)
