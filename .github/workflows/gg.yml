@@ -106,6 +106,7 @@ jobs:
           ls
           if [ "${{ matrix.container }}" == "alpine" ]
           then
+            apk add --no-cache tar
             apk add build-base 
             apk add rustup
             rustup-init -y
