@@ -94,10 +94,14 @@ jobs:
 
       - name: cargo pls
         run: |
+          set -x
+          ls -lah
+          du -sh stage42/*
           mkdir -p stage42
           mv src/stage4/* stage42
           rm -rf src
           cd stage42
+          ls
           if [ "${{ matrix.container }}" == "alpine" ]
           then
             apk add build-base 
@@ -577,6 +581,7 @@ jobs:
         with:
           tag_name: ${{ needs.version.outputs.version }}
           release_name: Release ${{ needs.version.outputs.version }}
+          body: ${{ github.event.pull_request.body }}
           draft: false
           prerelease: false
 
