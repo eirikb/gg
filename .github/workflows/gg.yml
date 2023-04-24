@@ -97,6 +97,7 @@ jobs:
       - name: cargo pls
         run: |
           set -x
+          du -sh /cache/*
           ls -lah
           du -sh /*
           mkdir -p stage42
