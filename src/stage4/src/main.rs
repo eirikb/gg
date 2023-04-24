@@ -144,9 +144,7 @@ async fn main() -> ExitCode {
                 let p = app_path.clone();
                 (app_path, x.get_env(p))
             });
-            println!("A");
             let res = join_all(alles).await;
-            println!("B");
 
             for (app_path, env) in res.clone() {
                 for (key, value) in env {
