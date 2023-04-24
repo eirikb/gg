@@ -81,6 +81,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: version
     container: ${{ matrix.container }}
+    env:
+      CARGO_HOME: "/cache/cargo"
     steps:
       - name: Cache support
         run: |
