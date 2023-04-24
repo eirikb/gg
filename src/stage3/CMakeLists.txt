@@ -4,6 +4,15 @@ project(stage3 C)
 
 set(CMAKE_C_STANDARD 99)
 
+file(
+        DOWNLOAD
+        "https://opensource.apple.com/source/network_cmds/network_cmds-511/unbound/compat/sha512.c"
+        "sha512.c"
+        SHOW_PROGRESS
+)
+
+execute_process(COMMAND patch sha512.c sha512-fix.diff WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
 if (WIN32)
     add_executable(stage3 main-win.c)
 else ()
