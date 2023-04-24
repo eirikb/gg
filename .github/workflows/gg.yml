@@ -81,14 +81,16 @@ jobs:
     runs-on: ubuntu-latest
     needs: version
     container: ${{ matrix.container }}
+    variables:
+      CARGO_HOME: "/cache/cargo/"
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions/cache@v2
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
+            /cache/cargo/registry
+            /cache/cargo/git
             stage42/target
           key: cache1-container-${{ matrix.container }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
@@ -96,7 +98,7 @@ jobs:
         run: |
           set -x
           ls -lah
-          du -sh ~/*
+          du -sh /*
           mkdir -p stage42
           mv src/stage4/* stage42
           rm -rf src
