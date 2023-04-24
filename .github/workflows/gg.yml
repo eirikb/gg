@@ -86,7 +86,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: |
             /cache/cargo/registry
@@ -97,7 +97,6 @@ jobs:
       - name: cargo pls
         run: |
           set -x
-          du -sh /cache/*
           ls -lah
           du -sh /*
           mkdir -p stage42
