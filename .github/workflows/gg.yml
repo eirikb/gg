@@ -105,14 +105,10 @@ jobs:
       - name: cargo pls
         run: |
           set -x
-          du -sh /cache/*
-          ls -lah
-          du -sh /*
           mkdir -p stage42
           mv src/stage4/* stage42
           rm -rf src
           cd stage42
-          ls
           if [ "${{ matrix.container }}" == "alpine" ]
           then
             apk add build-base 
