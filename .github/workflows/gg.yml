@@ -174,7 +174,6 @@ jobs:
             apt-get -y install cargo
 
           run: |
-            set -x
             cd src/stage4
             mkdir -p /cachus/target
             cp -r /cachus/target target
