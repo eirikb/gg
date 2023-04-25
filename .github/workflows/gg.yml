@@ -186,7 +186,7 @@ jobs:
             cp target/release/stage4 /artifacts/
 
 #      - if: github.ref == 'refs/heads/main'
-        run: |
+      - run: |
           sudo chown -R $(id -u):$(id -g) $PWD/artifacts
           sudo chown -R $(id -u):$(id -g) .
           sudo chown -R $(id -u):$(id -g) /cachus
