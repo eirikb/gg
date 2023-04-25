@@ -157,7 +157,7 @@ jobs:
           key: cache1-arch-cargo-${{ matrix.arch }}-${{ matrix.target }}-x7-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: uraimo/run-on-arch-action@v2
-#        if: github.ref == 'refs/heads/main'
+        #        if: github.ref == 'refs/heads/main'
         name: Run commands
         id: runcmd
         with:
@@ -185,7 +185,7 @@ jobs:
             cp -r target /cachus/
             cp target/release/stage4 /artifacts/
 
-#      - if: github.ref == 'refs/heads/main'
+      #      - if: github.ref == 'refs/heads/main'
       - run: |
           sudo chown -R $(id -u):$(id -g) $PWD/artifacts
           sudo chown -R $(id -u):$(id -g) .
@@ -193,8 +193,8 @@ jobs:
           rm -rf src
           find $PWD/artifacts -type f -name stage4 -exec cp {} ./stage4 \;
 
-      - if: github.ref == 'refs/heads/main'
-        name: Upload artifact
+#      - if: github.ref == 'refs/heads/main'
+      -  name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: stage4_${{ matrix.target }}
