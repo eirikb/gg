@@ -193,8 +193,8 @@ jobs:
           rm -rf src
           find $PWD/artifacts -type f -name stage4 -exec cp {} ./stage4 \;
 
-#      - if: github.ref == 'refs/heads/main'
-      -  name: Upload artifact
+      - if: github.ref == 'refs/heads/main'
+        name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: stage4_${{ matrix.target }}
