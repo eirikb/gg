@@ -185,10 +185,11 @@ jobs:
             cp -r target /cachus/
             cp target/release/stage4 /artifacts/
 
-      - if: github.ref == 'refs/heads/main'
+#      - if: github.ref == 'refs/heads/main'
         run: |
           sudo chown -R $(id -u):$(id -g) $PWD/artifacts
           sudo chown -R $(id -u):$(id -g) .
+          sudo chown -R $(id -u):$(id -g) /cachus
           rm -rf src
           find $PWD/artifacts -type f -name stage4 -exec cp {} ./stage4 \;
 
@@ -400,7 +401,6 @@ jobs:
             make
             find . -type f \( -name stage3 -o -name stage3.exe \) -exec cp {} /artifacts/stage3_${{ matrix.target }} \;
             strip /artifacts/stage3_${{ matrix.target }}
-            chown -R 1000:1000 /cachus
 
       - if: github.ref == 'refs/heads/main'
         run: |
