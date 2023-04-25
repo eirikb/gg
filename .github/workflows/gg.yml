@@ -154,7 +154,7 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: /cachus
-          key: cache1-arch-cargo-${{ matrix.arch }}-${{ matrix.target }}-x7-${{ hashFiles('**/Cargo.lock') }}
+          key: cache1-arch-cargo-${{ matrix.arch }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: uraimo/run-on-arch-action@v2
         #        if: github.ref == 'refs/heads/main'
