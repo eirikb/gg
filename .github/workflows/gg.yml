@@ -147,7 +147,7 @@ jobs:
             target: armv7-unknown-linux-musl
 
     runs-on: ubuntu-20.04
-    needs: version
+#    needs: version
     steps:
       - uses: actions/checkout@v2.1.0
 
@@ -174,18 +174,18 @@ jobs:
             apt-get -y install cargo
 
           run: |
-                 set -x
-                 ls -lah /
-                 cd src/stage5
-                 mkdir -p /cache/target
-                 cp -r /cache/target target
-                 ls -lah
-                 #            echo "OK ${{needs.version.outputs.version}}"
-                 #            export VERSION=${{needs.version.outputs.version}}
-                 #            echo VERSION IS $VERSION
-                 CARGO_HOME=/cache/cargo cargo build --release
-                 cp -r target /cache/
-                 cp target/release/stage5 /artifacts/
+            set -x
+            ls -lah /
+            cd src/stage5
+            mkdir -p /cache/target
+            cp -r /cache/target target
+            ls -lah
+            #            echo "OK ${{needs.version.outputs.version}}"
+            #            export VERSION=${{needs.version.outputs.version}}
+            #            echo VERSION IS $VERSION
+            CARGO_HOME=/cache/cargo cargo build --release
+            cp -r target /cache/
+            cp target/release/stage5 /artifacts/
 
       #      - if: github.ref == 'refs/heads/main'
       - run: |
