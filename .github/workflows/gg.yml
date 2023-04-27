@@ -180,6 +180,7 @@ jobs:
 
           run: |
             set -x
+            uptime
             mkdir -p /cache/target
             ls -lah /cache
             du -sh /cache/*
