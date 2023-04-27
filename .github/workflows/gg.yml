@@ -36,9 +36,9 @@ jobs:
             target: x86_64-apple-darwin
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-          - os: buildjet-4vcpu-ubuntu-2204-arm
+          - os: buildjet-2vcpu-ubuntu-2204-arm
             target: aarch64-unknown-linux-musl
-          - os: buildjet-4vcpu-ubuntu-2204-arm
+          - os: buildjet-2vcpu-ubuntu-2204-arm
             target: aarch64-unknown-linux-gnu
 
     runs-on: ${{ matrix.os }}
@@ -254,9 +254,11 @@ jobs:
         include:
           - os: macos-latest
             target: x86_64-apple-darwin
+            stage4: x86_64-apple-darwin
             # TODO: Version too new
           - os: ubuntu-20.04
             target: x86_64-unknown-linux-gnu
+            stage4: x86_64-unknown-linux-musl
 
     runs-on: ${{ matrix.os }}
 
@@ -273,7 +275,7 @@ jobs:
         # ENV -> CMAKE -> Code very hard. This very easy
         shell: bash
         run: |
-          hash=$(cat hash/hash_stage4_${{ matrix.target }})
+          hash=$(cat hash/hash_stage4_${{ matrix.stage4 }})
           echo "now hash is $hash"
           echo "const char *hash = \"$hash\";" > src/stage3/const.h
 
@@ -281,11 +283,6 @@ jobs:
         shell: bash
         run: |
           cd src/stage3
-          if [ "${{ matrix.target }}" == "x86_64-unknown-linux-musl" ]
-          then
-            sudo apt install musl-dev musl-tools
-            export CC=musl-gcc
-          fi
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
           find . -type f \( -name stage3 -o -name stage3.exe \) -exec cp {} ../../stage3_${{ matrix.target }} \;
@@ -306,8 +303,6 @@ jobs:
         include:
           - container: alpine
             target: x86_64-unknown-linux-musl
-    #          - container: conanio/gcc5
-    #            target: x86_64-unknown-linux-gnu
 
     runs-on: ubuntu-20.04
     container: ${{ matrix.container }}
