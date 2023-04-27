@@ -36,10 +36,8 @@ jobs:
             target: x86_64-apple-darwin
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-          - os: buildjet-2vcpu-ubuntu-2204-arm
-            target: aarch64-unknown-linux-musl
-          - os: buildjet-2vcpu-ubuntu-2204-arm
-            target: aarch64-unknown-linux-gnu
+#          - os: buildjet-2vcpu-ubuntu-2204-arm
+#            target: aarch64-unknown-linux-musl
 
     runs-on: ${{ matrix.os }}
     needs: version
@@ -285,9 +283,11 @@ jobs:
       - name: Makus
         shell: bash
         run: |
+          set -x
           cd src/stage3
           if [ "${{ matrix.target }}" == *"musl"* ]
           then
+              echo MUSL we hope
               export CC=musl-gcc
           fi
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
