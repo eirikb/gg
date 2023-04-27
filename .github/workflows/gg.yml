@@ -180,10 +180,10 @@ jobs:
 
           run: |
             set -x
+            mkdir -p /cache/target
             ls -lah /cache
             du -sh /cache/*
             cd src/stage4
-            mkdir -p /cache/target
             cp -r /cache/target target
             ls -lah
             #            echo "OK ${{needs.version.outputs.version}}"
