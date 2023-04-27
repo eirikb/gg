@@ -192,7 +192,6 @@ jobs:
             chown -R 1001:122 /cache
             ls -lah /cache
             ls -lah target
-            ls -lah target/*
             export CARGO_HOME=/cache/cargo
             CARGO_HOME=/cache/cargo cargo build --release
             ls -lah target
