@@ -191,7 +191,6 @@ jobs:
             #            echo VERSION IS $VERSION
             chown -R 1001:122 /cache
             ls -lah /cache
-            du -sh /cache/cargo/*
             du -sh target/*
             ls -lah target
             ls -lah target/*
