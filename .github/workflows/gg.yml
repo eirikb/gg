@@ -39,7 +39,7 @@ jobs:
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
           - os: ubuntu-latest
-            target: armv7-unknown-linux-musl
+            target: armv7-unknown-linux-musleabi
 
     runs-on: ${{ matrix.os }}
     #    needs: version
