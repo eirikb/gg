@@ -153,7 +153,7 @@ jobs:
 
       - uses: actions/cache@v2
         with:
-          path: /cache
+          path: cache
           key: cache1-arch-cargo-${{ matrix.arch }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: uraimo/run-on-arch-action@v2
@@ -167,7 +167,7 @@ jobs:
           setup: mkdir -p "$PWD/artifacts"
           dockerRunArgs: |
             -v "$PWD/artifacts:/artifacts"
-            -v "/cache:/cache"
+            -v "$PWD/cache:/cache"
 
           install: |
             apt-get -y update
@@ -190,8 +190,10 @@ jobs:
       #      - if: github.ref == 'refs/heads/main'
       - run: |
           sudo chown -R $(id -u):$(id -g) $PWD/artifacts
-          sudo chown -R $(id -u):$(id -g) /cache
+          sudo chown -R $(id -u):$(id -g) $PWD/cache
           sudo chown -R $(id -u):$(id -g) .
+          ls -lah $PWD
+          ls -lah $PWD/cache
           rm -rf src
           find $PWD/artifacts -type f -name stage4 -exec cp {} ./stage4 \;
 
