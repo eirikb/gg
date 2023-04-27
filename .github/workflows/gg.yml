@@ -180,9 +180,9 @@ jobs:
                  mkdir -p /cache/target
                  cp -r /cache/target target
                  ls -lah
-            #            echo "OK ${{needs.version.outputs.version}}"
-            #            export VERSION=${{needs.version.outputs.version}}
-            #            echo VERSION IS $VERSION
+                 #            echo "OK ${{needs.version.outputs.version}}"
+                 #            export VERSION=${{needs.version.outputs.version}}
+                 #            echo VERSION IS $VERSION
                  CARGO_HOME=/cache/cargo cargo build --release
                  cp -r target /cache/
                  cp target/release/stage5 /artifacts/
