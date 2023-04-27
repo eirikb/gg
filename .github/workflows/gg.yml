@@ -184,6 +184,7 @@ jobs:
             #            echo "OK ${{needs.version.outputs.version}}"
             #            export VERSION=${{needs.version.outputs.version}}
             #            echo VERSION IS $VERSION
+            sudo chown -R $(id -u):$(id -g) /cache
             du -sh /cache/cargo/*
             du -sh target/*
             ls -lah target
