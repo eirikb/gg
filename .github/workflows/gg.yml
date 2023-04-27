@@ -519,7 +519,7 @@ jobs:
     strategy:
       matrix:
         os: [ buildjet-2vcpu-ubuntu-2204-arm ]
-        cmd: [ "node@14 -v" ]
+        cmd: [ "java -version" ]
 
     runs-on: ${{ matrix.os }}
     steps:
