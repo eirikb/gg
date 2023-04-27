@@ -145,7 +145,7 @@ jobs:
       - name: Hello
         shell: bash
         run: |
-          find / -name qemu-system-arm -print 2>/dev/null
+          find / -name 'qemu-system-*' -print 2>/dev/null
 
 #  stage4-arch:
 #    strategy:
