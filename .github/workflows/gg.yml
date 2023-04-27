@@ -175,11 +175,12 @@ jobs:
 
           run: |
             set -x
-            ls -lah /
+            ls -lah /cache
+            du -sh /cache/*
             cd src/stage4
             mkdir -p /cache/target
             cp -r /cache/target target
-            ls -lah
+            ls -lah 
             echo 1
             #            echo "OK ${{needs.version.outputs.version}}"
             #            export VERSION=${{needs.version.outputs.version}}
