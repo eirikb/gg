@@ -206,7 +206,7 @@ jobs:
 
 
   hash:
-    needs: [ stage4-OS, stage4-container ]
+    needs: [ stage4-OS ]
     runs-on: ubuntu-20.04
     steps:
       - name: Download stage4 hash
