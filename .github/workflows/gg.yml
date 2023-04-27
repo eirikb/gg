@@ -288,6 +288,8 @@ jobs:
           if [[ "${{ matrix.target }}" == *"musl"* ]]
           then
               echo MUSL we hope
+              apt-get -y update
+              apt-get -y install musl-dev musl-tools
               export CC=musl-gcc
           fi
           cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
