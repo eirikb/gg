@@ -181,13 +181,17 @@ jobs:
             mkdir -p /cache/target
             cp -r /cache/target target
             ls -lah 
-            echo 1
             #            echo "OK ${{needs.version.outputs.version}}"
             #            export VERSION=${{needs.version.outputs.version}}
             #            echo VERSION IS $VERSION
             du -sh /cache/cargo/*
+            du -sh target/*
+            ls -lah target
+            ls -lah target/*
             export CARGO_HOME=/cache/cargo 
             CARGO_HOME=/cache/cargo cargo build --release
+            ls -lah target
+            ls -lah target/*
             cp -r target /cache/
             cp target/release/stage4 /artifacts/
 
