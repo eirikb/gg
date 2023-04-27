@@ -176,7 +176,7 @@ jobs:
           run: |
             set -x
             ls -lah /
-            cd src/stage5
+            cd src/stage4
             mkdir -p /cache/target
             cp -r /cache/target target
             ls -lah
@@ -185,7 +185,7 @@ jobs:
             #            echo VERSION IS $VERSION
             CARGO_HOME=/cache/cargo cargo build --release
             cp -r target /cache/
-            cp target/release/stage5 /artifacts/
+            cp target/release/stage4 /artifacts/
 
       #      - if: github.ref == 'refs/heads/main'
       - run: |
@@ -193,14 +193,14 @@ jobs:
           sudo chown -R $(id -u):$(id -g) /cache
           sudo chown -R $(id -u):$(id -g) .
           rm -rf src
-          find $PWD/artifacts -type f -name stage5 -exec cp {} ./stage5 \;
+          find $PWD/artifacts -type f -name stage4 -exec cp {} ./stage4 \;
 
       - if: github.ref == 'refs/heads/main'
         name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: stage4_${{ matrix.target }}
-          path: stage5
+          path: stage4
 
 
 #  hash:
