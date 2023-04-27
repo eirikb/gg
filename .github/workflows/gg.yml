@@ -61,6 +61,13 @@ jobs:
           cd stage42
           export VERSION=${{needs.version.outputs.version}}
           
+          if [[ "${{ matrix.os }}" == *"ubuntu"* ]]
+          then
+              sudo apt-get -y update
+              sudo apt-get -y install musl-dev musl-tools
+              export CC=musl-gcc
+          fi
+          
           rustup update
           rustup target add ${{ matrix.target }}
           cargo test
@@ -294,7 +301,6 @@ jobs:
           cd src/stage3
           if [[ "${{ matrix.target }}" == *"musl"* ]]
           then
-              echo MUSL we hope
               sudo apt-get -y update
               sudo apt-get -y install musl-dev musl-tools
               export CC=musl-gcc
