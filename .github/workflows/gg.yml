@@ -145,7 +145,6 @@ jobs:
       - name: Hello
         shell: bash
         run: |
-          which qemu
           which qemu-system-arm
           which qemu-system-aarch64
 
