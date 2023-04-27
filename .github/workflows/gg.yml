@@ -180,6 +180,7 @@ jobs:
             mkdir -p /cache/target
             cp -r /cache/target target
             ls -lah
+            echo 1
             #            echo "OK ${{needs.version.outputs.version}}"
             #            export VERSION=${{needs.version.outputs.version}}
             #            echo VERSION IS $VERSION
