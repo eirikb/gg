@@ -185,6 +185,8 @@ jobs:
             #            echo "OK ${{needs.version.outputs.version}}"
             #            export VERSION=${{needs.version.outputs.version}}
             #            echo VERSION IS $VERSION
+            du -sh /cache/cargo/*
+            export CARGO_HOME=/cache/cargo 
             CARGO_HOME=/cache/cargo cargo build --release
             cp -r target /cache/
             cp target/release/stage4 /artifacts/
