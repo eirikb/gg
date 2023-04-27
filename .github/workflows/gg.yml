@@ -145,7 +145,7 @@ jobs:
       - name: Hello
         shell: bash
         run: |
-          qemu-system-aarch64
+          /usr/local/lib/android/sdk/emulator/qemu/linux-x86_64/qemu-system-aarch64
 
 #  stage4-arch:
 #    strategy:
