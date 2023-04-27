@@ -159,7 +159,7 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: cache
-          key: cache1-arch-cargo-${{ matrix.arch }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          key: cache2-arch-cargo-${{ matrix.arch }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
 
       - uses: uraimo/run-on-arch-action@v2
         #        if: github.ref == 'refs/heads/main'
@@ -189,7 +189,8 @@ jobs:
             #            echo "OK ${{needs.version.outputs.version}}"
             #            export VERSION=${{needs.version.outputs.version}}
             #            echo VERSION IS $VERSION
-            chown -R 1001:1001 /cache
+            chown -R 1001:122 /cache
+            ls -lah /cache
             du -sh /cache/cargo/*
             du -sh target/*
             ls -lah target
