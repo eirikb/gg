@@ -17,7 +17,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
     steps:
       - name: Generate version
-        if: github.ref == 'refs/heads/main'
+        if: github.event.pull_request.merged == true
         id: buildnumber
         uses: einaregilsson/build-number@v3
         with:
@@ -345,7 +345,7 @@ jobs:
     name: Release!
     needs: [ version, test-OS, test-batch, test-container ]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.event.pull_request.merged == true
     steps:
       - name: Create Release
         id: create_release
