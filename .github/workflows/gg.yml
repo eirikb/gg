@@ -349,9 +349,7 @@ jobs:
         with:
           tag_name: ${{ needs.version.outputs.version }}
           release_name: Release ${{ needs.version.outputs.version }}
-          body: ${{ github.event.pull_request.body }}
-          draft: false
-          prerelease: false
+          draft: true
 
       - name: Download gg
         uses: actions/download-artifact@v2
