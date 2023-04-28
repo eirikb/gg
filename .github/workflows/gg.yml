@@ -1,6 +1,12 @@
 on:
   workflow_dispatch:
   push:
+    branches-ignore:
+      - main
+  pull_request:
+    types: [ closed ]
+    branches: [ main ]
+
 
 name: gg.cmd
 jobs:
@@ -349,7 +355,7 @@ jobs:
         with:
           tag_name: ${{ needs.version.outputs.version }}
           release_name: Release ${{ needs.version.outputs.version }}
-          draft: true
+          body: ${{ github.event.pull_request.body }}
 
       - name: Download gg
         uses: actions/download-artifact@v2
