@@ -181,6 +181,12 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
             } else {
                 return false;
             }
+        } else {
+            if let Some(u_var) = u.variant {
+                if u_var != Variant::Any {
+                    return false;
+                }
+            }
         }
 
         if let Some(os) = u.os {

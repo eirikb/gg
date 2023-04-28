@@ -123,7 +123,8 @@ async fn get_java_download_urls(_target: &Target) -> Vec<Download> {
         });
         let arch = match (node.arch.as_str(), node.hw_bitness.as_str()) {
             ("x86", "64") => Some(Arch::X86_64),
-            ("arm", "64") => Some(Arch::Armv7),
+            ("arm", "32") => Some(Arch::Armv7),
+            ("arm", "64") => Some(Arch::Arm64),
             _ => None
         };
         let variant = if node.os.as_str().contains("musl") {

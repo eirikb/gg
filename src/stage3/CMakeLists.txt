@@ -7,7 +7,7 @@ set(CMAKE_C_STANDARD 99)
 file(
         DOWNLOAD
         "https://opensource.apple.com/source/network_cmds/network_cmds-511/unbound/compat/sha512.c"
-        "sha512.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/sha512.c"
         SHOW_PROGRESS
 )
 
