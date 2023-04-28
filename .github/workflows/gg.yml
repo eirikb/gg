@@ -83,134 +83,6 @@ jobs:
           path: stage4
 
 
-  #  stage4-container:
-  #    strategy:
-  #      matrix:
-  #        include:
-  #          - container: alpine
-  #            target: x86_64-unknown-linux-musl
-  #
-  #    runs-on: ubuntu-latest
-  #    needs: version
-  #    container: ${{ matrix.container }}
-  #    env:
-  #      CARGO_HOME: "/cache/cargo"
-  #    steps:
-  #      - name: Cache support
-  #        run: |
-  #          set -x
-  #          if [ "${{ matrix.container }}" == "alpine" ]
-  #          then
-  #            apk add --no-cache tar
-  #          fi
-  #
-  #      - uses: actions/checkout@v2
-  #
-  #      - uses: actions/cache@v3
-  #        with:
-  #          path: |
-  #            /cache/cargo/registry
-  #            /cache/cargo/git
-  #            stage42/target
-  #          key: cache1-container-${{ matrix.container }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-  #
-  #      - name: cargo pls
-  #        run: |
-  #          mkdir -p stage42
-  #          mv src/stage4/* stage42
-  #          rm -rf src
-  #          cd stage42
-  #          if [ "${{ matrix.container }}" == "alpine" ]
-  #          then
-  #            apk add build-base
-  #            apk add rustup
-  #            rustup-init -y
-  #            source /cache/cargo/env
-  #          fi
-  #
-  #          export VERSION=${{needs.version.outputs.version}}
-  #
-  #          cargo test
-  #          cargo build --release --target=${{ matrix.target }}
-  #          find . -type f -name stage4.exe -exec cp {} ../stage4 \;
-  #          find . -type f -name stage4 -exec cp {} ../stage4 \;
-  #
-  #
-  #      - name: Upload artifact
-  #        uses: actions/upload-artifact@v2
-  #        with:
-  #          name: stage4_${{ matrix.target }}
-  #          path: stage4
-  #
-  #      - name: Upload artifact
-  #        uses: actions/upload-artifact@v2
-  #        with:
-  #          name: stage4_x86_64-unknown-linux-gnu
-  #          path: stage4
-
-
-  #  stage4-arch:
-  #    strategy:
-  #      matrix:
-  #        include:
-  #          - arch: armv7
-  #            target: armv7-unknown-linux-gnu
-  #          - arch: armv7
-  #            target: armv7-unknown-linux-musl
-  #
-  #    runs-on: ubuntu-20.04
-  #    needs: version
-  #    steps:
-  #      - uses: actions/checkout@v2.1.0
-  #
-  #      - uses: actions/cache@v2
-  #        with:
-  #          path: cachus
-  #          key: cache1-arch-cargo-x7-${{ hashFiles('**/Cargo.lock') }}
-  #
-  #      - uses: uraimo/run-on-arch-action@v2
-  #        if: github.ref == 'refs/heads/main'
-  #        name: Run commands
-  #        id: runcmd
-  #        with:
-  #          arch: ${{ matrix.arch }}
-  #          distro: ubuntu18.04
-  #          githubToken: ${{ github.token }}
-  #          setup: mkdir -p "$PWD/artifacts"
-  #          dockerRunArgs: |
-  #            -v "$PWD/artifacts:/artifacts"
-  #            -v "$PWD/cachus:/cachus"
-  #
-  #          install: |
-  #            apt-get -y update
-  #            apt-get -y install cargo
-  #
-  #          run: |
-  #            cd src/stage4
-  #            cp -rp /cachus/* . || :
-  #            echo "OK ${{needs.version.outputs.version}}"
-  #            export VERSION=${{needs.version.outputs.version}}
-  #            echo VERSION IS $VERSION
-  #            CARGO_HOME=ok cargo build --release
-  #            cp -rp target /cachus/
-  #            cp -rp ok /cachus/
-  #            cp target/release/stage4 /artifacts/
-  #
-  #      - if: github.ref == 'refs/heads/main'
-  #        run: |
-  #          sudo chown -R $(id -u):$(id -g) $PWD/artifacts
-  #          sudo chown -R $(id -u):$(id -g) .
-  #          rm -rf src
-  #          find $PWD/artifacts -type f -name stage4 -exec cp {} ./stage4 \;
-  #
-  #      - if: github.ref == 'refs/heads/main'
-  #        name: Upload artifact
-  #        uses: actions/upload-artifact@v2
-  #        with:
-  #          name: stage4_${{ matrix.target }}
-  #          path: stage4
-
-
   hash:
     needs: [ stage4-OS ]
     runs-on: ubuntu-20.04
@@ -317,125 +189,6 @@ jobs:
           path: stage3_${{ matrix.target }}
 
 
-  #  stage3-container:
-  #    needs: hash
-  #
-  #    strategy:
-  #      matrix:
-  #        include:
-  #          - container: alpine
-  #            target: x86_64-unknown-linux-musl
-  #
-  #    runs-on: ubuntu-20.04
-  #    container: ${{ matrix.container }}
-  #
-  #    steps:
-  #      - uses: actions/checkout@v2
-  #
-  #      - name: Download stage4 hash
-  #        uses: actions/download-artifact@v2
-  #        with:
-  #          name: hash
-  #          path: hash
-  #
-  #      - name: Hash
-  #        # ENV -> CMAKE -> Code very hard. This very easy
-  #        run: |
-  #          hash=$(cat hash/hash_stage4_${{ matrix.target }})
-  #          echo "now hash is $hash"
-  #          echo "const char *hash = \"$hash\";" > src/stage3/const.h
-  #
-  #      - name: Makus
-  #        run: |
-  #          cd src/stage3
-  #          if [ "${{ matrix.container }}" == "alpine" ]
-  #          then
-  #            apk add build-base cmake
-  #          fi
-  #          cmake -B build -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
-  #          cmake --build build --config Release
-  #          find . -type f \( -name stage3 -o -name stage3.exe \) -exec cp {} ../../stage3_${{ matrix.target }} \;
-  #          strip ../../stage3_${{ matrix.target }}
-  #
-  #      - name: Upload artifact
-  #        uses: actions/upload-artifact@v2
-  #        with:
-  #          name: stage3_${{ matrix.target }}
-  #          path: stage3_${{ matrix.target }}
-
-
-  #  stage3-arch:
-  #    needs: hash
-  #
-  #    strategy:
-  #      matrix:
-  #        include:
-  #          - arch: armv7
-  #            target: armv7-unknown-linux-gnu
-  #    #          - arch: armv7
-  #    #            target: armv7-unknown-linux-musl
-  #
-  #    runs-on: ubuntu-20.04
-  #
-  #    steps:
-  #      - if: github.ref == 'refs/heads/main'
-  #        uses: actions/checkout@v2
-  #
-  #      - if: github.ref == 'refs/heads/main'
-  #        name: Download stage4 hash
-  #        uses: actions/download-artifact@v2
-  #        with:
-  #          name: hash
-  #          path: hash
-  #
-  #      - if: github.ref == 'refs/heads/main'
-  #        uses: uraimo/run-on-arch-action@v2
-  #        name: Run commands
-  #        id: runcmd
-  #        with:
-  #          arch: ${{ matrix.arch }}
-  #          distro: ubuntu18.04
-  #          githubToken: ${{ github.token }}
-  #          setup: mkdir -p "$PWD/artifacts"
-  #          dockerRunArgs: |
-  #            -v "$PWD/artifacts:/artifacts"
-  #            -v "$PWD:/yes"
-  #
-  #          install: |
-  #            apt-get -y update
-  #            apt-get -y install cmake build-essential musl-dev musl-tools
-  #
-  #          run: |
-  #            set -x
-  #            cd /yes
-  #            hash=$(cat hash/hash_stage4_${{ matrix.target }})
-  #            echo "now hash is $hash"
-  #            echo "const char *hash = \"$hash\";" > src/stage3/const.h
-  #            cd src/stage3
-  #            if [ "${{ matrix.target }}" == "armv7-unknown-linux-musl" ]
-  #            then
-  #              export CC=musl-gcc
-  #            fi
-  #            mkdir build
-  #            cd build
-  #            cmake .. -DCMAKE_EXE_LINKER_FLAGS='-Os' -DCMAKE_BUILD_TYPE=Release
-  #            make
-  #            find . -type f \( -name stage3 -o -name stage3.exe \) -exec cp {} /artifacts/stage3_${{ matrix.target }} \;
-  #            strip /artifacts/stage3_${{ matrix.target }}
-  #
-  #      - if: github.ref == 'refs/heads/main'
-  #        run: |
-  #          cp artifacts/* ./
-  #
-  #      - if: github.ref == 'refs/heads/main'
-  #        name: Upload artifact
-  #        uses: actions/upload-artifact@v2
-  #        with:
-  #          name: stage3_${{ matrix.target }}
-  #          path: stage3_${{ matrix.target }}
-
-
-
   stage1:
     needs: [ version, stage3-OS ]
     runs-on: ubuntu-latest
@@ -457,9 +210,7 @@ jobs:
           mkdir -p .cache/gg-$VERSION
           rm -rf src
           for dir in stage3*; do
-            echo "dir is $dir"
             for file in "$dir"/*; do
-              echo "file is $file"
               cp "$file" .cache/gg-$VERSION/
             done
           done
@@ -472,9 +223,6 @@ jobs:
           chmod +x .cache/gg-$VERSION/stage2.sh
           tar -zpvcf gg.tgz .cache
           
-          echo "OK ${{needs.version.outputs.version}}"
-          echo "version is $VERSION"
-          echo bat is 
           sed -i "s/VERVER/$VERSION/g" _stage1/stage1.*
           unix2dos _stage1/stage1.bat
           cat _stage1/stage1.bat _stage1/stage1.sh > 1
@@ -585,37 +333,6 @@ jobs:
           sh gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
           sh gg.cmd -v ${{ matrix.cmd }}
-
-  #  test-arch:
-  #    if: false
-  #    #    if: github.ref == 'refs/heads/main'
-  #    needs: stage1
-  #    strategy:
-  #      matrix:
-  #        include:
-  #          - arch: armv7
-  #            target: armv7-unknown-linux-gnu
-  #
-  #    runs-on: ubuntu-20.04
-  #    steps:
-  #      - name: Download gg
-  #        uses: actions/download-artifact@v2
-  #        with:
-  #          name: gg.cmd
-  #
-  #      - uses: uraimo/run-on-arch-action@v2
-  #        name: Run commands
-  #        id: runcmd
-  #        with:
-  #          arch: ${{ matrix.arch }}
-  #          distro: ubuntu18.04
-  #          githubToken: ${{ github.token }}
-  #          dockerRunArgs: |
-  #            -v "$PWD:/ok"
-  #          run: |
-  #            uname -a
-  #            cd /ok
-  #            sh gg.cmd java@11 -version
 
 
   release:
