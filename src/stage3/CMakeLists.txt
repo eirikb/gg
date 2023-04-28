@@ -10,6 +10,12 @@ file(
         "${CMAKE_CURRENT_SOURCE_DIR}/sha512.c"
         SHOW_PROGRESS
 )
+file(
+        DOWNLOAD
+        "https://opensource.apple.com/source/network_cmds/network_cmds-481.20.1/unbound/config.h"
+        "${CMAKE_CURRENT_SOURCE_DIR}/config.h"
+        SHOW_PROGRESS
+)
 
 execute_process(COMMAND patch sha512.c sha512-fix.diff WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
