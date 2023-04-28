@@ -26,7 +26,7 @@ jobs:
       - name: Set version
         id: version
         run: |
-          if [ "${{github.ref}}" == "refs/heads/main" ]; then
+          if [ "${{github.event.pull_request.merged}}" == "true" ]; then
             echo "version=${{ steps.buildnumber.outputs.build_number }}" >> $GITHUB_OUTPUT
           else
             echo "version=dev" >> $GITHUB_OUTPUT
