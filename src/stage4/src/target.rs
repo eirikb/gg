@@ -28,6 +28,7 @@ impl Target {
             arch: match parts[0] {
                 x if x.contains("x86_64") => Arch::X86_64,
                 x if x.contains("arm64") => Arch::Arm64,
+                x if x.contains("aarch64") => Arch::Arm64,
                 _ => Arch::Armv7
             },
             os: match input.to_lowercase() {
