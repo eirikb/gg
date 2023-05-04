@@ -22,7 +22,6 @@ jobs:
     container: ${{ matrix.container }}
     steps:
       - name: Run!
-        shell: bash
         run: |
           set -x
           uname -a
