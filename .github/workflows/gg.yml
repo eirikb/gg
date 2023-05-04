@@ -16,7 +16,7 @@ jobs:
       matrix:
         os: [ buildjet-2vcpu-ubuntu-2204-arm ]
         container: [ alpine ]
-        cmd: [ "java -version" ]
+        cmd: [ "node -v" ]
 
     runs-on: ${{ matrix.os }}
 #    container: ${{ matrix.container }}
