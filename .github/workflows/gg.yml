@@ -11,31 +11,6 @@ on:
 name: gg.cmd
 jobs:
 
-  bah:
-    strategy:
-      matrix:
-        os: [ buildjet-2vcpu-ubuntu-2204-arm ]
-        container: [ alpine ]
-        cmd: [ "node -v" ]
-
-    runs-on: ${{ matrix.os }}
-    container: ${{ matrix.container }}
-    steps:
-      - name: Run!
-        run: |
-          set -x
-          uname -a
-          wget https://gg.eirikb.no/gg.cmd
-          # docker run --rm -i -v $PWD:/a -w /a ${{ matrix.container }} sh gg.cmd ${{ matrix.cmd }}
-          #          ls -lah
-          #          file gg.cmd
-          #          which docker
-          #          docker -v
-          sh gg.cmd -v ${{ matrix.cmd }}
-          #          echo "Nice, let's try again"
-          #          sh gg.cmd -v ${{ matrix.cmd }}
-          exit 1
-
   version:
     runs-on: ubuntu-latest
     needs: bah
@@ -337,6 +312,28 @@ jobs:
           echo "Nice, let's try again"
           .\gg.cmd -v ${{ matrix.cmd }}
 
+
+  test-ARM-container:
+    strategy:
+      matrix:
+        os: [ buildjet-2vcpu-ubuntu-2204-arm ]
+        container: [ alpine ]
+        cmd: [ "node -v", "java -version" ]
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    steps:
+      - name: Download gg
+        uses: actions/download-artifact@v2
+        with:
+          name: gg.cmd
+
+      - name: Run!
+        run: |
+          set -x
+          uname -a
+          sh gg.cmd -v ${{ matrix.cmd }}
+          
 
   test-container:
     needs: stage1
