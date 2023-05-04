@@ -19,7 +19,7 @@ jobs:
         cmd: [ "node -v" ]
 
     runs-on: ${{ matrix.os }}
-#    container: ${{ matrix.container }}
+    container: ${{ matrix.container }}
     steps:
       - name: Run!
         shell: bash
@@ -27,7 +27,7 @@ jobs:
           set -x
           uname -a
           wget https://gg.eirikb.no/gg.cmd
-          docker run --rm -i -v $PWD:/a -w /a ${{ matrix.container }} sh gg.cmd ${{ matrix.cmd }}
+          # docker run --rm -i -v $PWD:/a -w /a ${{ matrix.container }} sh gg.cmd ${{ matrix.cmd }}
           #          ls -lah
           #          file gg.cmd
           #          which docker
