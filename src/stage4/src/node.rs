@@ -115,7 +115,7 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
         (Os::Windows, Arch::Arm64, _) => "win-arm64-zip",
         (Os::Windows, _, _) => "win-x64-zip",
         (Os::Linux, Arch::Armv7, Some(Variant::Musl)) => "linux-armv7l-musl",
-        (Os::Linux, Arch::Arm64, Some(Variant::Musl)) => "linux-arm64",
+        (Os::Linux, Arch::Arm64, Some(Variant::Musl)) => "linux-arm64-musl",
         (Os::Linux, Arch::X86_64, Some(Variant::Musl)) => "linux-x64-musl",
         (Os::Linux, Arch::Armv7, _) => "linux-armv7l",
         (Os::Linux, Arch::Arm64, _) => "linux-arm64",
@@ -162,7 +162,7 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
 
 async fn get_node_urls(target: &Target) -> Vec<Download> {
     match (target.os, target.arch, target.variant) {
-        (Os::Linux, Arch::Armv7, Some(Variant::Musl)) => unofficial_downloads(target).await,
+        (Os::Linux, _, Some(Variant::Musl)) => unofficial_downloads(target).await,
         (Os::Windows, Arch::Arm64, _) => unofficial_downloads(target).await,
         _ => official_downloads(target).await
     }
