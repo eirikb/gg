@@ -31,7 +31,7 @@ jobs:
           #          file gg.cmd
           #          which docker
           #          docker -v
-          #          sh gg.cmd -v ${{ matrix.cmd }}
+          sh gg.cmd -v ${{ matrix.cmd }}
           #          echo "Nice, let's try again"
           #          sh gg.cmd -v ${{ matrix.cmd }}
           exit 1
