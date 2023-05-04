@@ -313,6 +313,7 @@ jobs:
 
 
   test-ARM-container:
+    needs: stage1
     strategy:
       matrix:
         os: [ buildjet-2vcpu-ubuntu-2204-arm ]
