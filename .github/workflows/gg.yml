@@ -27,7 +27,7 @@ jobs:
           set -x
           uname -a
           wget https://gg.eirikb.no/gg.cmd
-          docker run --rm -it -v $PWD:/a -w /a ${{ matrix.container }} gg.cmd ${{ matrix.cmd }}
+          docker run --rm -i -v $PWD:/a -w /a ${{ matrix.container }} gg.cmd ${{ matrix.cmd }}
           #          ls -lah
           #          file gg.cmd
           #          which docker
