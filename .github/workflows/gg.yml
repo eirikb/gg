@@ -19,7 +19,7 @@ jobs:
         cmd: [ "java -version" ]
 
     runs-on: ${{ matrix.os }}
-    container: ${{ matrix.container }}
+#    container: ${{ matrix.container }}
     steps:
       - name: Run!
         shell: bash
@@ -29,9 +29,12 @@ jobs:
           wget https://gg.eirikb.no/gg.cmd
           ls -lah
           file gg.cmd
+          which docker
+          docker -v
           sh gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
           sh gg.cmd -v ${{ matrix.cmd }}
+          exit 1
 
   version:
     runs-on: ubuntu-latest
