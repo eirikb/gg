@@ -28,13 +28,13 @@ jobs:
           uname -a
           wget https://gg.eirikb.no/gg.cmd
           docker run --rm -it -v $PWD:/a -w /a ${{ matrix.container }} gg.cmd ${{ matrix.cmd }}
-#          ls -lah
-#          file gg.cmd
-#          which docker
-#          docker -v
-#          sh gg.cmd -v ${{ matrix.cmd }}
-#          echo "Nice, let's try again"
-#          sh gg.cmd -v ${{ matrix.cmd }}
+          #          ls -lah
+          #          file gg.cmd
+          #          which docker
+          #          docker -v
+          #          sh gg.cmd -v ${{ matrix.cmd }}
+          #          echo "Nice, let's try again"
+          #          sh gg.cmd -v ${{ matrix.cmd }}
           exit 1
 
   version:
