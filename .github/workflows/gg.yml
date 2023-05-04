@@ -11,8 +11,31 @@ on:
 name: gg.cmd
 jobs:
 
+  bah:
+    strategy:
+      matrix:
+        os: [ buildjet-2vcpu-ubuntu-2204-arm ]
+        container: [ alpine ]
+        cmd: [ "java -version" ]
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    steps:
+      - name: Run!
+        shell: bash
+        run: |
+          set -x
+          uname -a
+          wget https://gg.eirikb.no/gg.cmd
+          ls -lah
+          file gg.cmd
+          sh gg.cmd -v ${{ matrix.cmd }}
+          echo "Nice, let's try again"
+          sh gg.cmd -v ${{ matrix.cmd }}
+
   version:
     runs-on: ubuntu-latest
+    needs: bah
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
