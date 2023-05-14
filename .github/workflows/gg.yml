@@ -290,6 +290,7 @@ jobs:
           echo "Nice, let's try again"
           sh gg.cmd -v ${{ matrix.cmd }}
 
+
   test-batch:
     needs: stage1
     strategy:
@@ -333,7 +334,7 @@ jobs:
           set -x
           uname -a
           sh gg.cmd -v ${{ matrix.cmd }}
-          
+  
 
   test-container:
     needs: stage1
