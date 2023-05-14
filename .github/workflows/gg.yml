@@ -323,7 +323,6 @@ jobs:
         cmd: [ "java -version" ]
 
     runs-on: ${{ matrix.os }}
-    container: ${{ matrix.container }}
     steps:
       - name: Download gg
         uses: actions/download-artifact@v3
@@ -334,7 +333,7 @@ jobs:
         run: |
           set -x
           uname -a
-          sh gg.cmd -v ${{ matrix.cmd }}
+          docker run --rm -i -v $PWD:/b -w /b ${{ matrix.conainer }} sh gg.cmd -v ${{ matrix.cmd }}
   
 
   test-container:
