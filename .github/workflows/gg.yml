@@ -333,7 +333,7 @@ jobs:
         run: |
           set -x
           uname -a
-          docker run --rm -i -v $PWD:/b -w /b ${{ matrix.conainer }} sh gg.cmd -v ${{ matrix.cmd }}
+          docker run --rm -i -v $PWD:/b -w /b ${{ matrix.container }} sh gg.cmd -v ${{ matrix.cmd }}
   
 
   test-container:
