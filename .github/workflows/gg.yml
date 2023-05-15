@@ -32,6 +32,7 @@ jobs:
             echo "version=dev" >> $GITHUB_OUTPUT
           fi
 
+
   stage4-OS:
     strategy:
       matrix:
@@ -290,6 +291,7 @@ jobs:
           echo "Nice, let's try again"
           sh gg.cmd -v ${{ matrix.cmd }}
 
+
   test-batch:
     needs: stage1
     strategy:
@@ -311,6 +313,28 @@ jobs:
           echo "Nice, let's try again"
           .\gg.cmd -v ${{ matrix.cmd }}
 
+
+  test-ARM-container:
+    needs: stage1
+    strategy:
+      matrix:
+        os: [ buildjet-2vcpu-ubuntu-2204-arm ]
+        container: [ alpine ]
+        cmd: [ "java -version" ]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Download gg
+        uses: actions/download-artifact@v3
+        with:
+          name: gg.cmd
+
+      - name: Run!
+        run: |
+          set -x
+          uname -a
+          docker run --rm -i -v $PWD:/b -w /b ${{ matrix.container }} sh gg.cmd -v ${{ matrix.cmd }}
+  
 
   test-container:
     needs: stage1
