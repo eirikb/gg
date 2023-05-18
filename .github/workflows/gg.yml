@@ -378,7 +378,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           tag_name: ${{ needs.version.outputs.version }}
-          release_name: Release ${{ needs.version.outputs.version }}
+          release_name: ${{ needs.version.outputs.version }}
           body: ${{ github.event.pull_request.body }}
 
       - name: Download gg
