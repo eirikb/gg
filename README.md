@@ -48,21 +48,20 @@ sh gg.cmd -v gradle@7:java+lts build
 
 ## Support table
 
-| Logo                                                                                                          | Commands                         | Depends on | Set environment variables | Available tags                                                                     | Default tags |
-|---------------------------------------------------------------------------------------------------------------|----------------------------------|------------|---------------------------|------------------------------------------------------------------------------------|--------------|
-| ![image](https://user-images.githubusercontent.com/241706/231715452-4e04052a-d13c-4bca-afa5-0bb19239b6f0.png) | **node**<br/>**npm**<br/>**npx** |            |                           | lts                                                                                |
-| ![image](https://user-images.githubusercontent.com/241706/231713381-cc8436bb-ef6e-4aa6-ab5c-66ee0a868201.png) | **gradle**                       | java       |                           |
-| ![image](https://user-images.githubusercontent.com/241706/231713130-ba667ff2-a129-47be-9d06-9e68e6815108.png) | **java**                         |            | JAVA_HOME                 | jdk<br/>jre<br/>lts<br/>sts<br/>mts<br/>ea<br/>ga<br/>headless<br/>headfull<br/>fx | +jdk<br/>+ga |
-| ![image](https://user-images.githubusercontent.com/241706/231999543-61a192f0-7931-495d-a845-fdd855e690e5.png) | **maven**<br/>**mvn**            | java       |                           |                                                                                    |              |
+| Logo                                                                                                                          | Commands                         | Depends on | Set environment variables | Available tags                                                                     | Default tags |
+|-------------------------------------------------------------------------------------------------------------------------------|----------------------------------|------------|---------------------------|------------------------------------------------------------------------------------|--------------|
+| <img src="https://user-images.githubusercontent.com/241706/231715452-4e04052a-d13c-4bca-afa5-0bb19239b6f0.png" width="100px"> | **node**<br/>**npm**<br/>**npx** |            |                           | lts                                                                                |
+| <img src="https://user-images.githubusercontent.com/241706/231713381-cc8436bb-ef6e-4aa6-ab5c-66ee0a868201.png" width="100px"> | **gradle**                       | java       |                           |
+| <img src="https://user-images.githubusercontent.com/241706/231713130-ba667ff2-a129-47be-9d06-9e68e6815108.png" width="100px"> | **java**                         |            | JAVA_HOME                 | jdk<br/>jre<br/>lts<br/>sts<br/>mts<br/>ea<br/>ga<br/>headless<br/>headfull<br/>fx | +jdk<br/>+ga |
+| <img src="https://user-images.githubusercontent.com/241706/231999543-61a192f0-7931-495d-a845-fdd855e690e5.png" width="100px"> | **maven**<br/>**mvn**            | java       |                           |                                                                                    |              |
 
 ## OS / Arch support table
 
-|            | x86_64  | arm64   |
-|------------|---------|---------|
-| Linux musl | &check; | &check; |
-| Linux GNU  | &check; | &check; |
-| macOS      | &check; |         |
-| Windows    | &check; |         |
+|         | x86_64  | arm64   |
+|---------|---------|---------|
+| Linux   | &check; | &check; |
+| macOS   | &check; |         |
+| Windows | &check; |         |
 
 ## gradlew
 
