@@ -1,6 +1,11 @@
 # gg.cmd
 
 [![gg.cmd](https://github.com/eirikb/gg/actions/workflows/gg.yml/badge.svg)](https://github.com/eirikb/gg/actions/workflows/gg.yml)
+[![Release](https://badgen.net/github/release/eirikb/gg)](https://github.com/eirikb/gg/releases/latest/download/gg.cmd)
+
+[**[Changelog]**](https://github.com/eirikb/gg/releases)
+
+![image](https://github.com/eirikb/gg/assets/241706/b671f15e-23a3-4adb-9488-272e35f6a686)
 
 gg.cmd is a cross-platform and cross-architecture command-line interface (CLI) that acts as an executable wrapper for
 various tools such as Gradle, JDK/JVM, Node.js, and Java. It requires minimal dependencies and is similar in
@@ -8,6 +13,9 @@ functionality to gradlew.
 
 Install into root of your repo:
 > wget gg.eirikb.no/gg.cmd
+
+or  
+[Download the latest release](https://github.com/eirikb/gg/releases/latest/download/gg.cmd)
 
 ## Features
 
@@ -40,14 +48,23 @@ sh gg.cmd -v gradle@7:java+lts build
 
 ## Support table
 
-| Logo                                                                                                          | Commands                         | Depends on | Version from                                                                                         | Download url from                                                                                                  | Set environment variables | Available tags                                                                     | Default tags |
-|---------------------------------------------------------------------------------------------------------------|----------------------------------|------------|------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|---------------------------|------------------------------------------------------------------------------------|--------------|
-| ![image](https://user-images.githubusercontent.com/241706/231715452-4e04052a-d13c-4bca-afa5-0bb19239b6f0.png) | **node**<br/>**npm**<br/>**npx** |            | `engines` in `package.json`<br/> Contents of `.nvmrc`                                                |                                                                                                                    | lts                       |                                                                                    |
-| ![image](https://user-images.githubusercontent.com/241706/231713381-cc8436bb-ef6e-4aa6-ab5c-66ee0a868201.png) | **gradle**                       | java       | `distributionUrl` in `gradle/wrapper/gradle-wrapper.properties`                                      | `distributionUrl` in<br/> `gradle/wrapper/gradle-wrapper.properties`<br/> `distributionUrl` in `gradle.properties` |                           |                                                                                    |
-| ![image](https://user-images.githubusercontent.com/241706/231713130-ba667ff2-a129-47be-9d06-9e68e6815108.png) | **java**                         |            | `jdkVersion` in `gradle/wrapper/gradle-wrapper.properties` <br/> `jdkVersion` in `gradle.properties` |                                                                                                                    | JAVA_HOME                 | jdk<br/>jre<br/>lts<br/>sts<br/>mts<br/>ea<br/>ga<br/>headless<br/>headfull<br/>fx | +jdk<br/>+ga |
-| ![image](https://user-images.githubusercontent.com/241706/231999543-61a192f0-7931-495d-a845-fdd855e690e5.png) | **maven**<br/>**mvn**            | java       |                                                                                                      |                                                                                                                    |                           |                                                                                    |              |
+| Logo                                                                                                          | Commands                         | Depends on | Set environment variables | Available tags                                                                     | Default tags |
+|---------------------------------------------------------------------------------------------------------------|----------------------------------|------------|---------------------------|------------------------------------------------------------------------------------|--------------|
+| ![image](https://user-images.githubusercontent.com/241706/231715452-4e04052a-d13c-4bca-afa5-0bb19239b6f0.png) | **node**<br/>**npm**<br/>**npx** |            |                           | lts                                                                                |
+| ![image](https://user-images.githubusercontent.com/241706/231713381-cc8436bb-ef6e-4aa6-ab5c-66ee0a868201.png) | **gradle**                       | java       |                           |
+| ![image](https://user-images.githubusercontent.com/241706/231713130-ba667ff2-a129-47be-9d06-9e68e6815108.png) | **java**                         |            | JAVA_HOME                 | jdk<br/>jre<br/>lts<br/>sts<br/>mts<br/>ea<br/>ga<br/>headless<br/>headfull<br/>fx | +jdk<br/>+ga |
+| ![image](https://user-images.githubusercontent.com/241706/231999543-61a192f0-7931-495d-a845-fdd855e690e5.png) | **maven**<br/>**mvn**            | java       |                           |                                                                                    |              |
 
-## On gradlew
+## OS / Arch support table
+
+|            | x86_64  | arm64   |
+|------------|---------|---------|
+| Linux musl | &check; | &check; |
+| Linux GNU  | &check; | &check; |
+| macOS      | &check; |         |
+| Windows    | &check; |         |
+
+## gradlew
 
 With support for `distributionUrl` in `gradle.properties` you can replace gradlew with a single gg.cmd and can
 delete these files:
@@ -57,21 +74,31 @@ delete these files:
 * gradlew
 * gradlew.bat
 
-## On nvm
+## Gradle
 
-gg.cmd does not need to be installed beforehand, it is just a file in your repo that everyone can run.  
-gg.cmd is a wrapper and will not tamper with system installations of Node.js.
+Version from:
 
-```bash
-nvm i 14
-npm start
-```
+* `distributionUrl` in `gradle/wrapper/gradle-wrapper.properties`
+* `distributionUrl` in `gradle.properties`
 
-vs
+Download URL from:
 
-```bash
-./gg.cmd npm@14 start
-```
+* `distributionUrl` in `gradle/wrapper/gradle-wrapper.properties`
+* `distributionUrl` in `gradle.properties`
+
+## Node
+
+Version from:
+
+* `engines` in `package.json`
+* Contents of `.nvmrc`
+
+## Java
+
+Version from:
+
+* `jdkVersion` in `gradle/wrapper/gradle-wrapper.properties`
+* `jdkVersion` in `gradle.properties`
 
 ## Examples
 
