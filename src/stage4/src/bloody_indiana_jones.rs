@@ -1,17 +1,18 @@
+use futures_util::StreamExt;
+use indicatif::ProgressBar;
+use log::{debug, info};
 use std::cmp::min;
 use std::fs::{create_dir_all, File, read_dir, remove_dir, rename};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-
-use futures_util::StreamExt;
-use indicatif::ProgressBar;
-use log::{debug, info};
+use tokio::task;
 
 fn get_file_name(url: &str) -> String {
     reqwest::Url::parse(url).unwrap().path_segments().unwrap().last().unwrap().to_string()
 }
 
 pub async fn download(url: &str, file_path: &str, pb: &ProgressBar) {
+    pb.set_message("Downloading");
     let client = reqwest::Client::new();
     let res = client.get(url)
         .send()
@@ -45,11 +46,11 @@ pub async fn download(url: &str, file_path: &str, pb: &ProgressBar) {
     }
 
     info!("Downloaded {} to {}", url, file_path);
-    pb.finish_with_message("Done");
 }
 
 pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str, pb: &ProgressBar) {
     info!("Downloading {url}");
+    pb.set_message("Preparing");
 
     let ver = option_env!("VERSION").unwrap_or("dev");
     let downloads_dir = &format!(".cache/gg-{ver}/downloads");
@@ -57,6 +58,8 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str, pb: &Prog
     let file_name = get_file_name(url);
     let file_path = &format!("{downloads_dir}/{file_name}");
     download(url, file_path.as_str(), pb).await;
+    pb.reset();
+    pb.set_message("Extracting");
 
     info!("Extracting {file_name}");
     let ext = Path::new(&file_name).extension().unwrap().to_str();
@@ -74,6 +77,7 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str, pb: &Prog
                 }
                 _ => {
                     info!("Decompressing Gzip");
+                    pb.set_message("Gunzip");
                     let mut decoder = async_compression::tokio::bufread::GzipDecoder::new(file_buf_reader);
                     tokio::io::copy(&mut decoder, &mut file_writer).await.unwrap();
                 }
@@ -82,9 +86,14 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str, pb: &Prog
         Some("zip") => {
             info!("Decompressing Zip");
             info!("Path is {}", &path);
-            create_dir_all(&path).expect("Unable to create download dir");
-            let target_dir = PathBuf::from(&path);
-            zip_extract::extract(File::open(file_path).unwrap(), &target_dir, true).unwrap();
+            pb.set_message("Unzip");
+            let file_path_string = String::from(file_path);
+            let path_string = String::from(path);
+            task::spawn_blocking(move || {
+                create_dir_all(&path_string).expect("Unable to create download dir");
+                let target_dir = PathBuf::from(&path_string);
+                zip_extract::extract(File::open(file_path_string).unwrap(), &target_dir, true).unwrap();
+            }).await.expect("Unable to unzip");
         }
         _ => ()
     }
@@ -94,35 +103,41 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str, pb: &Prog
     match Path::new(&file_name).extension().unwrap().to_str() {
         Some("tar") => {
             info!("Untar {file_name}");
+            pb.set_message("Untar");
             let mut archive = tar::Archive::new(std::io::BufReader::new(File::open(file_name).unwrap()));
             archive.unpack(path).expect("Unable to extract");
         }
         _ => {}
     }
 
-    let parent_path = Path::new(&path);
-    let entries = read_dir(&path);
-    if let Ok(entries) = entries {
-        let entries = entries.collect::<Vec<_>>();
-        if entries.len() == 1 {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    if entry.path().is_dir() {
-                        debug!("Extracted files are contained in sub-folder. Moving them up");
-                        let parent = entry.path();
-                        if let Ok(entries) = read_dir(&parent) {
-                            for entry in entries {
-                                if let Ok(entry) = entry {
-                                    let path = entry.path();
-                                    let new_path = parent_path.join(path.file_name().unwrap());
-                                    rename(&path, new_path).unwrap();
+    let path_string = String::from(path);
+    pb.set_message("Move");
+    task::spawn_blocking(move || {
+        let parent_path = Path::new(&path_string);
+        let entries = read_dir(&path_string);
+        if let Ok(entries) = entries {
+            let entries = entries.collect::<Vec<_>>();
+            if entries.len() == 1 {
+                for entry in entries {
+                    if let Ok(entry) = entry {
+                        if entry.path().is_dir() {
+                            debug!("Extracted files are contained in sub-folder. Moving them up");
+                            let parent = entry.path();
+                            if let Ok(entries) = read_dir(&parent) {
+                                for entry in entries {
+                                    if let Ok(entry) = entry {
+                                        let path = entry.path();
+                                        let new_path = parent_path.join(path.file_name().unwrap());
+                                        rename(&path, new_path).unwrap();
+                                    }
                                 }
+                                remove_dir(parent).ok();
                             }
-                            remove_dir(parent).ok();
                         }
                     }
                 }
             }
         }
-    }
+    }).await.expect("Unable to move files");
+    pb.finish_with_message("Done");
 }
