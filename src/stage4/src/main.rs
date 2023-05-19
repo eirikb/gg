@@ -1,14 +1,12 @@
-use std::collections::HashMap;
-use std::fmt::Write;
-use std::fs;
-use std::process::ExitCode;
-
+use bloody_indiana_jones::download_unpack_and_all_that_stuff;
 use futures_util::future::join_all;
 use indicatif::{MultiProgress, ProgressBar, ProgressState, ProgressStyle};
 use log::{debug, info};
 use semver::VersionReq;
-
-use bloody_indiana_jones::download_unpack_and_all_that_stuff;
+use std::collections::HashMap;
+use std::fmt::Write;
+use std::fs;
+use std::process::ExitCode;
 
 use crate::bloody_indiana_jones::download;
 use crate::executor::{AppInput, Executor, ExecutorCmd, prep, try_run};
@@ -134,7 +132,7 @@ async fn main() -> ExitCode {
 
             let alles = executors.iter().enumerate().map(|(i, x)| {
                 let pb = m.insert(i, ProgressBar::new(1));
-                pb.set_style(ProgressStyle::with_template("{spinner:.green} {msg} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
+                pb.set_style(ProgressStyle::with_template("{prefix:.bold} {spinner:.green} {msg} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
                     .unwrap()
                     .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
                     .progress_chars("#>-"));

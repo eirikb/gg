@@ -1,13 +1,12 @@
+use indicatif::ProgressBar;
+use log::{debug, info};
+use semver::{Version, VersionReq};
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::process::Command;
-
-use indicatif::ProgressBar;
-use log::{debug, info};
-use semver::{Version, VersionReq};
 
 use crate::{download_unpack_and_all_that_stuff, Gradle, Java, NoClap, Node};
 use crate::maven::Maven;
@@ -155,6 +154,8 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
 
     let name = executor.get_name();
 
+    pb.set_prefix(String::from(name));
+
     match app_path {
         Some(app_path_ok) if app_path_ok.bin.exists() => return Ok(app_path_ok),
         _ => {
@@ -162,10 +163,10 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
         }
     }
 
-    pb.set_message(format!("{name}: Fetching versions"));
+    pb.set_message(format!("Fetching versions"));
 
     let urls = executor.get_download_urls(input).await;
-    pb.set_message(format!("{name}: {} versions", &urls.len()));
+    pb.set_message(format!("{} versions", &urls.len()));
     debug!( "{:?}", urls);
 
     if urls.is_empty() {
@@ -252,7 +253,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
     let url = urls_match.first();
 
     let url_string = if let Some(url) = url {
-        pb.set_message(format!("{name}: {}", url.version.clone().map(|v| v.to_string()).unwrap_or("".to_string())));
+        pb.set_prefix(format!("{name} {}", url.version.clone().map(|v| v.to_string()).unwrap_or("".to_string())));
         &url.download_url
     } else {
         ""
