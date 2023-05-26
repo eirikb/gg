@@ -21,10 +21,12 @@ mod bloody_indiana_jones;
 mod node;
 mod gradle;
 mod maven;
+mod openapigenerator;
 mod java;
 mod executor;
 mod no_clap;
 mod custom_command;
+mod bloody_maven;
 
 fn print_help(ver: &str) {
     println!(r"gg.cmd
@@ -56,6 +58,7 @@ Supported systems:
     gradle
     java
     maven
+    openapi
 ");
 }
 
@@ -152,9 +155,10 @@ async fn main() -> ExitCode {
             }
 
             let (app_path, _) = &res[0];
+            let executor = &executors[0];
 
             if app_path.bin.exists() {
-                if try_run(input, app_path.clone(), path_vars, env_vars).await.unwrap() {
+                if try_run(input, &**executor, app_path.clone(), path_vars, env_vars).await.unwrap() {
                     ExitCode::from(0)
                 } else {
                     println!("Unable to execute");

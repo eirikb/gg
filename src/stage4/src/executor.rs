@@ -1,6 +1,3 @@
-use indicatif::ProgressBar;
-use log::{debug, info};
-use semver::{Version, VersionReq};
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::future::Future;
@@ -8,8 +5,13 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::process::Command;
 
+use indicatif::ProgressBar;
+use log::{debug, info};
+use semver::{Version, VersionReq};
+
 use crate::{download_unpack_and_all_that_stuff, Gradle, Java, NoClap, Node};
 use crate::maven::Maven;
+use crate::openapigenerator::OpenAPIGenerator;
 use crate::target::{Arch, Os, Target, Variant};
 
 #[derive(PartialEq, Debug, Clone)]
@@ -81,6 +83,7 @@ impl dyn Executor {
             "gradle" => Some(Box::new(Gradle { executor_cmd })),
             "java" => Some(Box::new(Java { executor_cmd })),
             "maven" | "mvn" => Some(Box::new(Maven { executor_cmd })),
+            "openapi" => Some(Box::new(OpenAPIGenerator { executor_cmd })),
             _ => None
         }
     }
@@ -106,10 +109,13 @@ pub trait Executor {
     fn get_env(&self, _app_path: AppPath) -> HashMap<String, String> {
         HashMap::new()
     }
+    fn get_custom_bin_path(&self, _paths: &str) -> Option<String> { None }
+    fn get_additional_args(&self, _app_path: &AppPath) -> Vec<String> { vec!() }
 
     fn custom_prep(&self) -> Option<AppPath> {
         None
     }
+    fn post_prep(&self, _cache_path: &str) {}
 }
 
 fn get_executor_app_path(executor: &dyn Executor, input: &AppInput, path: &str) -> Option<AppPath> {
@@ -264,6 +270,8 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
     let cache_path = format!(".cache/{path}");
     download_unpack_and_all_that_stuff(url_string, cache_path.as_str(), pb).await;
 
+    executor.post_prep(cache_path.as_str());
+
     get_executor_app_path(executor, input, path).ok_or("Binary not found".to_string())
 }
 
@@ -282,19 +290,26 @@ fn get_app_path(bin: &str, path: &str) -> Result<AppPath, String> {
     }
 }
 
-pub async fn try_run(input: &AppInput, app_path: AppPath, path_vars: Vec<String>, env_vars: HashMap<String, String>) -> Result<bool, String> {
-    let bin_path = app_path.bin.to_str().unwrap_or("");
-    info!("Executing: {:?}. With args:{:?}", bin_path,&input.no_clap.app_args);
+pub async fn try_run(input: &AppInput, executor: &dyn Executor, app_path: AppPath, path_vars: Vec<String>, env_vars: HashMap<String, String>) -> Result<bool, String> {
+    let args: Vec<String> = executor.get_additional_args(&app_path).iter().cloned().chain(
+        input.no_clap.app_args.iter().cloned()
+    ).collect();
     let path_string = &env::var("PATH").unwrap_or("".to_string());
     let parent_bin_path = app_path.parent_bin_path();
     let paths = env::join_paths(path_vars).unwrap().to_str().unwrap().to_string();
     let all_paths = vec!(parent_bin_path, paths, path_string.to_string()).join(":");
+    let bin_path = if let Some(bin_path) = executor.get_custom_bin_path(all_paths.as_str()) {
+        bin_path
+    } else {
+        app_path.bin.to_str().unwrap_or("").to_string()
+    };
+    info!("Executing: {:?}. With args:{:?}", bin_path, args);
     debug!("PATH: {all_paths}");
     let mut command = Command::new(&bin_path);
     let res = command
         .env("PATH", all_paths)
         .envs(env_vars)
-        .args(&input.no_clap.app_args)
+        .args(args)
         .spawn().map_err(|e| e.to_string())?.wait().map_err(|_| "eh")?.success();
     if !res {
         info!("Unable to execute {bin_path}");

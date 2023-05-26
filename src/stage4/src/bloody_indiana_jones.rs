@@ -65,7 +65,6 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str, pb: &Prog
     let ext = Path::new(&file_name).extension().unwrap().to_str();
     let file_buf_reader = tokio::io::BufReader::new(tokio::fs::File::open(file_path).await.unwrap());
     let file_path_decomp = &Path::new(&format!("{downloads_dir}/{file_name}")).with_extension("").to_str().unwrap().to_string();
-    let mut file_writer = tokio::io::BufWriter::new(tokio::fs::File::create(file_path_decomp).await.unwrap());
 
     match ext {
         Some("xz") | Some("gz") => {
@@ -73,12 +72,14 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str, pb: &Prog
                 Some("xz") => {
                     info!("Decompressing Xz");
                     let mut decoder = async_compression::tokio::bufread::XzDecoder::new(file_buf_reader);
+                    let mut file_writer = tokio::io::BufWriter::new(tokio::fs::File::create(file_path_decomp).await.unwrap());
                     tokio::io::copy(&mut decoder, &mut file_writer).await.unwrap();
                 }
                 _ => {
                     info!("Decompressing Gzip");
                     pb.set_message("Gunzip");
                     let mut decoder = async_compression::tokio::bufread::GzipDecoder::new(file_buf_reader);
+                    let mut file_writer = tokio::io::BufWriter::new(tokio::fs::File::create(file_path_decomp).await.unwrap());
                     tokio::io::copy(&mut decoder, &mut file_writer).await.unwrap();
                 }
             };
@@ -95,7 +96,16 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str, pb: &Prog
                 zip_extract::extract(File::open(file_path_string).unwrap(), &target_dir, true).unwrap();
             }).await.expect("Unable to unzip");
         }
-        _ => ()
+        Some("tar") => (),
+        _ => {
+            println!("What now...");
+            pb.set_message("Move");
+            create_dir_all(&path).expect("Unable to create download dir");
+            // let mut file_writer = tokio::io::BufWriter::new(tokio::fs::File::create(file_path_decomp).await.unwrap());
+            rename(&file_path, path.to_string() + "/" + file_name.as_str()).unwrap();
+            pb.finish_with_message("Done");
+            return;
+        }
     }
 
     let file_name = Path::new(&format!(".cache/gg-{ver}/downloads/{file_name}")).with_extension("").to_str().unwrap().to_string();
