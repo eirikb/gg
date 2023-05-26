@@ -50,7 +50,6 @@ impl Executor for OpenAPIGenerator {
             entries.for_each(|entry| {
                 if let Ok(entry) = entry {
                     if let Some(path_str) = entry.path().to_str() {
-                        dbg!(&path_str);
                         if path_str.contains("openapi-generator-cli") && path_str.ends_with("jar") {
                             rename(entry.path(), cache_path.to_string() + "/openapi-generator-cli.jar").unwrap();
                         }
