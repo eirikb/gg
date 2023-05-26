@@ -1,10 +1,11 @@
-use futures_util::StreamExt;
-use indicatif::ProgressBar;
-use log::{debug, info};
 use std::cmp::min;
 use std::fs::{create_dir_all, File, read_dir, remove_dir, rename};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+
+use futures_util::StreamExt;
+use indicatif::ProgressBar;
+use log::{debug, info};
 use tokio::task;
 
 fn get_file_name(url: &str) -> String {
@@ -98,10 +99,8 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str, pb: &Prog
         }
         Some("tar") => (),
         _ => {
-            println!("What now...");
             pb.set_message("Move");
             create_dir_all(&path).expect("Unable to create download dir");
-            // let mut file_writer = tokio::io::BufWriter::new(tokio::fs::File::create(file_path_decomp).await.unwrap());
             rename(&file_path, path.to_string() + "/" + file_name.as_str()).unwrap();
             pb.finish_with_message("Done");
             return;
