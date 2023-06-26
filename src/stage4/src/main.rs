@@ -19,6 +19,7 @@ use crate::target::Target;
 mod target;
 mod bloody_indiana_jones;
 mod node;
+mod deno;
 mod gradle;
 mod maven;
 mod openapigenerator;
@@ -59,6 +60,7 @@ Supported systems:
     java
     maven
     openapi
+    deno
 ");
 }
 

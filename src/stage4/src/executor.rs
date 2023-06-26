@@ -10,6 +10,7 @@ use log::{debug, info};
 use semver::{Version, VersionReq};
 
 use crate::{download_unpack_and_all_that_stuff, Gradle, Java, NoClap, Node};
+use crate::deno::Deno;
 use crate::maven::Maven;
 use crate::openapigenerator::OpenAPIGenerator;
 use crate::target::{Arch, Os, Target, Variant};
@@ -84,6 +85,7 @@ impl dyn Executor {
             "java" => Some(Box::new(Java { executor_cmd })),
             "maven" | "mvn" => Some(Box::new(Maven { executor_cmd })),
             "openapi" => Some(Box::new(OpenAPIGenerator { executor_cmd })),
+            "deno" => Some(Box::new(Deno { executor_cmd })),
             _ => None
         }
     }
