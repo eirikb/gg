@@ -103,10 +103,15 @@ impl Executor for Java {
     }
 }
 
-async fn get_java_download_urls(_target: &Target) -> Vec<Download> {
+async fn get_java_download_urls(target: &Target) -> Vec<Download> {
     let json = reqwest::get("https://www.azul.com/wp-admin/admin-ajax.php?action=bundles&endpoint=community&use_stage=false&include_fields=java_version,release_status,abi,arch,bundle_type,cpu_gen,ext,features,hw_bitness,javafx,latest,os,support_term").await.unwrap().text().await.unwrap();
     let root: Root = serde_json::from_str(json.as_str()).expect("JSON was not well-formatted");
-    root.iter().filter(|node| node.ext == "zip" || node.ext == "tar.gz").map(|node| {
+    root.iter().filter(|node| {
+        match target.os {
+            Os::Windows => node.ext == "zip",
+            _ => node.ext == "tar.gz"
+        }
+    }).map(|node| {
         let n = node.clone();
         let mut tags = HashSet::new();
         tags.insert(n.bundle_type);
