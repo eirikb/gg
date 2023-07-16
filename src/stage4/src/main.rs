@@ -27,6 +27,7 @@ mod executor;
 mod no_clap;
 mod custom_command;
 mod bloody_maven;
+mod rat;
 
 fn print_help(ver: &str) {
     println!(r"gg.cmd
@@ -59,6 +60,7 @@ Supported systems:
     java
     maven
     openapi
+    rat (ra)
 ");
 }
 

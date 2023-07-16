@@ -12,6 +12,7 @@ use semver::{Version, VersionReq};
 use crate::{download_unpack_and_all_that_stuff, Gradle, Java, NoClap, Node};
 use crate::maven::Maven;
 use crate::openapigenerator::OpenAPIGenerator;
+use crate::rat::Rat;
 use crate::target::{Arch, Os, Target, Variant};
 
 #[derive(PartialEq, Debug, Clone)]
@@ -84,6 +85,7 @@ impl dyn Executor {
             "java" => Some(Box::new(Java { executor_cmd })),
             "maven" | "mvn" => Some(Box::new(Maven { executor_cmd })),
             "openapi" => Some(Box::new(OpenAPIGenerator { executor_cmd })),
+            "rat" | "ra" => Some(Box::new(Rat { executor_cmd })),
             _ => None
         }
     }
@@ -211,16 +213,17 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
             return false;
         }
 
-        if let Some(os) = u.os {
-            if os != Os::Any && !(match input.target.os {
-                Os::Windows => u.download_url.ends_with(".zip"),
-                Os::Linux => u.download_url.ends_with(".tar.gz"),
-                Os::Mac => u.download_url.ends_with(".tar.gz"),
-                Os::Any => u.download_url.ends_with(".tar.gz")
-            }) {
-                return false;
-            }
-        }
+        // SKIP?!
+        // if let Some(os) = u.os {
+        //     if os != Os::Any && !(match input.target.os {
+        //         Os::Windows => u.download_url.ends_with(".zip"),
+        //         Os::Linux => u.download_url.ends_with(".tar.gz"),
+        //         Os::Mac => u.download_url.ends_with(".tar.gz"),
+        //         Os::Any => u.download_url.ends_with(".tar.gz")
+        //     }) {
+        //         return false;
+        //     }
+        // }
 
         let cmd = executor.get_executor_cmd();
         for tag in &cmd.include_tags {
