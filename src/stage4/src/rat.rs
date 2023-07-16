@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::fs::{Permissions, read_dir, rename};
 use std::future::Future;
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::pin::Pin;
 
@@ -77,9 +78,12 @@ impl Executor for Rat {
                         };
                         if let Some(to_path) = to_path {
                             rename(entry.path(), &to_path).unwrap();
-                            let mut perms = fs::metadata(&to_path).unwrap().permissions();
-                            perms.set_mode(0o755);
-                            fs::set_permissions(to_path, perms).unwrap();
+                            #[cfg(unix)]
+                            {
+                                let mut perms = fs::metadata(&to_path).unwrap().permissions();
+                                perms.set_mode(0o755);
+                                fs::set_permissions(to_path, perms).unwrap();
+                            }
                         }
                     }
                 }
