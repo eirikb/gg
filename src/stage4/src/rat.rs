@@ -1,20 +1,14 @@
-use std::collections::HashSet;
 use std::fs;
-use std::fs::{Permissions, read_dir, rename};
+use std::fs::{read_dir, rename};
 use std::future::Future;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::pin::Pin;
 
-use log::info;
-use package_json::PackageJsonManager;
-use regex::Regex;
-use semver::{Version, VersionReq};
-use serde::Deserialize;
-use serde::Serialize;
+use semver::Version;
 
 use crate::executor::{AppInput, Download, Executor, ExecutorCmd};
-use crate::target::{Arch, Os, Target, Variant};
+use crate::target::{Arch, Os, Variant};
 
 pub struct Rat {
     pub executor_cmd: ExecutorCmd,
@@ -25,7 +19,7 @@ impl Executor for Rat {
         &self.executor_cmd
     }
 
-    fn get_download_urls<'a>(&'a self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {
+    fn get_download_urls<'a>(&'a self, _input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {
         Box::pin(async move {
             let versions: Vec<String> = reqwest::get("https://ratbinsa.z1.web.core.windows.net/list.json").await.unwrap().json().await.unwrap();
             versions.into_iter().map(|name| {
