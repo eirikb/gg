@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs::{read_dir, rename};
 use std::future::Future;
 use std::pin::Pin;
@@ -29,6 +30,10 @@ impl Executor for OpenAPIGenerator {
 
     fn get_deps(&self) -> Vec<&str> {
         vec!("java")
+    }
+
+    fn get_default_exclude_tags(&self) -> HashSet<String> {
+        vec!["beta"].into_iter().map(|s| s.to_string()).collect()
     }
 
     fn get_custom_bin_path(&self, paths: &str) -> Option<String> {
