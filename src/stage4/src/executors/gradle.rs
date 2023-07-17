@@ -108,7 +108,7 @@ impl Executor for Gradle {
 
 #[cfg(test)]
 mod tests {
-    use crate::gradle::HelloWorld;
+    use crate::executors::gradle::HelloWorld;
 
     #[test]
     fn it_works() {
