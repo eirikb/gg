@@ -53,11 +53,8 @@ impl Executor for Maven {
         })
     }
 
-    fn get_bin(&self, input: &AppInput) -> Vec<&str> {
-        match &input.target.os {
-            Os::Windows => vec!("bin/mvn.cmd", "bin/mvn.bat", "maven.bat"),
-            _ => vec!("bin/mvn", "bin/maven")
-        }
+    fn get_bins(&self, _input: &AppInput) -> Vec<String> {
+        vec!["mvn".to_string(), "mvn.bat".to_string(), "maven.bat".to_string()]
     }
 
     fn get_name(&self) -> &str {
@@ -66,6 +63,10 @@ impl Executor for Maven {
 
     fn get_deps(&self) -> Vec<&str> {
         vec!("java")
+    }
+
+    fn get_bin_dirs(&self) -> Vec<String> {
+        vec![".".to_string(), "bin".to_string()]
     }
 }
 

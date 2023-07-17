@@ -45,16 +45,19 @@ impl Executor for Rat {
         })
     }
 
-
-    fn get_bin(&self, input: &AppInput) -> Vec<&str> {
-        vec!(match &input.target.os {
+    fn get_bins(&self, input: &AppInput) -> Vec<String> {
+        vec![match &input.target.os {
             Os::Windows => "rat.exe",
             _ => "rat.bin"
-        })
+        }.to_string()]
     }
 
     fn get_name(&self) -> &str {
         "rat"
+    }
+
+    fn get_bin_dirs(&self) -> Vec<String> {
+        vec![".".to_string()]
     }
 
     fn post_prep(&self, cache_path: &str) {
