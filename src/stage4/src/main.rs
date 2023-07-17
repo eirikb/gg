@@ -41,14 +41,12 @@ Options:
     -u          Update gg.cmd
     -v          Verbose output
     -vv         Debug output
-    -e          Execute first command blindly
-    -c          Execute first command blindly
     -h          Print help
     -V          Print version
 
 Examples:
     ./gg.cmd node
-    ./gg.cmd -c soapui:java@17
+    ./gg.cmd run soapui:java@17
     ./gg.cmd gradle@6:java@17 clean build
     ./gg.cmd node@10 -e 'console.log(1)'
     ./gg.cmd -vv npm@14 start
