@@ -280,7 +280,7 @@ pub async fn try_run(input: &AppInput, executor: &dyn Executor, app_path: AppPat
     let path_string = &env::var("PATH").unwrap_or("".to_string());
     let paths = env::join_paths(path_vars).unwrap().to_str().unwrap().to_string();
     let all_paths = vec!(paths, path_string.to_string()).join(":");
-    debug!("PATH: {all_paths}");
+    info!("PATH: {all_paths}");
     let bins = executor.get_bins(&input);
     info!("Trying to find these bins: {}", bins.join(","));
     for bin in bins {
