@@ -137,11 +137,6 @@ async fn get_java_download_urls(target: &Target) -> Vec<Download> {
         } else {
             None
         };
-        // TODO: ext?!
-        // let ext = match target.os {
-        //     Os::Windows => "zip",
-        //     _ => "tar.gz",
-        // };
         Download {
             download_url: n.url,
             version:

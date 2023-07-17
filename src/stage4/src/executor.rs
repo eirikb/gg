@@ -25,12 +25,6 @@ pub struct AppPath {
     pub install_dir: PathBuf,
 }
 
-// impl AppPath {
-//     pub(crate) fn parent_bin_path(&self) -> String {
-//         self.bin.parent().unwrap_or(Path::new("/")).to_str().unwrap_or("").to_string()
-//     }
-// }
-//
 pub struct AppInput {
     pub target: Target,
     pub no_clap: NoClap,
@@ -131,20 +125,12 @@ pub trait Executor {
 }
 
 fn get_executor_app_path(_executor: &dyn Executor, _input: &AppInput, path: &str) -> Option<AppPath> {
-    // let bins = executor.get_bin(input);
-    // let bin = bins.join(",");
     info!( "Trying to find {path}");
-    // if let Some(p) = bins.iter().map(|bin| {
     if let Ok(app_path) = get_app_path(path) {
         Some(app_path)
     } else {
         None
     }
-    // }).find(|p| p.is_some()) {
-    //     p
-    // } else {
-    //     None
-    // }
 }
 
 pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -> Result<AppPath, String> {
@@ -222,18 +208,6 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
         } else {
             return false;
         }
-
-        // SKIP?!
-        // if let Some(os) = u.os {
-        //     if os != Os::Any && !(match input.target.os {
-        //         Os::Windows => u.download_url.ends_with(".zip"),
-        //         Os::Linux => u.download_url.ends_with(".tar.gz"),
-        //         Os::Mac => u.download_url.ends_with(".tar.gz"),
-        //         Os::Any => u.download_url.ends_with(".tar.gz")
-        //     }) {
-        //         return false;
-        //     }
-        // }
 
         let cmd = executor.get_executor_cmd();
         for tag in &cmd.include_tags {

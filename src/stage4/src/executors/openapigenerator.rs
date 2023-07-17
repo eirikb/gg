@@ -24,9 +24,6 @@ impl Executor for OpenAPIGenerator {
         vec!["java".to_string()]
     }
 
-    // fn get_bins(&self, _input: &AppInput) -> Vec<String> { vec!["openapi-generator-cli.jar".to_string()] }
-
-
     fn get_name(&self) -> &str {
         "openapi"
     }
@@ -39,10 +36,17 @@ impl Executor for OpenAPIGenerator {
         vec!["beta"].into_iter().map(|s| s.to_string()).collect()
     }
 
-    // fn get_custom_bin_path(&self, paths: &str) -> Option<String> {
-    //     which_in_global("java", Some(paths)).and_then(|mut s| s.next().ok_or(Error::CannotFindBinaryPath)).map(|s| s.to_str().unwrap().to_string()).ok()
-    // }
-
+    fn customize_args(&self, input: &AppInput, app_path: &AppPath) -> Vec<String> {
+        let jar = "openapi-generator-cli.jar";
+        if let Some(path) = app_path.install_dir.join(jar).to_str() {
+            let args = vec!("-jar".to_string(), path.to_string());
+            args.iter().cloned().chain(
+                input.no_clap.app_args.iter().cloned()
+            ).collect()
+        } else {
+            vec!()
+        }
+    }
 
     fn post_prep(&self, cache_path: &str) {
         let entries = read_dir(&cache_path);
@@ -56,18 +60,6 @@ impl Executor for OpenAPIGenerator {
                     }
                 }
             });
-        }
-    }
-
-    fn customize_args(&self, input: &AppInput, app_path: &AppPath) -> Vec<String> {
-        let jar = "openapi-generator-cli.jar";
-        if let Some(path) = app_path.install_dir.join(jar).to_str() {
-            let args = vec!("-jar".to_string(), path.to_string());
-            args.iter().cloned().chain(
-                input.no_clap.app_args.iter().cloned()
-            ).collect()
-        } else {
-            vec!()
         }
     }
 }

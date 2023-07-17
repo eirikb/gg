@@ -1,11 +1,12 @@
-use futures_util::future::join_all;
-use indicatif::{MultiProgress, ProgressBar, ProgressState, ProgressStyle};
-use log::{debug, info};
-use semver::VersionReq;
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::fs;
 use std::process::ExitCode;
+
+use futures_util::future::join_all;
+use indicatif::{MultiProgress, ProgressBar, ProgressState, ProgressStyle};
+use log::{debug, info};
+use semver::VersionReq;
 
 use crate::bloody_indiana_jones::download;
 use crate::executor::{AppInput, Executor, ExecutorCmd, prep, try_run};
@@ -153,17 +154,12 @@ async fn main() -> ExitCode {
 
             info!("Path vars: {}", &path_vars.join(", "));
 
-            // if app_path.bin.exists() {
             if try_run(input, &**executor, app_path.clone(), path_vars, env_vars).await.unwrap() {
                 ExitCode::from(0)
             } else {
                 println!("Unable to execute");
                 ExitCode::from(1)
             }
-            // } else {
-            //     println!("Binary not found!");
-            //     ExitCode::from(1)
-            // }
         } else {
             println!("No executor found!");
             ExitCode::from(1)
