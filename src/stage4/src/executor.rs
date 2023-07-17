@@ -110,8 +110,9 @@ pub trait Executor {
     fn get_env(&self, _app_path: &AppPath) -> HashMap<String, String> {
         HashMap::new()
     }
+
     fn get_bin_dirs(&self) -> Vec<String> {
-        vec!["bin".to_string()]
+        vec!["bin".to_string(), ".".to_string()]
     }
 
     fn customize_args(&self, input: &AppInput, _app_path: &AppPath) -> Vec<String> {

@@ -37,11 +37,12 @@ Options:
 
 Examples:
     ./gg.cmd node
-    ./gg.cmd run soapui:java@17
     ./gg.cmd gradle@6:java@17 clean build
     ./gg.cmd node@10 -e 'console.log(1)'
     ./gg.cmd -vv npm@14 start
     ./gg.cmd java@-jdk+jre -version
+    ./gg.cmd run soapui:java@17
+    ./gg.cmd run env:java@14 java -version
 
 Supported systems:
     node (npm, npx will also work, version refers to node version)
@@ -50,7 +51,7 @@ Supported systems:
     maven
     openapi
     rat (ra)
-    run
+    run (any aritrary command)
 ");
 }
 

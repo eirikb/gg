@@ -56,10 +56,6 @@ impl Executor for Rat {
         "rat"
     }
 
-    fn get_bin_dirs(&self) -> Vec<String> {
-        vec![".".to_string()]
-    }
-
     fn post_prep(&self, cache_path: &str) {
         let entries = read_dir(&cache_path);
         if let Ok(entries) = entries {

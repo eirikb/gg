@@ -64,10 +64,6 @@ impl Executor for Maven {
     fn get_deps(&self) -> Vec<&str> {
         vec!("java")
     }
-
-    fn get_bin_dirs(&self) -> Vec<String> {
-        vec![".".to_string(), "bin".to_string()]
-    }
 }
 
 #[cfg(test)]
