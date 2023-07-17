@@ -8,7 +8,7 @@ use crate::Executor;
 use crate::executor::{AppInput, AppPath, Download, ExecutorCmd};
 
 pub struct CustomCommand {
-    executor_cmd: ExecutorCmd,
+    pub executor_cmd: ExecutorCmd,
 }
 
 impl Executor for CustomCommand {
@@ -32,8 +32,12 @@ impl Executor for CustomCommand {
         "custom_command"
     }
 
-    fn custom_prep(&self) -> Option<AppPath> {
-        let cmd = self.executor_cmd.cmd.as_str();
+    fn customize_args(&self, input: &AppInput, _app_path: &AppPath) -> Vec<String> {
+        input.no_clap.app_args.clone().into_iter().skip(1).collect()
+    }
+
+    fn custom_prep(&self, input: &AppInput) -> Option<AppPath> {
+        let cmd = input.no_clap.app_args.clone().into_iter().next().unwrap_or("".to_string());
         let bin = which(cmd.clone());
         if let Ok(bin) = bin {
             Some(AppPath {

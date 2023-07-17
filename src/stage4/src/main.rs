@@ -59,6 +59,7 @@ Supported systems:
     maven
     openapi
     rat (ra)
+    run
 ");
 }
 

@@ -10,6 +10,7 @@ use log::{debug, info};
 use semver::{Version, VersionReq};
 
 use crate::{download_unpack_and_all_that_stuff, Gradle, Java, NoClap, Node};
+use crate::custom_command::CustomCommand;
 use crate::maven::Maven;
 use crate::openapigenerator::OpenAPIGenerator;
 use crate::rat::Rat;
@@ -86,7 +87,8 @@ impl dyn Executor {
             "maven" | "mvn" => Some(Box::new(Maven { executor_cmd })),
             "openapi" => Some(Box::new(OpenAPIGenerator { executor_cmd })),
             "rat" | "ra" => Some(Box::new(Rat { executor_cmd })),
-            _ => None
+            "run" => Some(Box::new(CustomCommand { executor_cmd })),
+            _ => None,
         }
     }
 }
@@ -112,9 +114,11 @@ pub trait Executor {
         HashMap::new()
     }
     fn get_custom_bin_path(&self, _paths: &str) -> Option<String> { None }
-    fn get_additional_args(&self, _app_path: &AppPath) -> Vec<String> { vec!() }
+    fn customize_args(&self, input: &AppInput, _app_path: &AppPath) -> Vec<String> {
+        input.no_clap.app_args.clone()
+    }
 
-    fn custom_prep(&self) -> Option<AppPath> {
+    fn custom_prep(&self, _input: &AppInput) -> Option<AppPath> {
         None
     }
     fn post_prep(&self, _cache_path: &str) {}
@@ -138,7 +142,7 @@ fn get_executor_app_path(executor: &dyn Executor, input: &AppInput, path: &str) 
 }
 
 pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -> Result<AppPath, String> {
-    if let Some(app_path) = executor.custom_prep() {
+    if let Some(app_path) = executor.custom_prep(input) {
         return Ok(app_path);
     }
 
@@ -294,9 +298,7 @@ fn get_app_path(bin: &str, path: &str) -> Result<AppPath, String> {
 }
 
 pub async fn try_run(input: &AppInput, executor: &dyn Executor, app_path: AppPath, path_vars: Vec<String>, env_vars: HashMap<String, String>) -> Result<bool, String> {
-    let args: Vec<String> = executor.get_additional_args(&app_path).iter().cloned().chain(
-        input.no_clap.app_args.iter().cloned()
-    ).collect();
+    let args = executor.customize_args(&input, &app_path);
     let path_string = &env::var("PATH").unwrap_or("".to_string());
     let parent_bin_path = app_path.parent_bin_path();
     let paths = env::join_paths(path_vars).unwrap().to_str().unwrap().to_string();

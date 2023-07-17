@@ -41,14 +41,6 @@ impl Executor for OpenAPIGenerator {
     }
 
 
-    fn get_additional_args(&self, app_path: &AppPath) -> Vec<String> {
-        if let Some(path) = app_path.bin.to_str().map(|s| s.to_string()) {
-            vec!("-jar".to_string(), path)
-        } else {
-            vec!()
-        }
-    }
-
     fn post_prep(&self, cache_path: &str) {
         let entries = read_dir(&cache_path);
         if let Ok(entries) = entries {
@@ -61,6 +53,17 @@ impl Executor for OpenAPIGenerator {
                     }
                 }
             });
+        }
+    }
+
+    fn customize_args(&self, input: &AppInput, app_path: &AppPath) -> Vec<String> {
+        if let Some(path) = app_path.bin.to_str().map(|s| s.to_string()) {
+            let args = vec!("-jar".to_string(), path);
+            args.iter().cloned().chain(
+                input.no_clap.app_args.iter().cloned()
+            ).collect()
+        } else {
+            vec!()
         }
     }
 }
