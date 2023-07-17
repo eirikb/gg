@@ -282,7 +282,7 @@ pub async fn try_run(input: &AppInput, executor: &dyn Executor, app_path: AppPat
     let all_paths = vec!(paths, path_string.to_string()).join(":");
     debug!("PATH: {all_paths}");
     let bins = executor.get_bins(&input);
-    debug!("bins: {}", bins.join(","));
+    info!("Trying to find these bins: {}", bins.join(","));
     for bin in bins {
         let bin_paths = which_in(bin, Some(&all_paths), ".");
         if let Ok(bin_path) = bin_paths {
