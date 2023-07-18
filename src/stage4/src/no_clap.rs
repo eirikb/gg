@@ -100,7 +100,6 @@ mod tests {
         let no_clap = NoClap::parse(["-V", "node", "hello", "world"].map(String::from).to_vec());
         assert_eq!(["hello", "world"].map(String::from).to_vec(), no_clap.app_args);
         assert_eq!(true, no_clap.version);
-        assert_eq!(false, no_clap.help);
     }
 
     #[test]
@@ -108,7 +107,6 @@ mod tests {
         let no_clap = NoClap::parse(["-V", "node", "-h", "hello", "world"].map(String::from).to_vec());
         assert_eq!(["-h", "hello", "world"].map(String::from).to_vec(), no_clap.app_args);
         assert_eq!(true, no_clap.version);
-        assert_eq!(false, no_clap.help);
     }
 
     #[test]
@@ -116,7 +114,6 @@ mod tests {
         let no_clap = NoClap::parse(["-V", "-h", "node", "hello", "world"].map(String::from).to_vec());
         assert_eq!(["hello", "world"].map(String::from).to_vec(), no_clap.app_args);
         assert_eq!(true, no_clap.version);
-        assert_eq!(true, no_clap.help);
     }
 
     #[test]
@@ -134,22 +131,13 @@ mod tests {
     #[test]
     fn print_help_no_cmd() {
         let no_clap = NoClap::parse(["-h"].map(String::from).to_vec());
-        assert_eq!(true, no_clap.help);
         assert_eq!(false, no_clap.version);
     }
 
     #[test]
     fn print_version_no_cmd() {
         let no_clap = NoClap::parse(["-V"].map(String::from).to_vec());
-        assert_eq!(false, no_clap.help);
         assert_eq!(true, no_clap.version);
-    }
-
-    #[test]
-    fn update() {
-        let no_clap = NoClap::parse(["-u"].map(String::from).to_vec());
-        assert_eq!(true, no_clap.update);
-        assert_eq!(false, no_clap.version);
     }
 
     #[test]
