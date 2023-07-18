@@ -5,7 +5,7 @@ use std::process::ExitCode;
 
 use futures_util::future::join_all;
 use indicatif::{MultiProgress, ProgressBar, ProgressState, ProgressStyle};
-use log::{debug, info};
+use log::{debug, info, LevelFilter};
 use semver::VersionReq;
 
 use crate::bloody_indiana_jones::download;
@@ -29,8 +29,10 @@ Version: {ver}
 Usage: ./gg.cmd [options] <executable name>@<version>:<dependent executable name>@<version> [program arguments]
 
 Options:
-    -v          Verbose output
+    -v          Info output
     -vv         Debug output
+    -vvv        Trace output
+    -w          Even more output
     -V          Print version
 
 Built in commands:
@@ -63,7 +65,21 @@ async fn main() -> ExitCode {
     let ver = option_env!("VERSION").unwrap_or("dev");
 
     let no_clap = NoClap::new();
-    env_logger::init_from_env(env_logger::Env::default().default_filter_or(&no_clap.log_level));
+    let log_level = match no_clap.log_level.as_str() {
+        "debug" => LevelFilter::Debug,
+        "info" => LevelFilter::Info,
+        _ => LevelFilter::Warn,
+    };
+    if no_clap.log_external {
+        env_logger::builder().filter_level(log_level).init();
+    } else {
+        env_logger::builder()
+            .filter_module("gg", log_level)
+            .filter_module("gg:executors", log_level)
+            .filter_module("stage4", log_level)
+            .filter_module("stage4:executors", log_level)
+            .init();
+    }
 
     if let Some(cmd) = no_clap.cmds.first() {
         match cmd.cmd.as_str() {
