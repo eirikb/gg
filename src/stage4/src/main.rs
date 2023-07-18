@@ -29,11 +29,13 @@ Version: {ver}
 Usage: ./gg.cmd [options] <executable name>@<version>:<dependent executable name>@<version> [program arguments]
 
 Options:
-    -u          Update gg.cmd
     -v          Verbose output
     -vv         Debug output
-    -h          Print help
     -V          Print version
+
+Built in commands:
+    update      Update gg.cmd
+    help        Print help
 
 Examples:
     ./gg.cmd node
@@ -43,6 +45,7 @@ Examples:
     ./gg.cmd java@-jdk+jre -version
     ./gg.cmd run soapui:java@17
     ./gg.cmd run env:java@14 java -version
+    ./gg.cmd update
 
 Supported systems:
     node (npm, npx will also work, version refers to node version)
@@ -62,21 +65,26 @@ async fn main() -> ExitCode {
     let no_clap = NoClap::new();
     env_logger::init_from_env(env_logger::Env::default().default_filter_or(&no_clap.log_level));
 
-    if no_clap.help {
-        print_help(ver);
-        return ExitCode::from(0);
+    if let Some(cmd) = no_clap.cmds.first() {
+        match cmd.cmd.as_str() {
+            "update" => {
+                println!("Updating gg.cmd...");
+                let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
+                let pb = ProgressBar::new(0);
+                download(url, "gg.cmd", &pb).await;
+                return ExitCode::from(0);
+            }
+            "help" => {
+                print_help(ver);
+                return ExitCode::from(0);
+            }
+            _ => {}
+        };
     }
+
 
     if no_clap.version {
         println!("{}", ver);
-        return ExitCode::from(0);
-    }
-
-    if no_clap.update {
-        println!("Updating gg.cmd...");
-        let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
-        let pb = ProgressBar::new(0);
-        download(url, "gg.cmd", &pb).await;
         return ExitCode::from(0);
     }
 
