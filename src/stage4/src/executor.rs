@@ -164,7 +164,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
     match app_path {
         Some(app_path_ok) if app_path_ok.install_dir.exists() => return Ok(app_path_ok),
         _ => {
-            info!("App {name} not found in cache. Download time");
+            info!("{name} not found in cache. Download time");
         }
     }
 
@@ -255,7 +255,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
 
     debug!("{:?}", url_string);
 
-    let cache_path = format!(".cache/{path}");
+    let cache_path = format!(".cache/gg/{path}");
     download_unpack_and_all_that_stuff(url_string, cache_path.as_str(), pb).await;
 
     executor.post_prep(cache_path.as_str());
@@ -266,7 +266,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
 fn get_app_path(path: &str) -> Result<AppPath, String> {
     let path = env::current_dir()
         .map_err(|_| "Current dir not found")?
-        .join(".cache")
+        .join(".cache/gg")
         .join(path);
 
     if path.exists() {

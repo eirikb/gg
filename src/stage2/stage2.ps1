@@ -1,4 +1,4 @@
-$stage4 = ".\.cache\gg-VERVER\stage4.exe"
+$stage4 = ".\.cache\gg\gg-VERVER\stage4.exe"
 
 if (Test-Path $stage4)
 {
@@ -13,11 +13,11 @@ if ($arch -Eq "AMD64")
     $arch = "x86_64"
 }
 
-$hashes = (Get-Content .cache/gg-VERVER/hashes).Split("`n")
+$hashes = (Get-Content .cache/gg/gg-VERVER/hashes).Split("`n")
 $hash = ($hashes | Where-Object { $_ -match "$arch.*windows" })
 if ($hash)
 {
-    "$arch-windows" | Out-File .cache\gg-VERVER\system -Encoding ascii
+    "$arch-windows" | Out-File .cache\gg\gg-VERVER\system -Encoding ascii
     $hash = $hash.split("=")[1]
     Invoke-WebRequest "https://gg.eirikb.no/$hash" -OutFile $stage4
     if (Test-Path $stage4)
