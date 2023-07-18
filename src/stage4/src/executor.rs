@@ -164,7 +164,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
     match app_path {
         Some(app_path_ok) if app_path_ok.install_dir.exists() => return Ok(app_path_ok),
         _ => {
-            info!("App {name} not found in cache. Download time");
+            info!("{name} not found in cache. Download time");
         }
     }
 
