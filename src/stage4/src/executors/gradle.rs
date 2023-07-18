@@ -8,11 +8,9 @@ use regex::Regex;
 use scraper::{Html, Selector};
 use semver::VersionReq;
 
-use crate::Executor;
+use crate::{Executor, target};
 use crate::executor::{AppInput, Download, ExecutorCmd};
 use crate::target::Variant;
-
-use super::target;
 
 pub struct Gradle {
     pub executor_cmd: ExecutorCmd,
@@ -91,11 +89,11 @@ impl Executor for Gradle {
         })
     }
 
-    fn get_bin(&self, input: &AppInput) -> Vec<&str> {
-        vec!(match &input.target.os {
-            target::Os::Windows => "bin/gradle.bat",
-            _ => "bin/gradle"
-        })
+    fn get_bins(&self, input: &AppInput) -> Vec<String> {
+        vec![match &input.target.os {
+            target::Os::Windows => "gradle.bat",
+            _ => "gradle"
+        }.to_string()]
     }
 
     fn get_name(&self) -> &str {
@@ -110,7 +108,7 @@ impl Executor for Gradle {
 
 #[cfg(test)]
 mod tests {
-    use crate::gradle::HelloWorld;
+    use crate::executors::gradle::HelloWorld;
 
     #[test]
     fn it_works() {

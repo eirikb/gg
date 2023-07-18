@@ -82,19 +82,19 @@ impl Executor for Node {
         Box::pin(async move { get_node_urls(&input.target).await })
     }
 
-    fn get_bin(&self, input: &AppInput) -> Vec<&str> {
-        vec!(match &input.target.os {
+    fn get_bins(&self, input: &AppInput) -> Vec<String> {
+        vec![match &input.target.os {
             Os::Windows => match self.executor_cmd.cmd.as_str() {
                 "node" => "node.exe",
                 "npm" => "npm.cmd",
                 _ => "npx.cmd",
             },
             _ => match self.executor_cmd.cmd.as_str() {
-                "node" => "bin/node",
-                "npm" => "bin/npm",
-                _ => "bin/npx"
+                "node" => "node",
+                "npm" => "npm",
+                _ => "npx"
             }
-        })
+        }.to_string()]
     }
 
     fn get_name(&self) -> &str {

@@ -1,33 +1,24 @@
-use bloody_indiana_jones::download_unpack_and_all_that_stuff;
-use futures_util::future::join_all;
-use indicatif::{MultiProgress, ProgressBar, ProgressState, ProgressStyle};
-use log::{debug, info};
-use semver::VersionReq;
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::fs;
 use std::process::ExitCode;
 
+use futures_util::future::join_all;
+use indicatif::{MultiProgress, ProgressBar, ProgressState, ProgressStyle};
+use log::{debug, info};
+use semver::VersionReq;
+
 use crate::bloody_indiana_jones::download;
 use crate::executor::{AppInput, Executor, ExecutorCmd, prep, try_run};
-use crate::gradle::Gradle;
-use crate::java::Java;
 use crate::no_clap::NoClap;
-use crate::node::Node;
 use crate::target::Target;
 
 mod target;
 mod bloody_indiana_jones;
-mod node;
-mod gradle;
-mod maven;
-mod openapigenerator;
-mod java;
 mod executor;
 mod no_clap;
-mod custom_command;
 mod bloody_maven;
-mod rat;
+mod executors;
 
 fn print_help(ver: &str) {
     println!(r"gg.cmd
@@ -41,18 +32,17 @@ Options:
     -u          Update gg.cmd
     -v          Verbose output
     -vv         Debug output
-    -e          Execute first command blindly
-    -c          Execute first command blindly
     -h          Print help
     -V          Print version
 
 Examples:
     ./gg.cmd node
-    ./gg.cmd -c soapui:java@17
     ./gg.cmd gradle@6:java@17 clean build
     ./gg.cmd node@10 -e 'console.log(1)'
     ./gg.cmd -vv npm@14 start
     ./gg.cmd java@-jdk+jre -version
+    ./gg.cmd run soapui:java@17
+    ./gg.cmd run env:java@14 java -version
 
 Supported systems:
     node (npm, npx will also work, version refers to node version)
@@ -61,6 +51,7 @@ Supported systems:
     maven
     openapi
     rat (ra)
+    run (any aritrary command)
 ");
 }
 
@@ -144,30 +135,30 @@ async fn main() -> ExitCode {
                 (x, pb)
             }).map(|(x, pb)| async move {
                 let app_path = prep(&**x, &input, &pb).await.expect("Prep failed");
-                let p = app_path.clone();
-                (app_path, x.get_env(p))
+                let env = x.get_env(&app_path);
+                let bin_dirs = x.get_bin_dirs();
+                (app_path, env, bin_dirs)
             });
             let res = join_all(alles).await;
 
-            for (app_path, env) in res.clone() {
+            for (app_path, env, bin_dirs) in res.clone() {
+                for bin_dir in &bin_dirs {
+                    path_vars.push(app_path.install_dir.clone().join(bin_dir).to_str().unwrap_or("").to_string());
+                }
                 for (key, value) in env {
-                    path_vars.push(app_path.clone().parent_bin_path());
                     env_vars.insert(key.to_string(), value.to_string());
                 }
             }
 
-            let (app_path, _) = &res[0];
+            let (app_path, _, _) = &res[0];
             let executor = &executors[0];
 
-            if app_path.bin.exists() {
-                if try_run(input, &**executor, app_path.clone(), path_vars, env_vars).await.unwrap() {
-                    ExitCode::from(0)
-                } else {
-                    println!("Unable to execute");
-                    ExitCode::from(1)
-                }
+            info!("Path vars: {}", &path_vars.join(", "));
+
+            if try_run(input, &**executor, app_path.clone(), path_vars, env_vars).await.unwrap() {
+                ExitCode::from(0)
             } else {
-                println!("Binary not found!");
+                println!("Unable to execute");
                 ExitCode::from(1)
             }
         } else {

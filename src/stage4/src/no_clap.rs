@@ -150,18 +150,6 @@ mod tests {
     }
 
     #[test]
-    fn custom_cmd1() {
-        let no_clap = NoClap::parse(["-c"].map(String::from).to_vec());
-        assert_eq!(false, no_clap.version);
-    }
-
-    #[test]
-    fn custom_cmd2() {
-        let no_clap = NoClap::parse(["-c", "test"].map(String::from).to_vec());
-        assert_eq!(false, no_clap.version);
-    }
-
-    #[test]
     fn update() {
         let no_clap = NoClap::parse(["-u"].map(String::from).to_vec());
         assert_eq!(true, no_clap.update);

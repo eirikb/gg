@@ -83,11 +83,11 @@ impl Executor for Java {
         Box::pin(async move { get_java_download_urls(&input.target).await })
     }
 
-    fn get_bin(&self, input: &AppInput) -> Vec<&str> {
-        vec!(match &input.target.os {
-            Os::Windows => "bin/java.exe",
-            _ => "bin/java"
-        })
+    fn get_bins(&self, input: &AppInput) -> Vec<String> {
+        vec![match &input.target.os {
+            Os::Windows => "java.exe",
+            _ => "java"
+        }.to_string()]
     }
 
     fn get_name(&self) -> &str {
@@ -98,8 +98,8 @@ impl Executor for Java {
         vec!["jdk", "ga"].into_iter().map(|s| s.to_string()).collect()
     }
 
-    fn get_env(&self, app_path: AppPath) -> HashMap<String, String> {
-        [(String::from("JAVA_HOME"), app_path.app.to_str().unwrap().to_string())].iter().cloned().collect()
+    fn get_env(&self, app_path: &AppPath) -> HashMap<String, String> {
+        [(String::from("JAVA_HOME"), app_path.install_dir.to_str().unwrap().to_string())].iter().cloned().collect()
     }
 }
 
@@ -137,11 +137,6 @@ async fn get_java_download_urls(target: &Target) -> Vec<Download> {
         } else {
             None
         };
-        // TODO: ext?!
-        // let ext = match target.os {
-        //     Os::Windows => "zip",
-        //     _ => "tar.gz",
-        // };
         Download {
             download_url: n.url,
             version:
