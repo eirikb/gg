@@ -10,7 +10,7 @@ if [ ! -f .cache/gg/gg-VERVER/stage4 ]; then
     chmod +x "$stage3"
     if "./$stage3" 2>/dev/null; then
       echo "$stage3" >system
-      cd ../..
+      cd ../../..
       break
     fi
   done
