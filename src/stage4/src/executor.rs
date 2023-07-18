@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::env;
+use std::fs::File;
 use std::future::Future;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::process::Command;
@@ -8,6 +10,7 @@ use std::process::Command;
 use indicatif::ProgressBar;
 use log::{debug, info};
 use semver::{Version, VersionReq};
+use serde::{Serialize, Deserialize};
 use which::{which_in};
 use crate::bloody_indiana_jones::download_unpack_and_all_that_stuff;
 use crate::executors::custom_command::CustomCommand;
@@ -30,6 +33,47 @@ pub struct AppInput {
     pub no_clap: NoClap,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GgVersion(String);
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GgVersionReq(String);
+
+impl GgVersion {
+    pub fn to_version(&self) -> Version {
+        Version::parse(&self.0).unwrap()
+    }
+
+    pub fn new(version: &str) -> Option<Self> {
+        return if Version::parse(version).is_ok() {
+            Some(Self(version.to_string()))
+        } else {
+            None
+        };
+    }
+}
+
+impl GgVersionReq {
+    pub fn to_version_req(&self) -> VersionReq {
+        VersionReq::parse(&self.0).unwrap()
+    }
+
+    pub fn new(version_req: &str) -> Option<Self> {
+        return if VersionReq::parse(version_req).is_ok() {
+            Some(Self(version_req.to_string()))
+        } else {
+            None
+        };
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct GgMeta {
+    version_req: GgVersionReq,
+    download: Download,
+    cmd: ExecutorCmd,
+}
+
 #[cfg(test)]
 impl AppInput {
     pub fn dummy() -> Self {
@@ -37,9 +81,9 @@ impl AppInput {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Download {
-    pub version: Option<Version>,
+    pub version: Option<GgVersion>,
     pub tags: HashSet<String>,
     pub download_url: String,
     pub arch: Option<Arch>,
@@ -51,7 +95,7 @@ impl Download {
     pub fn new(download_url: String, version: &str, variant: Option<Variant>) -> Download {
         return Download {
             download_url,
-            version: Version::parse(version).ok(),
+            version: GgVersion::new(version),
             os: Some(Os::Any),
             arch: Some(Arch::Any),
             variant,
@@ -60,10 +104,10 @@ impl Download {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ExecutorCmd {
     pub cmd: String,
-    pub version: Option<VersionReq>,
+    pub version: Option<GgVersionReq>,
     pub include_tags: HashSet<String>,
     pub exclude_tags: HashSet<String>,
 }
@@ -141,7 +185,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
 
     let executor_cmd = &executor.get_executor_cmd();
     let version_req = if let Some(ver) = &executor_cmd.version {
-        Some(ver.clone())
+        Some(ver.to_version_req())
     } else if let Some(ver) = executor.get_version_req() {
         Some(ver)
     } else {
@@ -233,7 +277,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
         }
         if let Some(version_req) = &cmd.version {
             if let Some(version) = &u.version {
-                if version_req.matches(version) {
+                if version_req.to_version_req().matches(&version.to_version()) {
                     return true;
                 }
             }
@@ -242,12 +286,12 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
         return true;
     }).collect::<Vec<_>>();
 
-    urls_match.sort_by(|a, b| b.version.cmp(&a.version));
+    urls_match.sort_by(|a, b| b.version.clone().map(|v| v.to_version()).cmp(&a.version.clone().map(|v| v.to_version())));
 
     let url = urls_match.first();
 
     let url_string = if let Some(url) = url {
-        pb.set_prefix(format!("{name} {}", url.version.clone().map(|v| v.to_string()).unwrap_or("".to_string())));
+        pb.set_prefix(format!("{name} {}", url.version.clone().map(|v| v.0).unwrap_or("".to_string())));
         &url.download_url
     } else {
         ""
@@ -257,6 +301,21 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
 
     let cache_path = format!(".cache/gg/{path}");
     download_unpack_and_all_that_stuff(url_string, cache_path.as_str(), pb).await;
+
+    if let Some(download) = url {
+        let download = *download;
+        let meta = GgMeta {
+            download: download.clone(),
+            version_req: GgVersionReq(version_req_str.to_string()),
+            cmd: executor.get_executor_cmd().clone(),
+        };
+        let meta_path = Path::new(&cache_path).join("gg-meta.json");
+        if let Ok(json) = serde_json::to_string(&meta) {
+            if let Ok(mut file) = File::create(meta_path) {
+                let _ = file.write_all(json.as_bytes());
+            }
+        }
+    }
 
     executor.post_prep(cache_path.as_str());
 

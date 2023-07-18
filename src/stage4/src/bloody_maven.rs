@@ -6,7 +6,7 @@ use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_xml_rs::from_str;
 
-use crate::executor::Download;
+use crate::executor::{Download, GgVersion};
 use crate::target::{Arch, Os, Variant};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -64,7 +64,7 @@ pub fn get_download_urls_from_maven<'a>(group: &'a str, artifact: &'a str) -> Pi
             }
             Download {
                 download_url: format!("{root_url}/{ver}/{artifact}-{ver}.jar"),
-                version: Version::parse(ver.as_str()).ok(),
+                version: GgVersion::new(ver.as_str()),
                 os: Some(Os::Any),
                 arch: Some(Arch::Any),
                 variant: Some(Variant::Any),

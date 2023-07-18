@@ -9,7 +9,7 @@ use log::{debug, info, LevelFilter};
 use semver::VersionReq;
 
 use crate::bloody_indiana_jones::download;
-use crate::executor::{AppInput, Executor, ExecutorCmd, prep, try_run};
+use crate::executor::{AppInput, Executor, ExecutorCmd, GgVersionReq, prep, try_run};
 use crate::no_clap::NoClap;
 use crate::target::Target;
 
@@ -38,6 +38,7 @@ Options:
 Built in commands:
     update      Update gg.cmd
     help        Print help
+    check       Check for updates
 
 Examples:
     ./gg.cmd node
@@ -115,7 +116,7 @@ async fn main() -> ExitCode {
     return if no_clap.cmds.first().is_some() {
         let mut executors = no_clap.cmds.iter().filter_map(|cmd| <dyn Executor>::new(ExecutorCmd {
             cmd: cmd.cmd.to_string(),
-            version: VersionReq::parse(cmd.version.clone().unwrap_or("".to_string()).as_str()).ok(),
+            version: GgVersionReq::new(cmd.version.clone().unwrap_or("".to_string()).as_str()),
             include_tags: cmd.include_tags.clone(),
             exclude_tags: cmd.exclude_tags.clone(),
         })).collect::<Vec<Box<dyn Executor>>>();

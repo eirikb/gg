@@ -10,7 +10,7 @@ use semver::{Version, VersionReq};
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::executor::{AppInput, Download, Executor, ExecutorCmd};
+use crate::executor::{AppInput, Download, Executor, ExecutorCmd, GgVersion};
 use crate::target::{Arch, Os, Target, Variant};
 
 type Root = Vec<Root2>;
@@ -147,10 +147,10 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
             HashSet::new()
         };
         let string = version.replace("v", "");
-        let result = Version::parse(string.as_str());
+        let result = GgVersion::new(string.as_str());
         return Download {
             download_url: format!("https://{host}/download/release/{version}/node-{version}-{file_fix}"),
-            version: result.ok(),
+            version: result,
             tags,
             // Arch and Os are mapped by target Arch/Os
             arch: Some(Arch::Any),
