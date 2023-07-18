@@ -53,7 +53,6 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str, pb: &Prog
     info!("Downloading {url}");
     pb.set_message("Preparing");
 
-    let ver = option_env!("VERSION").unwrap_or("dev");
     let downloads_dir = &format!(".cache/gg/downloads");
     create_dir_all(downloads_dir).expect("Unable to create download dir");
     let file_name = get_file_name(url);

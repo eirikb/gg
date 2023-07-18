@@ -5,7 +5,7 @@ use std::process::ExitCode;
 
 use futures_util::future::join_all;
 use indicatif::{MultiProgress, ProgressBar, ProgressState, ProgressStyle};
-use log::{debug, info};
+use log::{debug, info, LevelFilter};
 use semver::VersionReq;
 
 use crate::bloody_indiana_jones::download;
@@ -29,11 +29,15 @@ Version: {ver}
 Usage: ./gg.cmd [options] <executable name>@<version>:<dependent executable name>@<version> [program arguments]
 
 Options:
-    -u          Update gg.cmd
-    -v          Verbose output
+    -v          Info output
     -vv         Debug output
-    -h          Print help
+    -vvv        Trace output
+    -w          Even more output
     -V          Print version
+
+Built in commands:
+    update      Update gg.cmd
+    help        Print help
 
 Examples:
     ./gg.cmd node
@@ -43,6 +47,7 @@ Examples:
     ./gg.cmd java@-jdk+jre -version
     ./gg.cmd run soapui:java@17
     ./gg.cmd run env:java@14 java -version
+    ./gg.cmd update
 
 Supported systems:
     node (npm, npx will also work, version refers to node version)
@@ -60,23 +65,42 @@ async fn main() -> ExitCode {
     let ver = option_env!("VERSION").unwrap_or("dev");
 
     let no_clap = NoClap::new();
-    env_logger::init_from_env(env_logger::Env::default().default_filter_or(&no_clap.log_level));
-
-    if no_clap.help {
-        print_help(ver);
-        return ExitCode::from(0);
+    let log_level = match no_clap.log_level.as_str() {
+        "debug" => LevelFilter::Debug,
+        "info" => LevelFilter::Info,
+        _ => LevelFilter::Warn,
+    };
+    if no_clap.log_external {
+        env_logger::builder().filter_level(log_level).init();
+    } else {
+        env_logger::builder()
+            .filter_module("gg", log_level)
+            .filter_module("gg:executors", log_level)
+            .filter_module("stage4", log_level)
+            .filter_module("stage4:executors", log_level)
+            .init();
     }
+
+    if let Some(cmd) = no_clap.cmds.first() {
+        match cmd.cmd.as_str() {
+            "update" => {
+                println!("Updating gg.cmd...");
+                let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
+                let pb = ProgressBar::new(0);
+                download(url, "gg.cmd", &pb).await;
+                return ExitCode::from(0);
+            }
+            "help" => {
+                print_help(ver);
+                return ExitCode::from(0);
+            }
+            _ => {}
+        };
+    }
+
 
     if no_clap.version {
         println!("{}", ver);
-        return ExitCode::from(0);
-    }
-
-    if no_clap.update {
-        println!("Updating gg.cmd...");
-        let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
-        let pb = ProgressBar::new(0);
-        download(url, "gg.cmd", &pb).await;
         return ExitCode::from(0);
     }
 
