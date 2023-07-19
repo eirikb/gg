@@ -44,10 +44,10 @@ Examples:
     ./gg.cmd node
     ./gg.cmd gradle@6:java@17 clean build
     ./gg.cmd node@10 -e 'console.log(1)'
-    ./gg.cmd -vv npm@14 start
+    ./gg.cmd -vv -w npm@14 start
     ./gg.cmd java@-jdk+jre -version
-    ./gg.cmd run soapui:java@17
-    ./gg.cmd run env:java@14 java -version
+    ./gg.cmd run:java@17 soapui
+    ./gg.cmd run:java@14 env
     ./gg.cmd update
 
 Supported systems:
@@ -57,7 +57,7 @@ Supported systems:
     maven
     openapi
     rat (ra)
-    run (any aritrary command)
+    run (any arbitrary command)
 ");
 }
 
