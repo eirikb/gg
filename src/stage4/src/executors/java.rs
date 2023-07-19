@@ -5,7 +5,7 @@ use std::io::BufReader;
 use std::pin::Pin;
 
 use java_properties::read;
-use semver::{Version, VersionReq};
+use semver::VersionReq;
 use serde::Deserialize;
 use serde::Serialize;
 

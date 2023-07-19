@@ -3,7 +3,6 @@ use std::future::Future;
 use std::pin::Pin;
 
 use scraper::{Html, Selector};
-use semver::Version;
 
 use crate::Executor;
 use crate::executor::{AppInput, Download, ExecutorCmd, GgVersion};

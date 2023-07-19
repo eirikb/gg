@@ -6,7 +6,7 @@ use std::pin::Pin;
 use log::info;
 use package_json::PackageJsonManager;
 use regex::Regex;
-use semver::{Version, VersionReq};
+use semver::VersionReq;
 use serde::Deserialize;
 use serde::Serialize;
 

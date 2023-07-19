@@ -5,8 +5,6 @@ use std::future::Future;
 use std::os::unix::fs::PermissionsExt;
 use std::pin::Pin;
 
-use semver::Version;
-
 use crate::executor::{AppInput, Download, Executor, ExecutorCmd, GgVersion};
 use crate::target::{Arch, Os, Variant};
 

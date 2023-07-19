@@ -2,7 +2,6 @@ use std::collections::HashSet;
 use std::future::Future;
 use std::pin::Pin;
 
-use semver::Version;
 use serde::{Deserialize, Serialize};
 use serde_xml_rs::from_str;
 

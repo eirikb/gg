@@ -44,6 +44,10 @@ impl GgVersion {
         Version::parse(&self.0).unwrap()
     }
 
+    pub fn to_string(&self) -> String {
+        self.0.clone()
+    }
+
     pub fn new(version: &str) -> Option<Self> {
         return if Version::parse(version).is_ok() {
             Some(Self(version.to_string()))
@@ -58,6 +62,10 @@ impl GgVersionReq {
         VersionReq::parse(&self.0).unwrap()
     }
 
+    pub fn to_string(&self) -> String {
+        self.0.clone()
+    }
+
     pub fn new(version_req: &str) -> Option<Self> {
         return if VersionReq::parse(version_req).is_ok() {
             Some(Self(version_req.to_string()))
@@ -68,10 +76,10 @@ impl GgVersionReq {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-struct GgMeta {
-    version_req: GgVersionReq,
-    download: Download,
-    cmd: ExecutorCmd,
+pub struct GgMeta {
+    pub version_req: GgVersionReq,
+    pub download: Download,
+    pub cmd: ExecutorCmd,
 }
 
 #[cfg(test)]
@@ -131,6 +139,10 @@ impl dyn Executor {
             "run" => Some(Box::new(CustomCommand { executor_cmd })),
             _ => None,
         }
+    }
+
+    pub fn get_url_matches(&self, urls: &Vec<Download>, input: &AppInput) -> Vec<Download> {
+        get_url_matches(urls, input, self)
     }
 }
 
@@ -222,6 +234,43 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
         panic!("Did not find any download URL!");
     }
 
+    let urls_match = get_url_matches(&urls, input, executor);
+
+    let url = urls_match.first();
+
+    let url_string = if let Some(url) = url {
+        pb.set_prefix(format!("{name} {}", url.version.clone().map(|v| v.0).unwrap_or("".to_string())));
+        &url.download_url
+    } else {
+        ""
+    };
+
+    debug!("{:?}", url_string);
+
+    let cache_path = format!(".cache/gg/{path}");
+    download_unpack_and_all_that_stuff(url_string, cache_path.as_str(), pb).await;
+
+    if let Some(download) = url {
+        let download = download;
+        let meta = GgMeta {
+            download: download.clone(),
+            version_req: GgVersionReq(version_req_str.to_string()),
+            cmd: executor.get_executor_cmd().clone(),
+        };
+        let meta_path = Path::new(&cache_path).join("gg-meta.json");
+        if let Ok(json) = serde_json::to_string(&meta) {
+            if let Ok(mut file) = File::create(meta_path) {
+                let _ = file.write_all(json.as_bytes());
+            }
+        }
+    }
+
+    executor.post_prep(cache_path.as_str());
+
+    get_executor_app_path(executor, input, path).ok_or("Binary not found".to_string())
+}
+
+fn get_url_matches(urls: &Vec<Download>, input: &AppInput, executor: &dyn Executor) -> Vec<Download> {
     let mut urls_match = urls.iter().filter(|u| {
         if let Some(t_var) = input.target.variant {
             if let Some(u_var) = u.variant {
@@ -288,38 +337,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
 
     urls_match.sort_by(|a, b| b.version.clone().map(|v| v.to_version()).cmp(&a.version.clone().map(|v| v.to_version())));
 
-    let url = urls_match.first();
-
-    let url_string = if let Some(url) = url {
-        pb.set_prefix(format!("{name} {}", url.version.clone().map(|v| v.0).unwrap_or("".to_string())));
-        &url.download_url
-    } else {
-        ""
-    };
-
-    debug!("{:?}", url_string);
-
-    let cache_path = format!(".cache/gg/{path}");
-    download_unpack_and_all_that_stuff(url_string, cache_path.as_str(), pb).await;
-
-    if let Some(download) = url {
-        let download = *download;
-        let meta = GgMeta {
-            download: download.clone(),
-            version_req: GgVersionReq(version_req_str.to_string()),
-            cmd: executor.get_executor_cmd().clone(),
-        };
-        let meta_path = Path::new(&cache_path).join("gg-meta.json");
-        if let Ok(json) = serde_json::to_string(&meta) {
-            if let Ok(mut file) = File::create(meta_path) {
-                let _ = file.write_all(json.as_bytes());
-            }
-        }
-    }
-
-    executor.post_prep(cache_path.as_str());
-
-    get_executor_app_path(executor, input, path).ok_or("Binary not found".to_string())
+    urls_match.into_iter().map(|d| d.clone()).collect()
 }
 
 fn get_app_path(path: &str) -> Result<AppPath, String> {
