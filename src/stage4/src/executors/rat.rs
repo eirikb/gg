@@ -5,9 +5,7 @@ use std::future::Future;
 use std::os::unix::fs::PermissionsExt;
 use std::pin::Pin;
 
-use semver::Version;
-
-use crate::executor::{AppInput, Download, Executor, ExecutorCmd};
+use crate::executor::{AppInput, Download, Executor, ExecutorCmd, GgVersion};
 use crate::target::{Arch, Os, Variant};
 
 pub struct Rat {
@@ -34,7 +32,7 @@ impl Executor for Rat {
                     _ => None
                 };
                 Download {
-                    version: Version::parse(version).ok(),
+                    version: GgVersion::new(version),
                     tags: Default::default(),
                     download_url: url,
                     arch: Some(Arch::X86_64),

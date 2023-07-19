@@ -5,12 +5,12 @@ use std::io::BufReader;
 use std::pin::Pin;
 
 use java_properties::read;
-use semver::{Version, VersionReq};
+use semver::VersionReq;
 use serde::Deserialize;
 use serde::Serialize;
 
 use crate::Executor;
-use crate::executor::{AppInput, AppPath, Download, ExecutorCmd};
+use crate::executor::{AppInput, AppPath, Download, ExecutorCmd, GgVersion};
 use crate::target::{Arch, Os, Target, Variant};
 
 type Root = Vec<Root2>;
@@ -140,7 +140,7 @@ async fn get_java_download_urls(target: &Target) -> Vec<Download> {
         Download {
             download_url: n.url,
             version:
-            Version::parse(&n.java_version.into_iter().map(|i| i.to_string()).collect::<Vec<String>>().join(".")).ok(),
+            GgVersion::new(&n.java_version.into_iter().map(|i| i.to_string()).collect::<Vec<String>>().join(".")),
             os,
             arch,
             variant,

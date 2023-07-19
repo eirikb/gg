@@ -6,10 +6,9 @@ use std::process::ExitCode;
 use futures_util::future::join_all;
 use indicatif::{MultiProgress, ProgressBar, ProgressState, ProgressStyle};
 use log::{debug, info, LevelFilter};
-use semver::VersionReq;
 
 use crate::bloody_indiana_jones::download;
-use crate::executor::{AppInput, Executor, ExecutorCmd, prep, try_run};
+use crate::executor::{AppInput, Executor, ExecutorCmd, GgVersionReq, prep, try_run};
 use crate::no_clap::NoClap;
 use crate::target::Target;
 
@@ -19,6 +18,7 @@ mod executor;
 mod no_clap;
 mod bloody_maven;
 mod executors;
+mod checker;
 
 fn print_help(ver: &str) {
     println!(r"gg.cmd
@@ -38,15 +38,16 @@ Options:
 Built in commands:
     update      Update gg.cmd
     help        Print help
+    check       Check for updates
 
 Examples:
     ./gg.cmd node
     ./gg.cmd gradle@6:java@17 clean build
     ./gg.cmd node@10 -e 'console.log(1)'
-    ./gg.cmd -vv npm@14 start
+    ./gg.cmd -vv -w npm@14 start
     ./gg.cmd java@-jdk+jre -version
-    ./gg.cmd run soapui:java@17
-    ./gg.cmd run env:java@14 java -version
+    ./gg.cmd run:java@17 soapui
+    ./gg.cmd run:java@14 env
     ./gg.cmd update
 
 Supported systems:
@@ -56,7 +57,7 @@ Supported systems:
     maven
     openapi
     rat (ra)
-    run (any aritrary command)
+    run (any arbitrary command)
 ");
 }
 
@@ -81,6 +82,18 @@ async fn main() -> ExitCode {
             .init();
     }
 
+    let system = fs::read_to_string(format!("./.cache/gg/gg-{ver}/system")).unwrap_or(String::from("x86_64-linux")).trim().to_string();
+    let target = Target::parse(&system);
+
+    let input = &AppInput { target, no_clap: no_clap.clone() };
+
+    if no_clap.version {
+        println!("{}", ver);
+        return ExitCode::from(0);
+    }
+
+    debug!(target: "main", "{:?}", &no_clap);
+
     if let Some(cmd) = no_clap.cmds.first() {
         match cmd.cmd.as_str() {
             "update" => {
@@ -94,28 +107,20 @@ async fn main() -> ExitCode {
                 print_help(ver);
                 return ExitCode::from(0);
             }
+            "check" => {
+                checker::check(input).await;
+                return ExitCode::from(0);
+            }
             _ => {}
         };
     }
 
-
-    if no_clap.version {
-        println!("{}", ver);
-        return ExitCode::from(0);
-    }
-
-    debug!(target: "main", "{:?}", &no_clap);
-
-    let system = fs::read_to_string(format!("./.cache/gg/gg-{ver}/system")).unwrap_or(String::from("x86_64-linux")).trim().to_string();
-    let target = Target::parse(&system);
-
     info!("System is {system}. {:?}", &target);
 
-    let input = &AppInput { target, no_clap: no_clap.clone() };
     return if no_clap.cmds.first().is_some() {
         let mut executors = no_clap.cmds.iter().filter_map(|cmd| <dyn Executor>::new(ExecutorCmd {
             cmd: cmd.cmd.to_string(),
-            version: VersionReq::parse(cmd.version.clone().unwrap_or("".to_string()).as_str()).ok(),
+            version: GgVersionReq::new(cmd.version.clone().unwrap_or("".to_string()).as_str()),
             include_tags: cmd.include_tags.clone(),
             exclude_tags: cmd.exclude_tags.clone(),
         })).collect::<Vec<Box<dyn Executor>>>();
