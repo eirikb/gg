@@ -25,7 +25,7 @@ or
 **Install?**  
 The idea is to put a copy of `gg.cmd` in the root of your project.  
 Just like you would do with `gradlew` or `mvnw`.  
-Except this would work for multiple tools.  
+Except this would work with multiple tools.  
 This way your coworkers would not need to install anything on their host.
 
 ## Features
