@@ -7,12 +7,18 @@
 
 ![image](https://github.com/eirikb/gg/assets/241706/b671f15e-23a3-4adb-9488-272e35f6a686)
 
+![image](https://github.com/eirikb/gg/assets/241706/8b6b1e26-e991-4969-8213-3c703527265f)
+
+
 gg.cmd is a cross-platform and cross-architecture command-line interface (CLI) that acts as an executable wrapper for
 various tools such as Gradle, JDK/JVM, Node.js, and Java. It requires minimal dependencies and is similar in
 functionality to gradlew.
 
-Install into root of your repo:
+Install with bash:
 > wget gg.eirikb.no/gg.cmd
+
+Install with PowerShell:
+> wget gg.eirikb.no/gg.cmd -OutFile gg.cmd
 
 or  
 [Download the latest release](https://github.com/eirikb/gg/releases/latest/download/gg.cmd)
