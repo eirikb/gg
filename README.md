@@ -22,6 +22,12 @@ Install with PowerShell:
 or  
 [Download the latest release](https://github.com/eirikb/gg/releases/latest/download/gg.cmd)
 
+**Install?**  
+The idea is to put a copy of `gg.cmd` in the root of your project.  
+Just like you would do with `gradlew` or `mvnw`.  
+Except this would work for multiple tools.  
+This way your coworkers would not need to install anything on their host.
+
 ## Features
 
 - Simplify the management of other executables in your project
