@@ -40,7 +40,8 @@ Built in commands:
     update         Update gg.cmd
     help           Print help
     check          Check for updates
-    checkupdate   Check for updates and update if available
+    checkupdate    Check for updates and update if available
+    cacheclean     Clean cache
 
 Examples:
     ./gg.cmd node
@@ -115,6 +116,11 @@ async fn main() -> ExitCode {
             }
             "checkupdate" => {
                 checker::check(input, true).await;
+                return ExitCode::from(0);
+            }
+            "cacheclean" => {
+                println!("Cleaning cache");
+                let _ = fs::remove_dir_all(".cache/gg");
                 return ExitCode::from(0);
             }
             _ => {}
