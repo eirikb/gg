@@ -27,11 +27,6 @@ The concept involves placing a copy of gg.cmd in the root directory of your proj
 This is similar to what you would do with `gradlew` or `mvnw`, except this method is applicable to multiple tools.  
 As a result, your colleagues would not have to install anything on their host machines."
 
-The idea is to put a copy of `gg.cmd` in the root of your project.  
-Just like you would do with `gradlew` or `mvnw`.  
-Except this would work with multiple tools.  
-This way your coworkers would not need to install anything on their host.
-
 ## Features
 
 - Simplify the management of other executables in your project
