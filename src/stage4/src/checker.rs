@@ -1,9 +1,11 @@
 use std::fs;
+use dialoguer::Confirm;
 use log::{debug, info};
-use crate::executor::{AppInput, GgMeta};
+use crate::barus::create_barus;
+use crate::executor::{AppInput, GgMeta, prep};
 use crate::Executor;
 
-pub async fn check(input: &AppInput) {
+pub async fn check(input: &AppInput, update: bool) {
     let entries = walkdir::WalkDir::new("./.cache/gg").into_iter()
         .filter_map(|x| x.ok())
         .filter(|x| x.file_name().to_string_lossy() == "gg-meta.json");
@@ -27,6 +29,25 @@ pub async fn check(input: &AppInput) {
 
                     if latest_version.clone().map(|v| v.to_version()) > current_version.clone().map(|v| v.to_version()) {
                         println!(" ** {}: New version available!", executor.get_name());
+                        if update {
+                            if Confirm::new()
+                                .with_prompt("Do you want to update?")
+                                .interact()
+                                .unwrap_or(false) {
+                                println!("Updating...");
+                                if let Some(parent) = entry.path().parent() {
+                                    if fs::remove_dir_all(parent).is_ok() {
+                                        let pb = create_barus();
+                                        let e = executor;
+                                        let _ = prep(&*e, input, &pb).await;
+                                    } else {
+                                        println!("Unable to update");
+                                    }
+                                } else {
+                                    println!("Unable to update");
+                                }
+                            }
+                        }
                     }
                 }
             }

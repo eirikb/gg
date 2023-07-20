@@ -1,12 +1,12 @@
 use std::collections::HashMap;
-use std::fmt::Write;
 use std::fs;
 use std::process::ExitCode;
 
 use futures_util::future::join_all;
-use indicatif::{MultiProgress, ProgressBar, ProgressState, ProgressStyle};
+use indicatif::MultiProgress;
 use log::{debug, info, LevelFilter};
 
+use crate::barus::create_barus;
 use crate::bloody_indiana_jones::download;
 use crate::executor::{AppInput, Executor, ExecutorCmd, GgVersionReq, prep, try_run};
 use crate::no_clap::NoClap;
@@ -19,6 +19,7 @@ mod no_clap;
 mod bloody_maven;
 mod executors;
 mod checker;
+mod barus;
 
 fn print_help(ver: &str) {
     println!(r"gg.cmd
@@ -29,16 +30,18 @@ Version: {ver}
 Usage: ./gg.cmd [options] <executable name>@<version>:<dependent executable name>@<version> [program arguments]
 
 Options:
-    -v          Info output
-    -vv         Debug output
-    -vvv        Trace output
-    -w          Even more output
-    -V          Print version
+    -v             Info output
+    -vv            Debug output
+    -vvv           Trace output
+    -w             Even more output
+    -V             Print version
 
 Built in commands:
-    update      Update gg.cmd
-    help        Print help
-    check       Check for updates
+    update         Update gg.cmd
+    help           Print help
+    check          Check for updates
+    checkupdate    Check for updates and update if available
+    cacheclean     Clean cache
 
 Examples:
     ./gg.cmd node
@@ -99,7 +102,7 @@ async fn main() -> ExitCode {
             "update" => {
                 println!("Updating gg.cmd...");
                 let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
-                let pb = ProgressBar::new(0);
+                let pb = create_barus();
                 download(url, "gg.cmd", &pb).await;
                 return ExitCode::from(0);
             }
@@ -108,7 +111,16 @@ async fn main() -> ExitCode {
                 return ExitCode::from(0);
             }
             "check" => {
-                checker::check(input).await;
+                checker::check(input, false).await;
+                return ExitCode::from(0);
+            }
+            "checkupdate" => {
+                checker::check(input, true).await;
+                return ExitCode::from(0);
+            }
+            "cacheclean" => {
+                println!("Cleaning cache");
+                let _ = fs::remove_dir_all(".cache/gg");
                 return ExitCode::from(0);
             }
             _ => {}
@@ -156,11 +168,8 @@ async fn main() -> ExitCode {
             let m = MultiProgress::new();
 
             let alles = executors.iter().enumerate().map(|(i, x)| {
-                let pb = m.insert(i, ProgressBar::new(1));
-                pb.set_style(ProgressStyle::with_template("{prefix:.bold} {spinner:.green} {msg} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
-                    .unwrap()
-                    .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
-                    .progress_chars("#>-"));
+                let pb = create_barus();
+                let pb = m.insert(i, pb);
                 (x, pb)
             }).map(|(x, pb)| async move {
                 let app_path = prep(&**x, &input, &pb).await.expect("Prep failed");
