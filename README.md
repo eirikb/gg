@@ -53,7 +53,7 @@ by the desired executable and its required dependencies:
 ### Example
 
 ```bash
-sh gg.cmd -v gradle@7:java+lts build
+sh gg.cmd npm install
 ```
 
 ## Support table
