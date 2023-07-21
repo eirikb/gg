@@ -1,33 +1,25 @@
-use bloody_indiana_jones::download_unpack_and_all_that_stuff;
-use futures_util::future::join_all;
-use indicatif::{MultiProgress, ProgressBar, ProgressState, ProgressStyle};
-use log::{debug, info};
-use semver::VersionReq;
 use std::collections::HashMap;
-use std::fmt::Write;
 use std::fs;
 use std::process::ExitCode;
 
+use futures_util::future::join_all;
+use indicatif::MultiProgress;
+use log::{debug, info, LevelFilter};
+
+use crate::barus::create_barus;
 use crate::bloody_indiana_jones::download;
-use crate::executor::{AppInput, Executor, ExecutorCmd, prep, try_run};
-use crate::gradle::Gradle;
-use crate::java::Java;
+use crate::executor::{AppInput, Executor, ExecutorCmd, GgVersionReq, prep, try_run};
 use crate::no_clap::NoClap;
-use crate::node::Node;
 use crate::target::Target;
 
 mod target;
 mod bloody_indiana_jones;
-mod node;
-mod deno;
-mod gradle;
-mod maven;
-mod openapigenerator;
-mod java;
 mod executor;
 mod no_clap;
-mod custom_command;
 mod bloody_maven;
+mod executors;
+mod checker;
+mod barus;
 
 fn print_help(ver: &str) {
     println!(r"gg.cmd
@@ -38,21 +30,28 @@ Version: {ver}
 Usage: ./gg.cmd [options] <executable name>@<version>:<dependent executable name>@<version> [program arguments]
 
 Options:
-    -u          Update gg.cmd
-    -v          Verbose output
-    -vv         Debug output
-    -e          Execute first command blindly
-    -c          Execute first command blindly
-    -h          Print help
-    -V          Print version
+    -v             Info output
+    -vv            Debug output
+    -vvv           Trace output
+    -w             Even more output
+    -V             Print version
+
+Built in commands:
+    update         Update gg.cmd
+    help           Print help
+    check          Check for updates
+    checkupdate    Check for updates and update if available
+    cacheclean     Clean cache
 
 Examples:
     ./gg.cmd node
-    ./gg.cmd -c soapui:java@17
     ./gg.cmd gradle@6:java@17 clean build
     ./gg.cmd node@10 -e 'console.log(1)'
-    ./gg.cmd -vv npm@14 start
+    ./gg.cmd -vv -w npm@14 start
     ./gg.cmd java@-jdk+jre -version
+    ./gg.cmd run:java@17 soapui
+    ./gg.cmd run:java@14 env
+    ./gg.cmd update
 
 Supported systems:
     node (npm, npx will also work, version refers to node version)
@@ -60,7 +59,8 @@ Supported systems:
     java
     maven
     openapi
-    deno
+    rat (ra)
+    run (any arbitrary command)
 ");
 }
 
@@ -69,38 +69,70 @@ async fn main() -> ExitCode {
     let ver = option_env!("VERSION").unwrap_or("dev");
 
     let no_clap = NoClap::new();
-    env_logger::init_from_env(env_logger::Env::default().default_filter_or(&no_clap.log_level));
-
-    if no_clap.help {
-        print_help(ver);
-        return ExitCode::from(0);
+    let log_level = match no_clap.log_level.as_str() {
+        "debug" => LevelFilter::Debug,
+        "info" => LevelFilter::Info,
+        _ => LevelFilter::Warn,
+    };
+    if no_clap.log_external {
+        env_logger::builder().filter_level(log_level).init();
+    } else {
+        env_logger::builder()
+            .filter_module("gg", log_level)
+            .filter_module("gg:executors", log_level)
+            .filter_module("stage4", log_level)
+            .filter_module("stage4:executors", log_level)
+            .init();
     }
+
+    let system = fs::read_to_string(format!("./.cache/gg/gg-{ver}/system")).unwrap_or(String::from("x86_64-linux")).trim().to_string();
+    let target = Target::parse(&system);
+
+    let input = &AppInput { target, no_clap: no_clap.clone() };
 
     if no_clap.version {
         println!("{}", ver);
         return ExitCode::from(0);
     }
 
-    if no_clap.update {
-        println!("Updating gg.cmd...");
-        let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
-        let pb = ProgressBar::new(0);
-        download(url, "gg.cmd", &pb).await;
-        return ExitCode::from(0);
-    }
-
     debug!(target: "main", "{:?}", &no_clap);
 
-    let system = fs::read_to_string(format!("./.cache/gg-{ver}/system")).unwrap_or(String::from("x86_64-linux")).trim().to_string();
-    let target = Target::parse(&system);
+    if let Some(cmd) = no_clap.cmds.first() {
+        match cmd.cmd.as_str() {
+            "update" => {
+                println!("Updating gg.cmd...");
+                let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
+                let pb = create_barus();
+                download(url, "gg.cmd", &pb).await;
+                return ExitCode::from(0);
+            }
+            "help" => {
+                print_help(ver);
+                return ExitCode::from(0);
+            }
+            "check" => {
+                checker::check(input, false).await;
+                return ExitCode::from(0);
+            }
+            "checkupdate" => {
+                checker::check(input, true).await;
+                return ExitCode::from(0);
+            }
+            "cacheclean" => {
+                println!("Cleaning cache");
+                let _ = fs::remove_dir_all(".cache/gg");
+                return ExitCode::from(0);
+            }
+            _ => {}
+        };
+    }
 
     info!("System is {system}. {:?}", &target);
 
-    let input = &AppInput { target, no_clap: no_clap.clone() };
     return if no_clap.cmds.first().is_some() {
         let mut executors = no_clap.cmds.iter().filter_map(|cmd| <dyn Executor>::new(ExecutorCmd {
             cmd: cmd.cmd.to_string(),
-            version: VersionReq::parse(cmd.version.clone().unwrap_or("".to_string()).as_str()).ok(),
+            version: GgVersionReq::new(cmd.version.clone().unwrap_or("".to_string()).as_str()),
             include_tags: cmd.include_tags.clone(),
             exclude_tags: cmd.exclude_tags.clone(),
         })).collect::<Vec<Box<dyn Executor>>>();
@@ -136,38 +168,35 @@ async fn main() -> ExitCode {
             let m = MultiProgress::new();
 
             let alles = executors.iter().enumerate().map(|(i, x)| {
-                let pb = m.insert(i, ProgressBar::new(1));
-                pb.set_style(ProgressStyle::with_template("{prefix:.bold} {spinner:.green} {msg} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({eta})")
-                    .unwrap()
-                    .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
-                    .progress_chars("#>-"));
+                let pb = create_barus();
+                let pb = m.insert(i, pb);
                 (x, pb)
             }).map(|(x, pb)| async move {
                 let app_path = prep(&**x, &input, &pb).await.expect("Prep failed");
-                let p = app_path.clone();
-                (app_path, x.get_env(p))
+                let env = x.get_env(&app_path);
+                let bin_dirs = x.get_bin_dirs();
+                (app_path, env, bin_dirs)
             });
             let res = join_all(alles).await;
 
-            for (app_path, env) in res.clone() {
+            for (app_path, env, bin_dirs) in res.clone() {
+                for bin_dir in &bin_dirs {
+                    path_vars.push(app_path.install_dir.clone().join(bin_dir).to_str().unwrap_or("").to_string());
+                }
                 for (key, value) in env {
-                    path_vars.push(app_path.clone().parent_bin_path());
                     env_vars.insert(key.to_string(), value.to_string());
                 }
             }
 
-            let (app_path, _) = &res[0];
+            let (app_path, _, _) = &res[0];
             let executor = &executors[0];
 
-            if app_path.bin.exists() {
-                if try_run(input, &**executor, app_path.clone(), path_vars, env_vars).await.unwrap() {
-                    ExitCode::from(0)
-                } else {
-                    println!("Unable to execute");
-                    ExitCode::from(1)
-                }
+            info!("Path vars: {}", &path_vars.join(", "));
+
+            if try_run(input, &**executor, app_path.clone(), path_vars, env_vars).await.unwrap() {
+                ExitCode::from(0)
             } else {
-                println!("Binary not found!");
+                println!("Unable to execute");
                 ExitCode::from(1)
             }
         } else {

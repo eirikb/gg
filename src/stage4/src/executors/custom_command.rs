@@ -1,14 +1,14 @@
 use std::future::Future;
+use std::path::PathBuf;
 use std::pin::Pin;
 
 use semver::VersionReq;
-use which::which;
 
 use crate::Executor;
 use crate::executor::{AppInput, AppPath, Download, ExecutorCmd};
 
 pub struct CustomCommand {
-    executor_cmd: ExecutorCmd,
+    pub executor_cmd: ExecutorCmd,
 }
 
 impl Executor for CustomCommand {
@@ -24,25 +24,19 @@ impl Executor for CustomCommand {
         Box::pin(async move { vec!() })
     }
 
-    fn get_bin(&self, _input: &AppInput) -> Vec<&str> {
-        vec!(self.executor_cmd.cmd.as_str())
+    fn get_bins(&self, input: &AppInput) -> Vec<String> {
+        vec![input.no_clap.app_args[0].as_str().to_string()]
     }
 
     fn get_name(&self) -> &str {
         "custom_command"
     }
 
-    fn custom_prep(&self) -> Option<AppPath> {
-        let cmd = self.executor_cmd.cmd.as_str();
-        let bin = which(cmd.clone());
-        if let Ok(bin) = bin {
-            Some(AppPath {
-                app: bin.clone(),
-                bin,
-            })
-        } else {
-            println!("Custom command {} not found", cmd);
-            return None;
-        }
+    fn customize_args(&self, input: &AppInput, _app_path: &AppPath) -> Vec<String> {
+        input.no_clap.app_args.clone().into_iter().skip(1).collect()
+    }
+
+    fn custom_prep(&self, _input: &AppInput) -> Option<AppPath> {
+        Some(AppPath { install_dir: PathBuf::new() })
     }
 }

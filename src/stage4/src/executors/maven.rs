@@ -3,10 +3,9 @@ use std::future::Future;
 use std::pin::Pin;
 
 use scraper::{Html, Selector};
-use semver::Version;
 
 use crate::Executor;
-use crate::executor::{AppInput, Download, ExecutorCmd};
+use crate::executor::{AppInput, Download, ExecutorCmd, GgVersion};
 use crate::target::{Arch, Os, Variant};
 
 pub struct Maven {
@@ -43,7 +42,7 @@ impl Executor for Maven {
                     }
                     Download {
                         download_url: format!("{url}{link}"),
-                        version: Version::parse(get_version(link).as_str()).ok(),
+                        version: GgVersion::new(get_version(link).as_str()),
                         os: Some(Os::Any),
                         arch: Some(Arch::Any),
                         variant: Some(Variant::Any),
@@ -53,11 +52,8 @@ impl Executor for Maven {
         })
     }
 
-    fn get_bin(&self, input: &AppInput) -> Vec<&str> {
-        match &input.target.os {
-            Os::Windows => vec!("bin/mvn.cmd", "bin/mvn.bat", "maven.bat"),
-            _ => vec!("bin/mvn", "bin/maven")
-        }
+    fn get_bins(&self, _input: &AppInput) -> Vec<String> {
+        vec!["mvn".to_string(), "mvn.bat".to_string(), "maven.bat".to_string()]
     }
 
     fn get_name(&self) -> &str {

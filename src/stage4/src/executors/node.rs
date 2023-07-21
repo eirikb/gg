@@ -6,11 +6,11 @@ use std::pin::Pin;
 use log::info;
 use package_json::PackageJsonManager;
 use regex::Regex;
-use semver::{Version, VersionReq};
+use semver::VersionReq;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::executor::{AppInput, Download, Executor, ExecutorCmd};
+use crate::executor::{AppInput, Download, Executor, ExecutorCmd, GgVersion};
 use crate::target::{Arch, Os, Target, Variant};
 
 type Root = Vec<Root2>;
@@ -82,19 +82,19 @@ impl Executor for Node {
         Box::pin(async move { get_node_urls(&input.target).await })
     }
 
-    fn get_bin(&self, input: &AppInput) -> Vec<&str> {
-        vec!(match &input.target.os {
+    fn get_bins(&self, input: &AppInput) -> Vec<String> {
+        vec![match &input.target.os {
             Os::Windows => match self.executor_cmd.cmd.as_str() {
                 "node" => "node.exe",
                 "npm" => "npm.cmd",
                 _ => "npx.cmd",
             },
             _ => match self.executor_cmd.cmd.as_str() {
-                "node" => "bin/node",
-                "npm" => "bin/npm",
-                _ => "bin/npx"
+                "node" => "node",
+                "npm" => "npm",
+                _ => "npx"
             }
-        })
+        }.to_string()]
     }
 
     fn get_name(&self) -> &str {
@@ -147,10 +147,10 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
             HashSet::new()
         };
         let string = version.replace("v", "");
-        let result = Version::parse(string.as_str());
+        let result = GgVersion::new(string.as_str());
         return Download {
             download_url: format!("https://{host}/download/release/{version}/node-{version}-{file_fix}"),
-            version: result.ok(),
+            version: result,
             tags,
             // Arch and Os are mapped by target Arch/Os
             arch: Some(Arch::Any),

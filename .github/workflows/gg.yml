@@ -213,21 +213,21 @@ jobs:
           mv src/stage2 _stage2
           mv src/stage3 _stage3
           VERSION=${{needs.version.outputs.version}}
-          rm -rf .cache/gg-$VERSION
-          mkdir -p .cache/gg-$VERSION
+          rm -rf .cache/gg/gg-$VERSION
+          mkdir -p .cache/gg/gg-$VERSION
           rm -rf src
           for dir in stage3*; do
             for file in "$dir"/*; do
-              cp "$file" .cache/gg-$VERSION/
+              cp "$file" .cache/gg/gg-$VERSION/
             done
           done
           # Prevent wine from trying to run (if installed on users PC)
           # mv .cache/gg/stage3_x86_64-pc-windows-msvc .cache/gg/stage3_zz_x86_64-pc-windows-msvc
           sed -i "s/VERVER/$VERSION/g" _stage2/stage2.*
-          cp _stage2/stage2.sh .cache/gg-$VERSION/
-          cp _stage2/stage2.ps1 .cache/gg-$VERSION/
-          cp hashes/hashes .cache/gg-$VERSION/
-          chmod +x .cache/gg-$VERSION/stage2.sh
+          cp _stage2/stage2.sh .cache/gg/gg-$VERSION/
+          cp _stage2/stage2.ps1 .cache/gg/gg-$VERSION/
+          cp hashes/hashes .cache/gg/gg-$VERSION/
+          chmod +x .cache/gg/gg-$VERSION/stage2.sh
           tar -zpvcf gg.tgz .cache
           
           sed -i "s/VERVER/$VERSION/g" _stage1/stage1.*
@@ -252,7 +252,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022, macOS-11, macOS-12 ]
-        cmd: [ "node@14 -v", "node@14 -e 'console.log(1)'", "npm@14 -v", "npx@14 -v", "java -version", "java@11 -version", "java@+lts -version", "gradle@7 -version", "gradle -version", "maven -v", "openapi version" ]
+        cmd: [ "node@14 -v", "node@14 -e 'console.log(1)'", "npm@14 -v", "npx@14 -v", "java -version", "java@11 -version", "java@+lts -version", "gradle@7 -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version" ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -297,7 +297,7 @@ jobs:
     strategy:
       matrix:
         os: [ windows-2019, windows-2022 ]
-        cmd: [ "node@14 -v", "node@14 -e 'console.log(1)'", "npm@14 -v", "npx@14 -v", "java -version", "java@11 -version", "java@+lts -version", "gradle@7 -version", "gradle -version", "maven -v", "openapi version" ]
+        cmd: [ "node@14 -v", "node@14 -e 'console.log(1)'", "npm@14 -v", "npx@14 -v", "java -version", "java@11 -version", "java@+lts -version", "gradle@7 -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version" ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -341,7 +341,7 @@ jobs:
     strategy:
       matrix:
         container: [ ubuntu, debian, alpine, archlinux, 'ubuntu:14.04', 'ubuntu:18.04' ]
-        cmd: [ "node@14 -v", "node@14 -e 'console.log(1)'", "npm@14 -v", "npx@14 -v", "java -version", "java@11 -version", "java@+lts -version", "gradle@7 -version", "gradle -version", "maven -v", "openapi version" ]
+        cmd: [ "node@14 -v", "node@14 -e 'console.log(1)'", "npm@14 -v", "npx@14 -v", "java -version", "java@11 -version", "java@+lts -version", "gradle@7 -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version" ]
 
     runs-on: ubuntu-latest
     container: ${{ matrix.container }}

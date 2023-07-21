@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::env;
+use std::fs::File;
 use std::future::Future;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::process::Command;
@@ -8,28 +10,76 @@ use std::process::Command;
 use indicatif::ProgressBar;
 use log::{debug, info};
 use semver::{Version, VersionReq};
-
-use crate::{download_unpack_and_all_that_stuff, Gradle, Java, NoClap, Node};
-use crate::deno::Deno;
-use crate::maven::Maven;
-use crate::openapigenerator::OpenAPIGenerator;
+use serde::{Serialize, Deserialize};
+use which::{which_in};
+use crate::bloody_indiana_jones::download_unpack_and_all_that_stuff;
+use crate::executors::custom_command::CustomCommand;
+use crate::executors::gradle::Gradle;
+use crate::executors::java::Java;
+use crate::executors::maven::Maven;
+use crate::executors::node::Node;
+use crate::executors::openapigenerator::OpenAPIGenerator;
+use crate::executors::rat::Rat;
+use crate::no_clap::NoClap;
 use crate::target::{Arch, Os, Target, Variant};
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct AppPath {
-    pub app: PathBuf,
-    pub bin: PathBuf,
-}
-
-impl AppPath {
-    pub(crate) fn parent_bin_path(&self) -> String {
-        self.bin.parent().unwrap_or(Path::new("/")).to_str().unwrap_or("").to_string()
-    }
+    pub install_dir: PathBuf,
 }
 
 pub struct AppInput {
     pub target: Target,
     pub no_clap: NoClap,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GgVersion(String);
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GgVersionReq(String);
+
+impl GgVersion {
+    pub fn to_version(&self) -> Version {
+        Version::parse(&self.0).unwrap()
+    }
+
+    pub fn to_string(&self) -> String {
+        self.0.clone()
+    }
+
+    pub fn new(version: &str) -> Option<Self> {
+        return if Version::parse(version).is_ok() {
+            Some(Self(version.to_string()))
+        } else {
+            None
+        };
+    }
+}
+
+impl GgVersionReq {
+    pub fn to_version_req(&self) -> VersionReq {
+        VersionReq::parse(&self.0).unwrap()
+    }
+
+    pub fn to_string(&self) -> String {
+        self.0.clone()
+    }
+
+    pub fn new(version_req: &str) -> Option<Self> {
+        return if VersionReq::parse(version_req).is_ok() {
+            Some(Self(version_req.to_string()))
+        } else {
+            None
+        };
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct GgMeta {
+    pub version_req: GgVersionReq,
+    pub download: Download,
+    pub cmd: ExecutorCmd,
 }
 
 #[cfg(test)]
@@ -39,9 +89,9 @@ impl AppInput {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Download {
-    pub version: Option<Version>,
+    pub version: Option<GgVersion>,
     pub tags: HashSet<String>,
     pub download_url: String,
     pub arch: Option<Arch>,
@@ -53,7 +103,7 @@ impl Download {
     pub fn new(download_url: String, version: &str, variant: Option<Variant>) -> Download {
         return Download {
             download_url,
-            version: Version::parse(version).ok(),
+            version: GgVersion::new(version),
             os: Some(Os::Any),
             arch: Some(Arch::Any),
             variant,
@@ -62,10 +112,10 @@ impl Download {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ExecutorCmd {
     pub cmd: String,
-    pub version: Option<VersionReq>,
+    pub version: Option<GgVersionReq>,
     pub include_tags: HashSet<String>,
     pub exclude_tags: HashSet<String>,
 }
@@ -85,9 +135,14 @@ impl dyn Executor {
             "java" => Some(Box::new(Java { executor_cmd })),
             "maven" | "mvn" => Some(Box::new(Maven { executor_cmd })),
             "openapi" => Some(Box::new(OpenAPIGenerator { executor_cmd })),
-            "deno" => Some(Box::new(Deno { executor_cmd })),
-            _ => None
+            "rat" | "ra" => Some(Box::new(Rat { executor_cmd })),
+            "run" => Some(Box::new(CustomCommand { executor_cmd })),
+            _ => None,
         }
+    }
+
+    pub fn get_url_matches(&self, urls: &Vec<Download>, input: &AppInput) -> Vec<Download> {
+        get_url_matches(urls, input, self)
     }
 }
 
@@ -97,7 +152,7 @@ pub trait Executor {
         None
     }
     fn get_download_urls<'a>(&'a self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>>;
-    fn get_bin(&self, input: &AppInput) -> Vec<&str>;
+    fn get_bins(&self, input: &AppInput) -> Vec<String>;
     fn get_name(&self) -> &str;
     fn get_deps(&self) -> Vec<&str> {
         vec![]
@@ -108,43 +163,41 @@ pub trait Executor {
     fn get_default_exclude_tags(&self) -> HashSet<String> {
         HashSet::new()
     }
-    fn get_env(&self, _app_path: AppPath) -> HashMap<String, String> {
+    fn get_env(&self, _app_path: &AppPath) -> HashMap<String, String> {
         HashMap::new()
     }
-    fn get_custom_bin_path(&self, _paths: &str) -> Option<String> { None }
-    fn get_additional_args(&self, _app_path: &AppPath) -> Vec<String> { vec!() }
 
-    fn custom_prep(&self) -> Option<AppPath> {
+    fn get_bin_dirs(&self) -> Vec<String> {
+        vec!["bin".to_string(), ".".to_string()]
+    }
+
+    fn customize_args(&self, input: &AppInput, _app_path: &AppPath) -> Vec<String> {
+        input.no_clap.app_args.clone()
+    }
+
+    fn custom_prep(&self, _input: &AppInput) -> Option<AppPath> {
         None
     }
     fn post_prep(&self, _cache_path: &str) {}
 }
 
-fn get_executor_app_path(executor: &dyn Executor, input: &AppInput, path: &str) -> Option<AppPath> {
-    let bins = executor.get_bin(input);
-    let bin = bins.join(",");
-    info!( "Trying to find {bin} in {path}");
-    if let Some(p) = bins.iter().map(|bin| {
-        if let Ok(app_path) = get_app_path(bin, path) {
-            Some(app_path)
-        } else {
-            None
-        }
-    }).find(|p| p.is_some()) {
-        p
+fn get_executor_app_path(_executor: &dyn Executor, _input: &AppInput, path: &str) -> Option<AppPath> {
+    info!( "Trying to find {path}");
+    if let Ok(app_path) = get_app_path(path) {
+        Some(app_path)
     } else {
         None
     }
 }
 
 pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -> Result<AppPath, String> {
-    if let Some(app_path) = executor.custom_prep() {
+    if let Some(app_path) = executor.custom_prep(input) {
         return Ok(app_path);
     }
 
     let executor_cmd = &executor.get_executor_cmd();
     let version_req = if let Some(ver) = &executor_cmd.version {
-        Some(ver.clone())
+        Some(ver.to_version_req())
     } else if let Some(ver) = executor.get_version_req() {
         Some(ver)
     } else {
@@ -165,9 +218,9 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
     pb.set_prefix(String::from(name));
 
     match app_path {
-        Some(app_path_ok) if app_path_ok.bin.exists() => return Ok(app_path_ok),
+        Some(app_path_ok) if app_path_ok.install_dir.exists() => return Ok(app_path_ok),
         _ => {
-            info!("App {name} not found in cache. Download time");
+            info!("{name} not found in cache. Download time");
         }
     }
 
@@ -181,6 +234,43 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
         panic!("Did not find any download URL!");
     }
 
+    let urls_match = get_url_matches(&urls, input, executor);
+
+    let url = urls_match.first();
+
+    let url_string = if let Some(url) = url {
+        pb.set_prefix(format!("{name} {}", url.version.clone().map(|v| v.0).unwrap_or("".to_string())));
+        &url.download_url
+    } else {
+        ""
+    };
+
+    debug!("{:?}", url_string);
+
+    let cache_path = format!(".cache/gg/{path}");
+    download_unpack_and_all_that_stuff(url_string, cache_path.as_str(), pb).await;
+
+    if let Some(download) = url {
+        let download = download;
+        let meta = GgMeta {
+            download: download.clone(),
+            version_req: GgVersionReq(version_req_str.to_string()),
+            cmd: executor.get_executor_cmd().clone(),
+        };
+        let meta_path = Path::new(&cache_path).join("gg-meta.json");
+        if let Ok(json) = serde_json::to_string(&meta) {
+            if let Ok(mut file) = File::create(meta_path) {
+                let _ = file.write_all(json.as_bytes());
+            }
+        }
+    }
+
+    executor.post_prep(cache_path.as_str());
+
+    get_executor_app_path(executor, input, path).ok_or("Binary not found".to_string())
+}
+
+fn get_url_matches(urls: &Vec<Download>, input: &AppInput, executor: &dyn Executor) -> Vec<Download> {
     let mut urls_match = urls.iter().filter(|u| {
         if let Some(t_var) = input.target.variant {
             if let Some(u_var) = u.variant {
@@ -213,17 +303,6 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
             return false;
         }
 
-        if let Some(os) = u.os {
-            if os != Os::Any && !(match input.target.os {
-                Os::Windows => u.download_url.ends_with(".zip"),
-                Os::Linux => u.download_url.ends_with(".tar.gz"),
-                Os::Mac => u.download_url.ends_with(".tar.gz"),
-                Os::Any => u.download_url.ends_with(".tar.gz")
-            }) {
-                return false;
-            }
-        }
-
         let cmd = executor.get_executor_cmd();
         for tag in &cmd.include_tags {
             if !u.tags.contains(tag.as_str()) {
@@ -247,7 +326,7 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
         }
         if let Some(version_req) = &cmd.version {
             if let Some(version) = &u.version {
-                if version_req.matches(version) {
+                if version_req.to_version_req().matches(&version.to_version()) {
                     return true;
                 }
             }
@@ -256,66 +335,50 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
         return true;
     }).collect::<Vec<_>>();
 
-    urls_match.sort_by(|a, b| b.version.cmp(&a.version));
+    urls_match.sort_by(|a, b| b.version.clone().map(|v| v.to_version()).cmp(&a.version.clone().map(|v| v.to_version())));
 
-    let url = urls_match.first();
-
-    let url_string = if let Some(url) = url {
-        pb.set_prefix(format!("{name} {}", url.version.clone().map(|v| v.to_string()).unwrap_or("".to_string())));
-        &url.download_url
-    } else {
-        ""
-    };
-
-    debug!("{:?}", url_string);
-
-    let cache_path = format!(".cache/{path}");
-    download_unpack_and_all_that_stuff(url_string, cache_path.as_str(), pb).await;
-
-    executor.post_prep(cache_path.as_str());
-
-    get_executor_app_path(executor, input, path).ok_or("Binary not found".to_string())
+    urls_match.into_iter().map(|d| d.clone()).collect()
 }
 
-fn get_app_path(bin: &str, path: &str) -> Result<AppPath, String> {
+fn get_app_path(path: &str) -> Result<AppPath, String> {
     let path = env::current_dir()
         .map_err(|_| "Current dir not found")?
-        .join(".cache")
+        .join(".cache/gg")
         .join(path);
 
-    let bin_path = path.join(bin);
-
-    if bin_path.exists() {
-        Ok(AppPath { app: path, bin: bin_path })
+    if path.exists() {
+        Ok(AppPath { install_dir: path })
     } else {
         Err("Binary not found".to_string())
     }
 }
 
 pub async fn try_run(input: &AppInput, executor: &dyn Executor, app_path: AppPath, path_vars: Vec<String>, env_vars: HashMap<String, String>) -> Result<bool, String> {
-    let args: Vec<String> = executor.get_additional_args(&app_path).iter().cloned().chain(
-        input.no_clap.app_args.iter().cloned()
-    ).collect();
+    let args = executor.customize_args(&input, &app_path);
     let path_string = &env::var("PATH").unwrap_or("".to_string());
-    let parent_bin_path = app_path.parent_bin_path();
     let paths = env::join_paths(path_vars).unwrap().to_str().unwrap().to_string();
-    let all_paths = vec!(parent_bin_path, paths, path_string.to_string()).join(":");
-    let bin_path = if let Some(bin_path) = executor.get_custom_bin_path(all_paths.as_str()) {
-        bin_path
-    } else {
-        app_path.bin.to_str().unwrap_or("").to_string()
-    };
-    info!("Executing: {:?}. With args:{:?}", bin_path, args);
-    debug!("PATH: {all_paths}");
-    let mut command = Command::new(&bin_path);
-    let res = command
-        .env("PATH", all_paths)
-        .envs(env_vars)
-        .args(args)
-        .spawn().map_err(|e| e.to_string())?.wait().map_err(|_| "eh")?.success();
-    if !res {
-        info!("Unable to execute {bin_path}");
+    let all_paths = vec!(paths, path_string.to_string()).join(match env::consts::OS {
+        "windows" => ";",
+        _ => ":",
+    });
+    info!("PATH: {all_paths}");
+    let bins = executor.get_bins(&input);
+    info!("Trying to find these bins: {}", bins.join(","));
+    for bin in bins {
+        let bin_paths = which_in(bin, Some(&all_paths), ".");
+        if let Ok(bin_path) = bin_paths {
+            info!("Executing: {:?}. With args:{:?}", bin_path, args);
+            let mut command = Command::new(&bin_path);
+            let res = command
+                .env("PATH", all_paths)
+                .envs(env_vars)
+                .args(args)
+                .spawn().map_err(|e| e.to_string())?.wait().map_err(|_| "eh")?.success();
+            if !res {
+                info!("Unable to execute {}", bin_path.display());
+            }
+            return Ok(res);
+        }
     }
-
-    Ok(res)
+    Err("Binary not found".to_string())
 }

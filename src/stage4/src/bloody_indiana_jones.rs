@@ -53,8 +53,7 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str, pb: &Prog
     info!("Downloading {url}");
     pb.set_message("Preparing");
 
-    let ver = option_env!("VERSION").unwrap_or("dev");
-    let downloads_dir = &format!(".cache/gg-{ver}/downloads");
+    let downloads_dir = &format!(".cache/gg/downloads");
     create_dir_all(downloads_dir).expect("Unable to create download dir");
     let file_name = get_file_name(url);
     let file_path = &format!("{downloads_dir}/{file_name}");
@@ -107,7 +106,7 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str, pb: &Prog
         }
     }
 
-    let file_name = Path::new(&format!(".cache/gg-{ver}/downloads/{file_name}")).with_extension("").to_str().unwrap().to_string();
+    let file_name = Path::new(&format!(".cache/gg/downloads/{file_name}")).with_extension("").to_str().unwrap().to_string();
 
     match Path::new(&file_name).extension().unwrap().to_str() {
         Some("tar") => {
