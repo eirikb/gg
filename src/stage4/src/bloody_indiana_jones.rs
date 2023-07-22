@@ -108,14 +108,13 @@ pub async fn download_unpack_and_all_that_stuff(url: &str, path: &str, pb: &Prog
 
     let file_name = Path::new(&format!(".cache/gg/downloads/{file_name}")).with_extension("").to_str().unwrap().to_string();
 
-    match Path::new(&file_name).extension().unwrap().to_str() {
-        Some("tar") => {
+    if let Some(extension) = Path::new(&file_name).extension() {
+        if extension == "tar" {
             info!("Untar {file_name}");
             pb.set_message("Untar");
             let mut archive = tar::Archive::new(std::io::BufReader::new(File::open(file_name).unwrap()));
             archive.unpack(path).expect("Unable to extract");
         }
-        _ => {}
     }
 
     let path_string = String::from(path);
