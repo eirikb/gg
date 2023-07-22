@@ -10,10 +10,12 @@ use std::process::Command;
 use indicatif::ProgressBar;
 use log::{debug, info};
 use semver::{Version, VersionReq};
-use serde::{Serialize, Deserialize};
-use which::{which_in};
+use serde::{Deserialize, Serialize};
+use which::which_in;
+
 use crate::bloody_indiana_jones::download_unpack_and_all_that_stuff;
 use crate::executors::custom_command::CustomCommand;
+use crate::executors::deno::Deno;
 use crate::executors::gradle::Gradle;
 use crate::executors::java::Java;
 use crate::executors::maven::Maven;
@@ -137,6 +139,7 @@ impl dyn Executor {
             "openapi" => Some(Box::new(OpenAPIGenerator { executor_cmd })),
             "rat" | "ra" => Some(Box::new(Rat { executor_cmd })),
             "run" => Some(Box::new(CustomCommand { executor_cmd })),
+            "deno" => Some(Box::new(Deno { executor_cmd })),
             _ => None,
         }
     }
