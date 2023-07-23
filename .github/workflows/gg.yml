@@ -74,7 +74,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspace: "stage42"
+          workspaces: "stage42"
 
       - name: Build
         shell: bash
