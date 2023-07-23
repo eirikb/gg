@@ -66,19 +66,22 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: "src/stage4"
+          workspaces: "stage42"
 
       - name: Build
         shell: bash
         run: |
-          cd src/stage4
+          mkdir -p stage42
+          mv src/stage4/* stage42
+          rm -rf src
+          cd stage42
           export VERSION=${{needs.version.outputs.version}}
           
           cargo test
           cargo build --release --target=${{ matrix.target }}
-          mkdir stage4
-          find . -type f -name stage4.exe -exec cp {} stage4 \;
-          find . -type f -name stage4 -exec cp {} stage4 \;
+          find . -type f -name stage4.exe -exec cp {} ../stage4 \;
+          find . -type f -name stage4 -exec cp {} ../stage4 \;
+
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
