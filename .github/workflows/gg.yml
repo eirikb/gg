@@ -59,15 +59,9 @@ jobs:
             stage42/target
           key: cache1-OS-${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: cargo pls
+      - name: Prepare build
         shell: bash
         run: |
-          mkdir -p stage42
-          mv src/stage4/* stage42
-          rm -rf src
-          cd stage42
-          export VERSION=${{needs.version.outputs.version}}
-          
           if [[ "${{ matrix.os }}" == *"ubuntu"* ]]
           then
               sudo apt-get -y update
@@ -77,6 +71,20 @@ jobs:
           
           rustup update
           rustup target add ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspace: "stage42"
+
+      - name: Build
+        shell: bash
+        run: |
+          mkdir -p stage42
+          mv src/stage4/* stage42
+          rm -rf src
+          cd stage42
+          export VERSION=${{needs.version.outputs.version}}
+          
           cargo test
           cargo build --release --target=${{ matrix.target }}
           find . -type f -name stage4.exe -exec cp {} ../stage4 \;
@@ -245,6 +253,12 @@ jobs:
         with:
           name: gg.cmd
           path: gg.cmd
+
+      - uses: LanceMcCarthy/Action-AzureBlobUpload@v1.9.0
+        with:
+          connection_string: ${{ secrets.ConnectionString }}
+          container_name: $web
+          source: gg.cmd
 
 
   test-OS:
