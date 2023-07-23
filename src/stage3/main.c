@@ -15,7 +15,7 @@
 
 int main() {
   const long bufferSize = 65536;
-  const char *host = "gg.eirikb.no";
+  const char *host = "ggcmd.z13.web.core.windows.net";
 
   char path[1000];
   snprintf(path, 1000, "/%s", hash);
