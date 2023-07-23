@@ -51,14 +51,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            stage42/target
-          key: cache1-OS-${{ matrix.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-
       - name: Prepare build
         shell: bash
         run: |
@@ -74,22 +66,19 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: "stage42"
+          workspaces: "src/stage4"
 
       - name: Build
         shell: bash
         run: |
-          mkdir -p stage42
-          mv src/stage4/* stage42
-          rm -rf src
-          cd stage42
+          cd src/stage4
           export VERSION=${{needs.version.outputs.version}}
           
           cargo test
           cargo build --release --target=${{ matrix.target }}
-          find . -type f -name stage4.exe -exec cp {} ../stage4 \;
-          find . -type f -name stage4 -exec cp {} ../stage4 \;
-
+          mkdir stage4
+          find . -type f -name stage4.exe -exec cp {} stage4 \;
+          find . -type f -name stage4 -exec cp {} stage4 \;
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
@@ -247,20 +236,12 @@ jobs:
           sed -i "s/AAA/$a/" 1;
           sed -i "s/BBB/$b/" 1;
           cat 1 gg.tgz > gg.cmd
-          mkdir to_blob
-          cp gg.cmd to_blob/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
           name: gg.cmd
           path: gg.cmd
-
-      - uses: LanceMcCarthy/Action-AzureBlobUpload@v2
-        with:
-          connection_string: ${{ secrets.ConnectionString }}
-          container_name: $web
-          source_folder: to_blob
 
 
   test-OS:
@@ -401,6 +382,19 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: gg.cmd
+
+      - name: Prepare upload
+        shell: bash
+        run: |
+          set -x
+          mkdir to_blob
+          cp gg.cmd to_blob
+
+      - uses: LanceMcCarthy/Action-AzureBlobUpload@v2
+        with:
+          connection_string: ${{ secrets.ConnectionString }}
+          container_name: $web
+          source_folder: to_blob
 
       - name: Upload Release Asset
         id: upload-release-asset
