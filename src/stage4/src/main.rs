@@ -60,6 +60,7 @@ Supported systems:
     maven
     openapi
     rat (ra)
+    deno
     run (any arbitrary command)
 ");
 }

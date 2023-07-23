@@ -17,7 +17,7 @@ int __cdecl main() {
   struct addrinfo *result = NULL, *ptr = NULL, hints;
   char path[1000];
   snprintf(path, 1000, "/%s", hash);
-  const char *host = "gg.eirikb.no";
+  const char *host = "ggcmd.z13.web.core.windows.net";
   char header[1024];
   snprintf(header, sizeof(header), "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", path,
            host);
