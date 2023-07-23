@@ -132,7 +132,7 @@ jobs:
           name: hashes
           path: hashes
 
-      - uses: LanceMcCarthy/Action-AzureBlobUpload@v1.9.0
+      - uses: LanceMcCarthy/Action-AzureBlobUpload@v2
         with:
           connection_string: ${{ secrets.ConnectionString }}
           container_name: $web
@@ -247,6 +247,8 @@ jobs:
           sed -i "s/AAA/$a/" 1;
           sed -i "s/BBB/$b/" 1;
           cat 1 gg.tgz > gg.cmd
+          mkdir to_blob
+          cp gg.cmd to_blob/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
@@ -254,11 +256,11 @@ jobs:
           name: gg.cmd
           path: gg.cmd
 
-      - uses: LanceMcCarthy/Action-AzureBlobUpload@v1.9.0
+      - uses: LanceMcCarthy/Action-AzureBlobUpload@v2
         with:
           connection_string: ${{ secrets.ConnectionString }}
           container_name: $web
-          source: gg.cmd
+          source_folder: to_blob
 
 
   test-OS:
