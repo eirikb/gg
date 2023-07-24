@@ -19,7 +19,7 @@ if ($hash)
 {
     "$arch-windows" | Out-File .cache\gg\gg-VERVER\system -Encoding ascii
     $hash = $hash.split("=")[1]
-    Invoke-WebRequest "https://gg.eirikb.no/$hash" -OutFile $stage4
+    Invoke-WebRequest "https://ggcmd.z13.web.core.windows.net/$hash" -OutFile $stage4
     if (Test-Path $stage4)
     {
         $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
