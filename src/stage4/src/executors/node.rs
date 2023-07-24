@@ -140,17 +140,16 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
             file.to_string() + ".tar.gz"
         }.replace("osx", "darwin").replace("-tar", "");
 
-        let version = r.clone().version;
         let tags: HashSet<String> = if lts {
             ["lts".to_string()].iter().cloned().collect()
         } else {
             HashSet::new()
         };
-        let string = version.replace("v", "");
-        let result = GgVersion::new(string.as_str());
+        let version_string = r.version.as_str();
+        let version = GgVersion::new(version_string);
         return Download {
-            download_url: format!("https://{host}/download/release/{version}/node-{version}-{file_fix}"),
-            version: result,
+            download_url: format!("https://{host}/download/release/{version_string}/node-{version_string}-{file_fix}"),
+            version,
             tags,
             // Arch and Os are mapped by target Arch/Os
             arch: Some(Arch::Any),

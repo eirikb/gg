@@ -51,6 +51,8 @@ impl GgVersion {
     }
 
     pub fn new(version: &str) -> Option<Self> {
+        let version = version.replace("v", "");
+        let version = version.as_str();
         return if Version::parse(version).is_ok() {
             Some(Self(version.to_string()))
         } else {
