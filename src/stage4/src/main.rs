@@ -22,7 +22,7 @@ mod checker;
 mod barus;
 
 fn print_help(ver: &str) {
-    println!(r"gg.cmd
+    println!(r"
 https://github.com/eirikb/gg
 
 Version: {ver}
