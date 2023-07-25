@@ -1,16 +1,14 @@
 use std::collections::{HashMap, HashSet};
-use std::fs::File;
 use std::future::Future;
-use std::io::BufReader;
 use std::pin::Pin;
 
-use java_properties::read;
 use semver::VersionReq;
 use serde::Deserialize;
 use serde::Serialize;
 
 use crate::Executor;
 use crate::executor::{AppInput, AppPath, Download, ExecutorCmd, GgVersion};
+use crate::executors::gradle_properties::GradleAndWrapperProperties;
 use crate::target::{Arch, Os, Target, Variant};
 
 type Root = Vec<Root2>;
@@ -51,17 +49,7 @@ pub struct Java {
 }
 
 fn get_jdk_version() -> Option<String> {
-    if let Ok(file) = File::open("gradle/wrapper/gradle-wrapper.properties") {
-        if let Ok(map) = read(BufReader::new(file)) {
-            return map.get("jdkVersion").map(|s| s.clone());
-        }
-    }
-    if let Ok(file) = File::open("gradle.properties") {
-        if let Ok(map) = read(BufReader::new(file)) {
-            return map.get("jdkVersion").map(|s| s.clone());
-        }
-    }
-    None
+    GradleAndWrapperProperties::new().get_jdk_version()
 }
 
 impl Executor for Java {

@@ -135,7 +135,7 @@ impl dyn Executor {
     pub fn new(executor_cmd: ExecutorCmd) -> Option<Box<Self>> {
         match executor_cmd.cmd.as_str() {
             "node" | "npm" | "npx" => Some(Box::new(Node { executor_cmd })),
-            "gradle" => Some(Box::new(Gradle { executor_cmd })),
+            "gradle" => Some(Box::new(Gradle::new(executor_cmd))),
             "java" => Some(Box::new(Java { executor_cmd })),
             "maven" | "mvn" => Some(Box::new(Maven { executor_cmd })),
             "openapi" => Some(Box::new(OpenAPIGenerator { executor_cmd })),
