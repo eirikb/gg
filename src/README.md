@@ -1,6 +1,18 @@
 Stages?  
 gg.cmd is split into different stages.
 
+**Contents of gg.cmd**
+![image](https://github.com/eirikb/gg/assets/241706/4d93262a-5029-4e04-8924-56c70af42ff7)
+
+**Output of running gg.cmd (before stage4 is downloaded)**
+![image](https://github.com/eirikb/gg/assets/241706/90eea521-8223-4b44-b7c2-ed9356951985)
+
+**After running gg.cmd and getting stage4**
+![image](https://github.com/eirikb/gg/assets/241706/1e4e2c4f-35b9-4449-aed5-83bf9042a6ea)
+
+**After installing deno**:
+![image](https://github.com/eirikb/gg/assets/241706/fe511e00-223d-4ec0-8588-21506a32e8c2)
+
 The gg.cmd-file itself is built up like this:
 
 1. stage1 batch script
