@@ -205,7 +205,7 @@ async fn main() -> ExitCode {
             ExitCode::from(1)
         };
     } else {
-        println!("Missing command. Try -h");
+        println!("Missing command. Try help");
         print_help(ver);
         ExitCode::from(1)
     };

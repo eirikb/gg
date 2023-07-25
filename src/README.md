@@ -17,8 +17,9 @@ Roughly:
 * **Stage 3**: Binary for each arch/os/variant for downloading stage 4. For example one for Linux x64 glibc, and another
   for Linux x64 musl. Building a static version with musl would be too big.
   Cosmopolitan does not (at writing time) support ARM.
-* ** Stage 4**: rust-based CLI. Does the actual logic (download, extract, execute). Hosted externally. One for each
+* **Stage 4**: rust-based CLI. Does the actual logic (download, extract, execute). Hosted externally. One for each
   OS/arch.
+
 
 
 
