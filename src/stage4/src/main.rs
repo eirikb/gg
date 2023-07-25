@@ -22,7 +22,7 @@ mod checker;
 mod barus;
 
 fn print_help(ver: &str) {
-    println!(r"gg.cmd
+    println!(r"
 https://github.com/eirikb/gg
 
 Version: {ver}
@@ -205,7 +205,7 @@ async fn main() -> ExitCode {
             ExitCode::from(1)
         };
     } else {
-        println!("Missing command. Try -h");
+        println!("Missing command. Try help");
         print_help(ver);
         ExitCode::from(1)
     };
