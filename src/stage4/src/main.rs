@@ -62,6 +62,7 @@ Supported systems:
     rat (ra)
     deno
     run (any arbitrary command)
+    go
 ");
 }
 
