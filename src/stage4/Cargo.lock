@@ -1885,9 +1885,9 @@ dependencies = [
 
 [[package]]
 name = "serde-java-properties"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "027c875b03f717d40110f6caea06daaa3db9fb040cd7d9e39f64f16a17780fcc"
+checksum = "a7ad00b6835632ee448fec1af7c6f8b42efacfa85a393a931427bfae33221a44"
 dependencies = [
  "encoding",
  "java-properties",
