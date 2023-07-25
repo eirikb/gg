@@ -20,6 +20,9 @@ Roughly:
 * **Stage 4**: rust-based CLI. Does the actual logic (download, extract, execute). Hosted externally. One for each
   OS/arch.
 
-
+The url _ggcmd.z13.web.core.windows.net_ littered around is storage for gg.eirikb.no.  
+The only reason I use the direct URL instead of gg.eirikb.no is because then it won't go
+through the CDN, which is, ironically, more expensive for me at the moment.  
+This host will only be part of specific versions of gg.cmd, and future versions can use gg.eirikb.no insetad just fine.
 
 
