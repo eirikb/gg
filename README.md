@@ -70,6 +70,9 @@ sh gg.cmd npm install
 | <img src="https://user-images.githubusercontent.com/241706/231999543-61a192f0-7931-495d-a845-fdd855e690e5.png" width="100px"> | **maven**<br/>**mvn**            | java       |                           |                                                                                    |              |
 | <img src="https://github.com/eirikb/gg/assets/241706/4d8be751-4680-4cc8-a939-f7ee6fac841f" width="100px">                     | **openapi**                      | java       |                           | beta                                                                               |              |
 | <img src="https://github.com/eirikb/gg/assets/241706/71b42988-bf62-49d3-b675-b2e526b3a8cc" width="100px">                     | **deno**                         |            |                           |                                                                                    |              |
+| <img src="https://github.com/eirikb/gg/assets/241706/e674f306-ce32-4718-b560-1b454f49e94c" width="100px">                     | **go**                           |            |                           | beta                                                                               |              |
+
+![image](
 
 ## OS / Arch support table
 
