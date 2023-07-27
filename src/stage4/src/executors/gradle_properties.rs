@@ -8,6 +8,7 @@ use serde::Deserialize;
 pub struct GradleWrapperProperties {
     pub distribution_url: Option<String>,
     pub jdk_version: Option<String>,
+    pub distribution_sha256sum: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -63,6 +64,10 @@ impl GradleAndWrapperProperties {
 
     pub fn get_jdk_version(&self) -> Option<String> {
         self.map(|p| p.jdk_version.clone(), |p| p.jdk_version.clone())
+    }
+
+    pub fn get_distribution_sha256sum(&self) -> Option<String> {
+        self.gradle_wrapper_properties.as_ref().and_then(|p| p.distribution_sha256sum.clone())
     }
 }
 

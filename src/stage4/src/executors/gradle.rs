@@ -1,8 +1,11 @@
 use std::future::Future;
+use std::path::Path;
 use std::pin::Pin;
 
+use log::{debug, info};
 use scraper::{Html, Selector};
 use semver::VersionReq;
+use sha256::try_digest;
 
 use crate::{Executor, target};
 use crate::executor::{AppInput, Download, ExecutorCmd};
@@ -69,5 +72,18 @@ impl Executor for Gradle {
 
     fn get_deps(&self) -> Vec<&str> {
         vec!("java")
+    }
+
+    fn post_download(&self, download_file_path: String) -> bool {
+        if let Some(checksum) = self.props.get_distribution_sha256sum() {
+            info!("Checksum found for {}: {}", &download_file_path, checksum);
+            debug!("Calculating checksum for {}", &download_file_path);
+            let input = Path::new(download_file_path.as_str());
+            let val = try_digest(input).unwrap();
+            info!("Calculated checksum: {}", val);
+            return checksum == val;
+        }
+        debug!("No checksum found in gradle properties (skipping check)");
+        return true;
     }
 }
