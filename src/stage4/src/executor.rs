@@ -12,8 +12,8 @@ use log::{debug, info};
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use which::which_in;
+use crate::bloody_indiana_jones::BloodyIndianaJones;
 
-use crate::bloody_indiana_jones::download_unpack_and_all_that_stuff;
 use crate::executors::custom_command::CustomCommand;
 use crate::executors::deno::Deno;
 use crate::executors::gradle::Gradle;
@@ -183,6 +183,9 @@ pub trait Executor {
     fn custom_prep(&self, _input: &AppInput) -> Option<AppPath> {
         None
     }
+    fn post_download(&self, _download_file_path: String) -> bool {
+        true
+    }
     fn post_prep(&self, _cache_path: &str) {}
 }
 
@@ -253,7 +256,12 @@ pub async fn prep(executor: &dyn Executor, input: &AppInput, pb: &ProgressBar) -
     debug!("{:?}", url_string);
 
     let cache_path = format!(".cache/gg/{path}");
-    download_unpack_and_all_that_stuff(url_string, cache_path.as_str(), pb).await;
+    let bloody_indiana_jones = BloodyIndianaJones::new(url_string.to_string(), cache_path.clone(), pb.clone());
+    bloody_indiana_jones.download().await;
+    if !executor.post_download(bloody_indiana_jones.file_path.clone()) {
+        return Err("Post download failed".to_string());
+    }
+    bloody_indiana_jones.unpack_and_all_that_stuff().await;
 
     if let Some(download) = url {
         let download = download;
