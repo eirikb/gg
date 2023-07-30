@@ -84,7 +84,10 @@ sh gg.cmd npm install
 
 ## gradlew
 
-With support for `distributionUrl` in `gradle.properties` you can replace gradlew with a single gg.cmd and can
+Supports `distributionUrl` in `gradle-wrapper.properties` and  `gradle.properties`.  
+Supports `distributionSha256sum` in `gradle-wrapper.properties`.
+
+You can replace gradlew with a single gg.cmd and can
 delete these files:
 
 * gradle/wrapper/gradle-wrapper.jar

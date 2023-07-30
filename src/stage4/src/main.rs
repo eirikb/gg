@@ -7,7 +7,7 @@ use indicatif::MultiProgress;
 use log::{debug, info, LevelFilter};
 
 use crate::barus::create_barus;
-use crate::bloody_indiana_jones::download;
+use crate::bloody_indiana_jones::BloodyIndianaJones;
 use crate::executor::{AppInput, Executor, ExecutorCmd, GgVersionReq, prep, try_run};
 use crate::no_clap::NoClap;
 use crate::target::Target;
@@ -105,7 +105,8 @@ async fn main() -> ExitCode {
                 println!("Updating gg.cmd...");
                 let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
                 let pb = create_barus();
-                download(url, "gg.cmd", &pb).await;
+                let bloody_indiana_jones = BloodyIndianaJones::new_with_file_name(url.to_string(), "gg.cmd".to_string(), pb.clone());
+                bloody_indiana_jones.download().await;
                 return ExitCode::from(0);
             }
             "help" => {
@@ -174,12 +175,21 @@ async fn main() -> ExitCode {
                 let pb = m.insert(i, pb);
                 (x, pb)
             }).map(|(x, pb)| async move {
-                let app_path = prep(&**x, &input, &pb).await.expect("Prep failed");
+                let app_path = prep(&**x, &input, &pb).await?;
                 let env = x.get_env(&app_path);
                 let bin_dirs = x.get_bin_dirs();
-                (app_path, env, bin_dirs)
+                Ok::<_, String>((app_path, env, bin_dirs))
             });
             let res = join_all(alles).await;
+
+            res.iter().filter(|x| x.is_err()).for_each(|x| {
+                println!("Prep failed: {}", x.clone().err().unwrap());
+            });
+            if res.iter().any(|x| x.is_err()) {
+                return ExitCode::from(1);
+            }
+
+            let res = res.into_iter().filter_map(|x| x.ok()).collect::<Vec<_>>();
 
             for (app_path, env, bin_dirs) in res.clone() {
                 for bin_dir in &bin_dirs {

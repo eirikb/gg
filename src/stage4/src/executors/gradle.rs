@@ -1,77 +1,47 @@
-use std::fs::File;
 use std::future::Future;
-use std::io::BufReader;
+use std::path::Path;
 use std::pin::Pin;
 
-use java_properties::read;
-use regex::Regex;
+use log::{debug, info};
 use scraper::{Html, Selector};
 use semver::VersionReq;
+use sha256::try_digest;
 
 use crate::{Executor, target};
 use crate::executor::{AppInput, Download, ExecutorCmd};
+use crate::executors::gradle_properties::GradleAndWrapperProperties;
 use crate::target::Variant;
 
 pub struct Gradle {
     pub executor_cmd: ExecutorCmd,
+    props: GradleAndWrapperProperties,
 }
 
-trait HelloWorld {
-    fn get_version_from_gradle_url(&self) -> Option<String>;
-}
-
-impl HelloWorld for String {
-    fn get_version_from_gradle_url(&self) -> Option<String> {
-        if let Ok(r) = Regex::new(r"gradle-(.*)-") {
-            let captures: Vec<_> = r.captures_iter(self).collect();
-            if captures.len() > 0 {
-                if let Some(cap) = captures[0].get(1) {
-                    return Some(cap.as_str().to_string());
-                }
-            }
-        }
-        None
+impl Gradle {
+    pub fn new(executor_cmd: ExecutorCmd) -> Self {
+        Self { executor_cmd, props: GradleAndWrapperProperties::new() }
     }
-}
-
-fn get_distribution_url() -> Option<String> {
-    if let Ok(file) = File::open("gradle/wrapper/gradle-wrapper.properties") {
-        if let Ok(map) = read(BufReader::new(file)) {
-            return map.get("distributionUrl").map(|s| s.clone());
-        }
-    }
-    if let Ok(file) = File::open("gradle.properties") {
-        if let Ok(map) = read(BufReader::new(file)) {
-            return map.get("distributionUrl").map(|s| s.clone());
-        }
-    }
-    None
 }
 
 impl Executor for Gradle {
-    fn get_executor_cmd(&self) -> &ExecutorCmd {
-        return &self.executor_cmd;
-    }
+    fn get_executor_cmd(&self) -> &ExecutorCmd { &self.executor_cmd }
 
     fn get_version_req(&self) -> Option<VersionReq> {
-        if let Some(distribution_url) = get_distribution_url() {
-            if let Some(version) = distribution_url.get_version_from_gradle_url() {
-                return VersionReq::parse(version.as_str()).ok();
-            }
+        if let Some(version) = self.props.get_version_from_distribution_url() {
+            return VersionReq::parse(version.as_str()).ok();
         }
         None
     }
 
     fn get_download_urls<'a>(&'a self, _input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {
         Box::pin(async move {
-            if let Some(distribution_url) = get_distribution_url() {
-                if let Some(version) = distribution_url.get_version_from_gradle_url() {
+            if let Some(distribution_url) = self.props.get_distribution_url() {
+                if let Some(version) = self.props.get_version_from_distribution_url() {
                     return vec![
                         Download::new(distribution_url, version.as_str(), Some(Variant::Any))
                     ];
                 }
             }
-
 
             let body = reqwest::get("https://gradle.org/releases").await
                 .expect("Unable to connect to services.gradle.org").text().await
@@ -103,17 +73,17 @@ impl Executor for Gradle {
     fn get_deps(&self) -> Vec<&str> {
         vec!("java")
     }
-}
 
-
-#[cfg(test)]
-mod tests {
-    use crate::executors::gradle::HelloWorld;
-
-    #[test]
-    fn it_works() {
-        let input = "https://services.gradle.org/distributions/gradle-6.8.3-bin.zip";
-        let version = input.to_string().get_version_from_gradle_url();
-        assert_eq!(version.unwrap(), "6.8.3");
+    fn post_download(&self, download_file_path: String) -> bool {
+        if let Some(checksum) = self.props.get_distribution_sha256sum() {
+            info!("Checksum found for {}: {}", &download_file_path, checksum);
+            debug!("Calculating checksum for {}", &download_file_path);
+            let input = Path::new(download_file_path.as_str());
+            let val = try_digest(input).unwrap();
+            info!("Calculated checksum: {}", val);
+            return checksum == val;
+        }
+        debug!("No checksum found in gradle properties (skipping check)");
+        return true;
     }
 }
