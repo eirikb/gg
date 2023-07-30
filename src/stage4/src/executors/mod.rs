@@ -7,3 +7,4 @@ pub mod rat;
 pub mod node;
 pub mod deno;
 pub mod gradle_properties;
+pub mod go;

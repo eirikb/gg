@@ -4,20 +4,24 @@
 [![Release](https://badgen.net/github/release/eirikb/gg)](https://github.com/eirikb/gg/releases/latest/download/gg.cmd)
 
 [**[Changelog]**](https://github.com/eirikb/gg/releases)
+[**[Download]**](https://github.com/eirikb/gg/releases/latest/download/gg.cmd)
 
-![image](https://github.com/eirikb/gg/assets/241706/b671f15e-23a3-4adb-9488-272e35f6a686)
+![image](https://github.com/eirikb/gg/assets/241706/2fc55830-ba2c-4ba8-8501-8013ed000444)
 
-![image](https://github.com/eirikb/gg/assets/241706/b69dde63-6f9e-4726-b1e9-bc25bfd0b786)
+![image](https://github.com/eirikb/gg/assets/241706/2594717d-6e3b-4773-a7db-4d951ec0aa0c)
 
 gg.cmd is a cross-platform and cross-architecture command-line interface (CLI) that acts as an executable wrapper for
 various tools such as Gradle, JDK/JVM, Node.js, and Java. It requires minimal dependencies and is similar in
 functionality to gradlew.
 
-Install with bash:
+Install with bash (wget):
 > wget gg.eirikb.no/gg.cmd
 
+Install with bash (curl):
+> curl gg.eirikb.no > gg.cmd
+
 Install with PowerShell:
-> wget gg.eirikb.no/gg.cmd -OutFile gg.cmd
+> wget gg.eirikb.no -OutFile gg.cmd
 
 or  
 [Download the latest release](https://github.com/eirikb/gg/releases/latest/download/gg.cmd)
@@ -25,7 +29,7 @@ or
 **Install?**  
 The concept involves placing a copy of gg.cmd in the root directory of your project.  
 This is similar to what you would do with `gradlew` or `mvnw`, except this method is applicable to multiple tools.  
-As a result, your colleagues would not have to install anything on their host machines."
+As a result, your colleagues would not have to install anything on their host machines.
 
 ## Features
 
@@ -66,6 +70,9 @@ sh gg.cmd npm install
 | <img src="https://user-images.githubusercontent.com/241706/231999543-61a192f0-7931-495d-a845-fdd855e690e5.png" width="100px"> | **maven**<br/>**mvn**            | java       |                           |                                                                                    |              |
 | <img src="https://github.com/eirikb/gg/assets/241706/4d8be751-4680-4cc8-a939-f7ee6fac841f" width="100px">                     | **openapi**                      | java       |                           | beta                                                                               |              |
 | <img src="https://github.com/eirikb/gg/assets/241706/71b42988-bf62-49d3-b675-b2e526b3a8cc" width="100px">                     | **deno**                         |            |                           |                                                                                    |              |
+| <img src="https://github.com/eirikb/gg/assets/241706/e674f306-ce32-4718-b560-1b454f49e94c" width="100px">                     | **go**                           |            |                           | beta                                                                               |              |
+
+![image](
 
 ## OS / Arch support table
 

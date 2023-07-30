@@ -16,6 +16,7 @@ use crate::bloody_indiana_jones::BloodyIndianaJones;
 
 use crate::executors::custom_command::CustomCommand;
 use crate::executors::deno::Deno;
+use crate::executors::go::Go;
 use crate::executors::gradle::Gradle;
 use crate::executors::java::Java;
 use crate::executors::maven::Maven;
@@ -35,7 +36,7 @@ pub struct AppInput {
     pub no_clap: NoClap,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct GgVersion(String);
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -53,7 +54,14 @@ impl GgVersion {
     pub fn new(version: &str) -> Option<Self> {
         let version = version.replace("v", "");
         let version = version.as_str();
-        return if Version::parse(version).is_ok() {
+        let parts: Vec<&str> = version.split('.').collect();
+
+        let version = match parts.len() {
+            1 => format!("{}.0.0", parts[0]),
+            2 => format!("{}.{}.0", parts[0], parts[1]),
+            _ => version.to_string(),
+        };
+        return if Version::parse(&version).is_ok() {
             Some(Self(version.to_string()))
         } else {
             None
@@ -93,7 +101,7 @@ impl AppInput {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct Download {
     pub version: Option<GgVersion>,
     pub tags: HashSet<String>,
@@ -142,6 +150,7 @@ impl dyn Executor {
             "rat" | "ra" => Some(Box::new(Rat { executor_cmd })),
             "run" => Some(Box::new(CustomCommand { executor_cmd })),
             "deno" => Some(Box::new(Deno { executor_cmd })),
+            "go" => Some(Box::new(Go { executor_cmd })),
             _ => None,
         }
     }
