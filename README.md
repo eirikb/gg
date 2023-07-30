@@ -10,6 +10,9 @@
 
 ![image](https://github.com/eirikb/gg/assets/241706/2594717d-6e3b-4773-a7db-4d951ec0aa0c)
 
+![image](https://github.com/eirikb/gg/assets/241706/3707abf5-e151-4aea-bbc9-15daeb9086e2)
+
+
 gg.cmd is a cross-platform and cross-architecture command-line interface (CLI) that acts as an executable wrapper for
 various tools such as Gradle, JDK/JVM, Node.js, and Java. It requires minimal dependencies and is similar in
 functionality to gradlew.
