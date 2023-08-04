@@ -30,18 +30,18 @@ Version: {ver}
 Usage: ./gg.cmd [options] <executable name>@<version>:<dependent executable name>@<version> [program arguments]
 
 Options:
-    -v             Info output
-    -vv            Debug output
-    -vvv           Trace output
-    -w             Even more output
-    -V             Print version
+    -v              Info output
+    -vv             Debug output
+    -vvv            Trace output
+    -w              Even more output
+    -V              Print version
 
 Built in commands:
-    update         Update gg.cmd
-    help           Print help
-    check          Check for updates
-    checkupdate    Check for updates and update if available
-    cacheclean     Clean cache
+    update          Update gg.cmd
+    help            Print help
+    check           Check for updates
+    check-update    Check for updates and update if available
+    clean-cache     Clean cache
 
 Examples:
     ./gg.cmd node
@@ -117,11 +117,11 @@ async fn main() -> ExitCode {
                 checker::check(input, false).await;
                 return ExitCode::from(0);
             }
-            "checkupdate" => {
+            "check-update" => {
                 checker::check(input, true).await;
                 return ExitCode::from(0);
             }
-            "cacheclean" => {
+            "clean-cache" => {
                 println!("Cleaning cache");
                 let _ = fs::remove_dir_all(".cache/gg");
                 return ExitCode::from(0);

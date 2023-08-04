@@ -49,31 +49,34 @@ impl NoClap {
 
         let cmds = cmds.split(":").filter(|s| !s.is_empty()).map(|cmd| {
             let mut cmd = cmd.to_string();
-            let r = Regex::new(r"[@+-]").unwrap();
-
-            let alles = cmd.clone();
-            let matches = r.find_iter(&alles).collect::<Vec<Match>>();
-
+            let parts: Vec<String> = cmd.split("@").map(String::from).collect();
             let mut include_tags = HashSet::new();
             let mut exclude_tags = HashSet::new();
             let mut version = None;
 
-            matches.iter().enumerate().for_each(|(index, m)| {
-                if index == 0 {
-                    cmd = cmd.as_str()[0..m.end() - 1].to_string();
-                }
+            if parts.len() == 2 {
+                cmd = parts[0].to_string();
 
-                let until = if index < matches.len() - 1 { matches[index + 1].start() } else { alles.len() };
-                let command = alles[m.start()..m.start() + 1].to_string();
-                let text = alles[m.start() + 1..until].to_string();
-                if command == "+" {
-                    include_tags.insert(text);
-                } else if command == "-" {
-                    exclude_tags.insert(text);
-                } else if command == "@" {
-                    version = Some(text);
+                let r = Regex::new(r"[+-]").unwrap();
+                let alles = parts[1].to_string();
+                let matches = r.find_iter(&alles).collect::<Vec<Match>>();
+                if matches.is_empty() {
+                    version = Some(alles.clone());
                 }
-            });
+                matches.iter().enumerate().for_each(|(index, m)| {
+                    if index == 0 && m.start() != 0 {
+                        version = Some(alles[0..m.start()].to_string());
+                    }
+                    let until = if index < matches.len() - 1 { matches[index + 1].start() } else { alles.len() };
+                    let command = alles[m.start()..m.start() + 1].to_string();
+                    let text = alles[m.start() + 1..until].to_string();
+                    if command == "+" {
+                        include_tags.insert(text);
+                    } else if command == "-" {
+                        exclude_tags.insert(text);
+                    }
+                });
+            }
 
             NoClapCmd {
                 cmd,
@@ -119,6 +122,12 @@ mod tests {
     }
 
     #[test]
+    fn check_update() {
+        let no_clap = NoClap::parse(["check-update"].map(String::from).to_vec());
+        assert_eq!("check-update", no_clap.cmds.first().unwrap().cmd);
+    }
+
+    #[test]
     fn versioning_test() {
         let no_clap = NoClap::parse(["node@10:gradle@1.2.3", "hello", "world"].map(String::from).to_vec());
         assert_eq!(["hello", "world"].map(String::from).to_vec(), no_clap.app_args);
@@ -150,7 +159,7 @@ mod tests {
 
     #[test]
     fn include_tags() {
-        let no_clap = NoClap::parse(["node@10:gradle@1.2.3+hello+world:java+azul", "no", "problem"].map(String::from).to_vec());
+        let no_clap = NoClap::parse(["node@10:gradle@1.2.3+hello+world:java@+azul", "no", "problem"].map(String::from).to_vec());
 
         assert_eq!(["no", "problem"].map(String::from).to_vec(), no_clap.app_args);
 
