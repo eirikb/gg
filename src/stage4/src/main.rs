@@ -30,16 +30,16 @@ Version: {ver}
 Usage: ./gg.cmd [options] <executable name>@<version>:<dependent executable name>@<version> [program arguments]
 
 Options:
-    -v             Info output
-    -vv            Debug output
-    -vvv           Trace output
-    -w             Even more output
-    -V             Print version
+    -v              Info output
+    -vv             Debug output
+    -vvv            Trace output
+    -w              Even more output
+    -V              Print version
 
 Built in commands:
-    update         Update gg.cmd
-    help           Print help
-    check          Check for updates
+    update          Update gg.cmd
+    help            Print help
+    check           Check for updates
     check-update    Check for updates and update if available
     clean-cache     Clean cache
 
