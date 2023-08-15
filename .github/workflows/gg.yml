@@ -81,6 +81,7 @@ jobs:
           cargo build --release --target=${{ matrix.target }}
           find . -type f -name stage4.exe -exec cp {} ../stage4 \;
           find . -type f -name stage4 -exec cp {} ../stage4 \;
+          strip ../stage4
 
 
       - name: Upload artifact
