@@ -18,13 +18,13 @@ various tools such as Gradle, JDK/JVM, Node.js, and Java. It requires minimal de
 functionality to gradlew.
 
 Install with bash (wget):
-> wget gg.eirikb.no/gg.cmd
+> wget ggcmd.io/gg.cmd
 
 Install with bash (curl):
-> curl gg.eirikb.no > gg.cmd
+> curl ggcmd.io > gg.cmd
 
 Install with PowerShell:
-> wget gg.eirikb.no -OutFile gg.cmd
+> wget ggcmd.io -OutFile gg.cmd
 
 or  
 [Download the latest release](https://github.com/eirikb/gg/releases/latest/download/gg.cmd)
@@ -75,7 +75,6 @@ sh gg.cmd npm install
 | <img src="https://github.com/eirikb/gg/assets/241706/71b42988-bf62-49d3-b675-b2e526b3a8cc" width="100px">                     | **deno**                         |            |                           |                                                                                    |              |
 | <img src="https://github.com/eirikb/gg/assets/241706/e674f306-ce32-4718-b560-1b454f49e94c" width="100px">                     | **go**                           |            |                           | beta                                                                               |              |
 
-![image](
 
 ## OS / Arch support table
 
