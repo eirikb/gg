@@ -13,7 +13,7 @@ use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use which::which_in;
 use crate::bloody_indiana_jones::BloodyIndianaJones;
-
+use crate::executors::caddy::Caddy;
 use crate::executors::custom_command::CustomCommand;
 use crate::executors::deno::Deno;
 use crate::executors::go::Go;
@@ -151,6 +151,7 @@ impl dyn Executor {
             "run" => Some(Box::new(CustomCommand { executor_cmd })),
             "deno" => Some(Box::new(Deno { executor_cmd })),
             "go" => Some(Box::new(Go { executor_cmd })),
+            "caddy" => Some(Box::new(Caddy { executor_cmd })),
             _ => None,
         }
     }
