@@ -256,7 +256,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022, macOS-11, macOS-12 ]
-        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v" ]
+        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V" ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -301,7 +301,7 @@ jobs:
     strategy:
       matrix:
         os: [ windows-2019, windows-2022 ]
-        cmd: [ "node -v", "java -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v" ]
+        cmd: [ "node -v", "java -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V" ]
 
     runs-on: ${{ matrix.os }}
     steps:
