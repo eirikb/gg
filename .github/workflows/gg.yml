@@ -142,6 +142,9 @@ jobs:
             target: x86_64-apple-darwin
             stage4: x86_64-apple-darwin
             # TODO: Version too new
+          - os: macos-12
+            target: x86_64-apple-darwin
+            stage4: x86_64-apple-darwin
           - os: ubuntu-20.04
             target: x86_64-unknown-linux-gnu
             stage4: x86_64-unknown-linux-musl
