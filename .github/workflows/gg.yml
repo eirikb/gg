@@ -341,7 +341,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        container: [ ubuntu, debian, alpine, archlinux, 'ubuntu:18.04' ]
+        container: [ ubuntu, debian, alpine, archlinux ]
         cmd: [ "node@14 -v", "java -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version" ]
 
     runs-on: ubuntu-latest
