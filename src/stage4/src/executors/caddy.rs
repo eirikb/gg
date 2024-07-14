@@ -29,7 +29,7 @@ impl Executor for Caddy {
                             Some(Windows)
                         } else if asset.name.contains("linux") {
                             Some(Os::Linux)
-                        } else if asset.name.contains("apple") {
+                        } else if asset.name.contains("mac") {
                             Some(Os::Mac)
                         } else {
                             None

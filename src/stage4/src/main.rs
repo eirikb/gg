@@ -63,6 +63,7 @@ Supported systems:
     deno
     run (any arbitrary command)
     go
+    caddy
 ");
 }
 
