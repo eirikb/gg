@@ -6,11 +6,11 @@ use crate::executor::{AppInput, Download, Executor, ExecutorCmd, GgVersion};
 use crate::target::{Arch, Os, Variant};
 use crate::target::Os::Windows;
 
-pub struct Deno {
+pub struct Caddy {
     pub executor_cmd: ExecutorCmd,
 }
 
-impl Executor for Deno {
+impl Executor for Caddy {
     fn get_executor_cmd(&self) -> &ExecutorCmd {
         &self.executor_cmd
     }
@@ -21,7 +21,7 @@ impl Executor for Deno {
             let octocrab = octocrab::Octocrab::builder().base_uri("https://ghapi.ggcmd.io/").unwrap().build().unwrap();
             let mut page: u32 = 1;
             loop {
-                let releases = octocrab.repos("denoland", "deno")
+                let releases = octocrab.repos("caddyserver", "caddy")
                     .releases().list().page(page).per_page(100).send().await.unwrap();
                 for release in releases.items {
                     for asset in release.assets {
@@ -34,7 +34,7 @@ impl Executor for Deno {
                         } else {
                             None
                         };
-                        let arch = if asset.name.contains("x86_64") {
+                        let arch = if asset.name.contains("amd64") {
                             Some(Arch::X86_64)
                         } else {
                             None
@@ -62,12 +62,12 @@ impl Executor for Deno {
 
     fn get_bins(&self, input: &AppInput) -> Vec<String> {
         vec!(match &input.target.os {
-            Windows => "deno.exe",
-            _ => "deno"
+            Windows => "caddy.exe",
+            _ => "caddy"
         }.to_string())
     }
 
     fn get_name(&self) -> &str {
-        "deno"
+        "caddy"
     }
 }

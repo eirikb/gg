@@ -26,7 +26,6 @@ struct Root2 {
     pub features: Vec<String>,
     #[serde(rename = "hw_bitness")]
     pub hw_bitness: String,
-    pub id: i64,
     #[serde(rename = "java_version")]
     pub java_version: Vec<i64>,
     pub javafx: bool,
