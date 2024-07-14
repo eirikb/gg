@@ -18,7 +18,7 @@ impl Executor for Deno {
     fn get_download_urls<'a>(&self, _input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {
         Box::pin(async move {
             let mut downloads: Vec<Download> = vec!();
-            let octocrab = octocrab::Octocrab::builder().build().unwrap();
+            let octocrab = octocrab::Octocrab::builder().base_uri("https://ghapi.ggcmd.io/").unwrap().build().unwrap();
             let mut page: u32 = 1;
             loop {
                 let releases = octocrab.repos("denoland", "deno")
