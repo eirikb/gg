@@ -5,5 +5,5 @@
     tar -zxf m2
     del m2
     powershell -executionpolicy bypass -file .cache\gg\gg-VERVER\stage2.ps1 %*
-    exit /b
+    exit /b %errorlevel%
 BATCH

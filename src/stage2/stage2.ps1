@@ -29,9 +29,11 @@ if ($hash)
     else
     {
         Write-Host "Unable to download. Try again"
+        exit 1
     }
 }
 else
 {
     Write-Host "Hash not found :("
+    exit 1
 }
