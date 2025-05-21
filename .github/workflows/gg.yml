@@ -52,7 +52,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     needs: version
-    if: ${{ !matrix.skip_on_pr }}
+    if: matrix.skip_on_pr != true
     steps:
       - uses: actions/checkout@v2
 
@@ -170,7 +170,7 @@ jobs:
             skip_on_pr: true
 
     runs-on: ${{ matrix.os }}
-    if: ${{ !matrix.skip_on_pr }}
+    if: matrix.skip_on_pr != true
     steps:
       - uses: actions/checkout@v2
 
