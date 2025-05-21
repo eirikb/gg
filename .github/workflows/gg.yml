@@ -96,7 +96,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download stage4 hash
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
 
       - name: Rename to hash
         shell: bash
@@ -164,7 +164,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Download stage4 hash
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: hash
           path: hash
@@ -208,7 +208,7 @@ jobs:
         uses: actions/checkout@v2.1.0
 
       - name: Download stage3 / stage4
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
 
       - name: gg.cmd
         run: |
@@ -261,7 +261,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Download gg
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: gg.cmd
 
@@ -283,7 +283,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Download gg
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: gg.cmd
 
@@ -306,7 +306,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Download gg
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: gg.cmd
 
@@ -329,7 +329,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Download gg
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: gg.cmd
 
@@ -351,7 +351,7 @@ jobs:
     container: ${{ matrix.container }}
     steps:
       - name: Download gg
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: gg.cmd
 
@@ -386,7 +386,7 @@ jobs:
           body: ${{ github.event.pull_request.body }}
 
       - name: Download gg
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: gg.cmd
 
