@@ -52,11 +52,12 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     needs: version
-    if: ${{ !(matrix.skip_on_pr == true) }}
     steps:
       - uses: actions/checkout@v2
+        if: ${{ !matrix.skip_on_pr }}
 
       - name: Prepare build
+        if: ${{ !matrix.skip_on_pr }}
         shell: bash
         run: |
           if [[ "${{ matrix.os }}" == *"ubuntu"* ]]
@@ -70,10 +71,12 @@ jobs:
           rustup target add ${{ matrix.target }}
 
       - uses: Swatinem/rust-cache@v2
+        if: ${{ !matrix.skip_on_pr }}
         with:
           workspaces: "stage42"
 
       - name: Build
+        if: ${{ !matrix.skip_on_pr }}
         shell: bash
         run: |
           mkdir -p stage42
@@ -90,6 +93,7 @@ jobs:
 
 
       - name: Upload artifact
+        if: ${{ !matrix.skip_on_pr }}
         uses: actions/upload-artifact@v4
         with:
           name: stage4_${{ matrix.target }}
@@ -170,17 +174,19 @@ jobs:
             skip_on_pr: true
 
     runs-on: ${{ matrix.os }}
-    if: ${{ !(matrix.skip_on_pr == true) }}
     steps:
       - uses: actions/checkout@v2
+        if: ${{ !matrix.skip_on_pr }}
 
       - name: Download stage4 hash
+        if: ${{ !matrix.skip_on_pr }}
         uses: actions/download-artifact@v4
         with:
           name: hash
           path: hash
 
       - name: Hash
+        if: ${{ !matrix.skip_on_pr }}
         # ENV -> CMAKE -> Code very hard. This very easy
         shell: bash
         run: |
@@ -189,6 +195,7 @@ jobs:
           echo "const char *hash = \"$hash\";" > src/stage3/const.h
 
       - name: Makus
+        if: ${{ !matrix.skip_on_pr }}
         shell: bash
         run: |
           set -x
@@ -205,6 +212,7 @@ jobs:
           strip ../../stage3_${{ matrix.target }}
 
       - name: Upload artifact
+        if: ${{ !matrix.skip_on_pr }}
         uses: actions/upload-artifact@v4
         with:
           name: stage3_${{ matrix.target }}
