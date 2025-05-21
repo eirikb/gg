@@ -46,7 +46,7 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             skip_on_pr: true
-          - os: ubuntu-22.04-arm64
+          - os: ubuntu-24.04-arm64
             target: aarch64-unknown-linux-musl
             skip_on_pr: true
 
@@ -164,12 +164,8 @@ jobs:
             target: x86_64-unknown-linux-gnu
             stage4: x86_64-unknown-linux-musl
             skip_on_pr: true
-          - os: ubuntu-22.04-arm64
+          - os: ubuntu-24.04-arm64
             target: aarch64-unknown-linux-musl
-            stage4: aarch64-unknown-linux-musl
-            skip_on_pr: true
-          - os: ubuntu-22.04-arm64
-            target: aarch64-unknown-linux-gnu
             stage4: aarch64-unknown-linux-musl
             skip_on_pr: true
 
@@ -298,7 +294,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        os: [ ubuntu-22.04-arm64 ]
+        os: [ ubuntu-24.04-arm64 ]
         cmd: [ "java -version" ]
 
     runs-on: ${{ matrix.os }}
@@ -345,7 +341,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        os: [ ubuntu-22.04-arm64 ]
+        os: [ ubuntu-24.04-arm64 ]
         container: [ alpine ]
         cmd: [ "java -version" ]
 
