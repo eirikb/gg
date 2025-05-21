@@ -38,6 +38,7 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
+            skip_on_pr: false
 
           - os: windows-latest
             target: x86_64-pc-windows-msvc
@@ -145,6 +146,7 @@ jobs:
           - os: ubuntu-20.04
             target: x86_64-unknown-linux-musl
             stage4: x86_64-unknown-linux-musl
+            skip_on_pr: false
 
           - os: macos-latest
             target: x86_64-apple-darwin
