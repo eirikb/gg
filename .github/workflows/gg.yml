@@ -157,14 +157,14 @@ jobs:
             target: x86_64-apple-darwin
             stage4: x86_64-apple-darwin
             skip_on_pr: true
-    #          - os: macos-12
-    #            target: x86_64-apple-darwin
-    #            stage4: x86_64-apple-darwin
-    #            skip_on_pr: true
-    #          - os: ubuntu-22.04
-    #            target: x86_64-unknown-linux-musl
-    #            stage4: x86_64-unknown-linux-musl
-    #            skip_on_pr: true
+          #          - os: macos-12
+          #            target: x86_64-apple-darwin
+          #            stage4: x86_64-apple-darwin
+          #            skip_on_pr: true
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-musl
+            stage4: x86_64-unknown-linux-musl
+            skip_on_pr: true
 
     runs-on: ${{ matrix.os }}
     steps:
