@@ -148,7 +148,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-            target: x86_64-unknown-linux-musl
+            target: x86_64-unknown-linux-gnu
             stage4: x86_64-unknown-linux-musl
             skip_on_pr: false
 
@@ -161,12 +161,8 @@ jobs:
     #            stage4: x86_64-apple-darwin
     #            skip_on_pr: true
     #          - os: ubuntu-22.04
-    #            target: x86_64-unknown-linux-gnu
+    #            target: x86_64-unknown-linux-musl
     #            stage4: x86_64-unknown-linux-musl
-    #            skip_on_pr: true
-    #          - os: ubuntu-24.04-arm64
-    #            target: aarch64-unknown-linux-musl
-    #            stage4: aarch64-unknown-linux-musl
     #            skip_on_pr: true
 
     runs-on: ${{ matrix.os }}
