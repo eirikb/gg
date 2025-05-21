@@ -1,8 +1,27 @@
-cmake_minimum_required(VERSION 3.9.4)
+cmake_minimum_required(VERSION 3.10)
 
 project(stage3 C)
 
 set(CMAKE_C_STANDARD 99)
+
+if (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/sha256-512/CMakeLists.txt)
+    message(STATUS "Cloning sha256-512 library...")
+    execute_process(
+            COMMAND git clone https://github.com/LeFroid/sha256-512.git
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            RESULT_VARIABLE GIT_RESULT
+    )
+
+    if (NOT GIT_RESULT EQUAL "0")
+        message(FATAL_ERROR "Failed to clone sha256-512 repository")
+    endif ()
+
+    file(READ ${CMAKE_CURRENT_SOURCE_DIR}/sha256-512/CMakeLists.txt SHA_CMAKE_CONTENT)
+    string(REPLACE "cmake_minimum_required (VERSION 2.6)" "cmake_minimum_required (VERSION 3.9.4)" SHA_CMAKE_CONTENT "${SHA_CMAKE_CONTENT}")
+    file(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/sha256-512/CMakeLists.txt "${SHA_CMAKE_CONTENT}")
+
+    message(STATUS "sha256-512 library cloned and patched successfully")
+endif ()
 
 add_subdirectory(sha256-512)
 
