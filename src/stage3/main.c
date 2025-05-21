@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 /**
- * Downloads http://gg.eirikb.no/. That's it.
+ * Downloads http://ggcmd.io/. That's it.
  * Using HTTP, not HTTPS. Hard coded checksum.
  **/
 

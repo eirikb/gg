@@ -6,12 +6,9 @@
 [**[Changelog]**](https://github.com/eirikb/gg/releases)
 [**[Download]**](https://github.com/eirikb/gg/releases/latest/download/gg.cmd)
 
-![image](https://github.com/eirikb/gg/assets/241706/2fc55830-ba2c-4ba8-8501-8013ed000444)
+![Image](https://github.com/user-attachments/assets/35d6bc4f-ea3b-4673-a874-45703c4de1d8)
 
-![image](https://github.com/eirikb/gg/assets/241706/2594717d-6e3b-4773-a7db-4d951ec0aa0c)
-
-![image](https://github.com/eirikb/gg/assets/241706/0daac529-4d85-45bc-b25c-aa59e892b56f)
-
+![Image](https://github.com/user-attachments/assets/93876050-9c28-4389-a77c-5a88f5af2811)
 
 gg.cmd is a cross-platform and cross-architecture command-line interface (CLI) that acts as an executable wrapper for
 various tools such as Gradle, JDK/JVM, Node.js, and Java. It requires minimal dependencies and is similar in
@@ -21,7 +18,7 @@ Install with bash (wget):
 > wget ggcmd.io/gg.cmd
 
 Install with bash (curl):
-> curl ggcmd.io > gg.cmd
+> curl -L ggcmd.io > gg.cmd
 
 Install with PowerShell:
 > wget ggcmd.io -OutFile gg.cmd
@@ -74,7 +71,6 @@ sh gg.cmd npm install
 | <img src="https://github.com/eirikb/gg/assets/241706/4d8be751-4680-4cc8-a939-f7ee6fac841f" width="100px">                     | **openapi**                      | java       |                           | beta                                                                               |              |
 | <img src="https://github.com/eirikb/gg/assets/241706/71b42988-bf62-49d3-b675-b2e526b3a8cc" width="100px">                     | **deno**                         |            |                           |                                                                                    |              |
 | <img src="https://github.com/eirikb/gg/assets/241706/e674f306-ce32-4718-b560-1b454f49e94c" width="100px">                     | **go**                           |            |                           | beta                                                                               |              |
-
 
 ## OS / Arch support table
 
