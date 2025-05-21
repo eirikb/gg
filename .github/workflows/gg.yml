@@ -4,7 +4,6 @@ on:
     branches-ignore:
       - main
   pull_request:
-    types: [ closed ]
     branches: [ main ]
 
 
@@ -37,17 +36,22 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-          - os: macos-latest
-            target: x86_64-apple-darwin
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
+
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            skip_on_pr: true
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            skip_on_pr: true
           - os: ubuntu-22.04-arm64
             target: aarch64-unknown-linux-musl
+            skip_on_pr: true
 
     runs-on: ${{ matrix.os }}
     needs: version
+    if: ${{ !matrix.skip_on_pr }}
     steps:
       - uses: actions/checkout@v2
 
@@ -138,28 +142,33 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            stage4: x86_64-apple-darwin
-            # TODO: Version too new
-          - os: macos-12
-            target: x86_64-apple-darwin
-            stage4: x86_64-apple-darwin
-          - os: ubuntu-20.04
-            target: x86_64-unknown-linux-gnu
-            stage4: x86_64-unknown-linux-musl
           - os: ubuntu-20.04
             target: x86_64-unknown-linux-musl
             stage4: x86_64-unknown-linux-musl
+
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            stage4: x86_64-apple-darwin
+            skip_on_pr: true
+          - os: macos-12
+            target: x86_64-apple-darwin
+            stage4: x86_64-apple-darwin
+            skip_on_pr: true
+          - os: ubuntu-20.04
+            target: x86_64-unknown-linux-gnu
+            stage4: x86_64-unknown-linux-musl
+            skip_on_pr: true
           - os: ubuntu-22.04-arm64
             target: aarch64-unknown-linux-musl
             stage4: aarch64-unknown-linux-musl
+            skip_on_pr: true
           - os: ubuntu-22.04-arm64
             target: aarch64-unknown-linux-gnu
             stage4: aarch64-unknown-linux-musl
+            skip_on_pr: true
 
     runs-on: ${{ matrix.os }}
-
+    if: ${{ !matrix.skip_on_pr }}
     steps:
       - uses: actions/checkout@v2
 
@@ -252,6 +261,7 @@ jobs:
 
 
   test-OS:
+    if: github.event.pull_request.merged == true
     needs: stage1
     strategy:
       matrix:
@@ -274,6 +284,7 @@ jobs:
           sh gg.cmd -v ${{ matrix.cmd }}
 
   test-ARM:
+    if: github.event.pull_request.merged == true
     needs: stage1
     strategy:
       matrix:
@@ -297,6 +308,7 @@ jobs:
 
 
   test-batch:
+    if: github.event.pull_request.merged == true
     needs: stage1
     strategy:
       matrix:
@@ -319,6 +331,7 @@ jobs:
 
 
   test-ARM-container:
+    if: github.event.pull_request.merged == true
     needs: stage1
     strategy:
       matrix:
@@ -342,6 +355,7 @@ jobs:
 
   test-container:
     needs: stage1
+    if: github.event.pull_request.merged == true
     strategy:
       matrix:
         container: [ ubuntu, debian, alpine, archlinux ]
