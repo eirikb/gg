@@ -156,10 +156,10 @@ jobs:
             target: x86_64-apple-darwin
             stage4: x86_64-apple-darwin
             skip_on_pr: true
-          - os: macos-12
-            target: x86_64-apple-darwin
-            stage4: x86_64-apple-darwin
-            skip_on_pr: true
+#          - os: macos-12
+#            target: x86_64-apple-darwin
+#            stage4: x86_64-apple-darwin
+#            skip_on_pr: true
           - os: ubuntu-20.04
             target: x86_64-unknown-linux-gnu
             stage4: x86_64-unknown-linux-musl
@@ -271,7 +271,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        os: [ ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022, macOS-12 ]
+        os: [ ubuntu-20.04, ubuntu-22.04, windows-2019, windows-2022 ]
         cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v" ]
 
     runs-on: ${{ matrix.os }}
