@@ -85,7 +85,7 @@ jobs:
 
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: stage4_${{ matrix.target }}
           path: stage4
@@ -114,13 +114,13 @@ jobs:
           done
 
       - name: Upload hash artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: hash
           path: hash
 
       - name: Upload hash artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: hashes
           path: hashes
@@ -194,7 +194,7 @@ jobs:
           strip ../../stage3_${{ matrix.target }}
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: stage3_${{ matrix.target }}
           path: stage3_${{ matrix.target }}
@@ -245,7 +245,7 @@ jobs:
           cat 1 gg.tgz > gg.cmd
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: gg.cmd
           path: gg.cmd
