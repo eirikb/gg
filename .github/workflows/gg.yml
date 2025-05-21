@@ -46,9 +46,9 @@ jobs:
           - os: macos-latest
             target: x86_64-apple-darwin
             skip_on_pr: true
-#          - os: ubuntu-24.04-arm64
-#            target: aarch64-unknown-linux-musl
-#            skip_on_pr: true
+    #          - os: ubuntu-24.04-arm64
+    #            target: aarch64-unknown-linux-musl
+    #            skip_on_pr: true
 
     runs-on: ${{ matrix.os }}
     needs: version
@@ -156,18 +156,18 @@ jobs:
             target: x86_64-apple-darwin
             stage4: x86_64-apple-darwin
             skip_on_pr: true
-#          - os: macos-12
-#            target: x86_64-apple-darwin
-#            stage4: x86_64-apple-darwin
-#            skip_on_pr: true
-#          - os: ubuntu-22.04
-#            target: x86_64-unknown-linux-gnu
-#            stage4: x86_64-unknown-linux-musl
-#            skip_on_pr: true
-#          - os: ubuntu-24.04-arm64
-#            target: aarch64-unknown-linux-musl
-#            stage4: aarch64-unknown-linux-musl
-#            skip_on_pr: true
+    #          - os: macos-12
+    #            target: x86_64-apple-darwin
+    #            stage4: x86_64-apple-darwin
+    #            skip_on_pr: true
+    #          - os: ubuntu-22.04
+    #            target: x86_64-unknown-linux-gnu
+    #            stage4: x86_64-unknown-linux-musl
+    #            skip_on_pr: true
+    #          - os: ubuntu-24.04-arm64
+    #            target: aarch64-unknown-linux-musl
+    #            stage4: aarch64-unknown-linux-musl
+    #            skip_on_pr: true
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -265,13 +265,35 @@ jobs:
           name: gg.cmd
           path: gg.cmd
 
+  test:
+    needs: stage1
+    strategy:
+      matrix:
+        os: [ ubuntu-22.04 ]
+        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v" ]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Download gg
+        uses: actions/download-artifact@v4
+        with:
+          name: gg.cmd
+
+      - name: Run!
+        shell: bash
+        run: |
+          set -x
+          sh gg.cmd -v ${{ matrix.cmd }}
+          echo "Nice, let's try again"
+          sh gg.cmd -v ${{ matrix.cmd }}
+
 
   test-OS:
     if: github.event.pull_request.merged == true
     needs: stage1
     strategy:
       matrix:
-        os: [ ubuntu-22.04, windows-2019, windows-2022 ]
+        os: [ windows-2019, windows-2022 ]
         cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v" ]
 
     runs-on: ${{ matrix.os }}
@@ -291,7 +313,7 @@ jobs:
 
   test-ARM:
     if: false
-#    if: github.event.pull_request.merged == true
+    #    if: github.event.pull_request.merged == true
     needs: stage1
     strategy:
       matrix:
@@ -339,7 +361,7 @@ jobs:
 
   test-ARM-container:
     if: false
-#    if: github.event.pull_request.merged == true
+    #    if: github.event.pull_request.merged == true
     needs: stage1
     strategy:
       matrix:
@@ -360,7 +382,6 @@ jobs:
           uname -a
           docker run --rm -i -v $PWD:/b -w /b ${{ matrix.container }} sh gg.cmd -v ${{ matrix.cmd }}
   
-
   test-container:
     needs: stage1
     if: github.event.pull_request.merged == true
