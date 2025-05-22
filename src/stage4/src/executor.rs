@@ -233,9 +233,9 @@ impl dyn Executor {
             "openapi" => Some(Box::new(OpenAPIGenerator { executor_cmd })),
             "rat" | "ra" => Some(Box::new(Rat { executor_cmd })),
             "run" => Some(Box::new(CustomCommand { executor_cmd })),
-            "deno" => Some(Box::new(Deno { executor_cmd })),
+            "deno" => Some(Box::new(Deno::new(executor_cmd))),
             "go" => Some(Box::new(Go { executor_cmd })),
-            "caddy" => Some(Box::new(Caddy { executor_cmd })),
+            "caddy" => Some(Box::new(Caddy::new(executor_cmd))),
             _ => None,
         }
     }

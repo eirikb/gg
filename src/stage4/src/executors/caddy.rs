@@ -1,73 +1,48 @@
-use std::collections::HashSet;
 use std::future::Future;
 use std::pin::Pin;
 
-use crate::executor::{AppInput, Download, Executor, ExecutorCmd, GgVersion};
-use crate::target::{Arch, Os, Variant};
-use crate::target::Os::Windows;
+use crate::executor::{AppInput, Download, Executor, ExecutorCmd};
+use crate::executors::github::GitHub;
 
 pub struct Caddy {
-    pub executor_cmd: ExecutorCmd,
+    github_executor: GitHub,
+}
+
+impl Caddy {
+    pub fn new(executor_cmd: ExecutorCmd) -> Self {
+        let github_executor = GitHub::new_with_config(
+            executor_cmd,
+            "caddyserver".to_string(),
+            "caddy".to_string(),
+            Some(vec![]),
+            Some(vec!["caddy".to_string(), "caddy.exe".to_string()]),
+        );
+
+        Self { github_executor }
+    }
 }
 
 impl Executor for Caddy {
     fn get_executor_cmd(&self) -> &ExecutorCmd {
-        &self.executor_cmd
+        self.github_executor.get_executor_cmd()
     }
 
-    fn get_download_urls<'a>(&self, _input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {
-        Box::pin(async move {
-            let mut downloads: Vec<Download> = vec!();
-            let octocrab = octocrab::Octocrab::builder().base_uri("https://ghapi.ggcmd.io/").unwrap().build().unwrap();
-            let mut page: u32 = 1;
-            loop {
-                let releases = octocrab.repos("caddyserver", "caddy")
-                    .releases().list().page(page).per_page(100).send().await.unwrap();
-                for release in releases.items {
-                    for asset in release.assets {
-                        let os = if asset.name.contains("windows") {
-                            Some(Windows)
-                        } else if asset.name.contains("linux") {
-                            Some(Os::Linux)
-                        } else if asset.name.contains("mac") {
-                            Some(Os::Mac)
-                        } else {
-                            None
-                        };
-                        let arch = if asset.name.contains("amd64") {
-                            Some(Arch::X86_64)
-                        } else {
-                            None
-                        };
-                        if os.is_some() && arch.is_some() {
-                            downloads.push(Download {
-                                download_url: asset.browser_download_url.to_string(),
-                                version: GgVersion::new(release.tag_name.as_str()),
-                                os,
-                                arch,
-                                tags: HashSet::new(),
-                                variant: Some(Variant::Any),
-                            });
-                        }
-                    }
-                }
-                if releases.next == None {
-                    break;
-                }
-                page += 1;
-            }
-            downloads
-        })
+    fn get_download_urls<'a>(
+        &'a self,
+        input: &'a AppInput,
+    ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
+        self.github_executor.get_download_urls(input)
     }
 
     fn get_bins(&self, input: &AppInput) -> Vec<String> {
-        vec!(match &input.target.os {
-            Windows => "caddy.exe",
-            _ => "caddy"
-        }.to_string())
+        self.github_executor.get_bins(input)
     }
 
     fn get_name(&self) -> &str {
         "caddy"
+    }
+
+    fn get_deps<'a>(&'a self) -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
+        self.github_executor.get_deps()
     }
 }
