@@ -213,6 +213,8 @@ impl Executor for GitHub {
                 Windows => format!("{}.exe", base_name.to_lowercase()),
                 _ => base_name.to_lowercase(),
             },
+            base_name.clone(),
+            base_name.to_lowercase(),
         ]
     }
 
