@@ -11,6 +11,7 @@ use crate::bloody_indiana_jones::BloodyIndianaJones;
 use crate::executors::caddy::Caddy;
 use crate::executors::custom_command::CustomCommand;
 use crate::executors::deno::Deno;
+use crate::executors::github::GitHub;
 use crate::executors::go::Go;
 use crate::executors::gradle::Gradle;
 use crate::executors::java::Java;
@@ -210,6 +211,18 @@ impl ExecutorCmd {
 
 impl dyn Executor {
     pub fn new(executor_cmd: ExecutorCmd) -> Option<Box<Self>> {
+        if executor_cmd.cmd.starts_with("github/") {
+            let cmd_clone = executor_cmd.cmd.clone();
+            let repo_part = &cmd_clone[7..];
+            if let Some((owner, repo)) = repo_part.split_once('/') {
+                return Some(Box::new(GitHub::new(
+                    executor_cmd,
+                    owner.to_string(),
+                    repo.to_string(),
+                )));
+            }
+        }
+
         match executor_cmd.cmd.as_str() {
             "node" | "npm" | "npx" => Some(Box::new(Node { executor_cmd })),
             "gradle" => Some(Box::new(Gradle::new(executor_cmd))),
