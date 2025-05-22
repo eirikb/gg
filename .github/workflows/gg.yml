@@ -242,7 +242,6 @@ jobs:
           path: gg.cmd
 
   test-OS:
-    if: github.event.pull_request.merged == true
     needs: stage1
     strategy:
       matrix:
@@ -290,7 +289,6 @@ jobs:
 
 
   test-batch:
-    if: github.event.pull_request.merged == true
     needs: stage1
     strategy:
       matrix:
@@ -337,7 +335,6 @@ jobs:
   
   test-container:
     needs: stage1
-    if: github.event.pull_request.merged == true
     strategy:
       matrix:
         container: [ ubuntu, debian, alpine, archlinux ]
