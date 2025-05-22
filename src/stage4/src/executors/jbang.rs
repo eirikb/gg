@@ -15,7 +15,11 @@ impl JBang {
             "jbangdev".to_string(),
             "jbang".to_string(),
             Some(vec!["java".to_string()]),
-            Some(vec!["jbang".to_string(), "jbang.exe".to_string()]),
+            Some(vec![
+                "jbang".to_string(),
+                "jbang.ps1".to_string(),
+                "jbang.cmd".to_string(),
+            ]),
         );
 
         Self { github_executor }
