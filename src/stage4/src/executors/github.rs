@@ -67,18 +67,18 @@ impl GitHub {
 
     fn detect_os_from_name(name: &str) -> Option<Os> {
         let name_lower = name.to_lowercase();
-        if name_lower.contains("windows")
+        if name_lower.contains("darwin")
+            || name_lower.contains("macos")
+            || name_lower.contains("apple")
+        {
+            Some(Os::Mac)
+        } else if name_lower.contains("windows")
             || name_lower.contains("win")
             || name_lower.contains(".exe")
         {
             Some(Windows)
         } else if name_lower.contains("linux") {
             Some(Os::Linux)
-        } else if name_lower.contains("darwin")
-            || name_lower.contains("macos")
-            || name_lower.contains("apple")
-        {
-            Some(Os::Mac)
         } else {
             None
         }
