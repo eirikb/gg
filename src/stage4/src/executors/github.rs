@@ -54,7 +54,7 @@ impl GitHub {
                 return match language_str.as_str() {
                     "java" | "kotlin" | "scala" | "clojure" => vec!["java"],
                     "javascript" | "typescript" => vec!["node"],
-                    "go" => vec!["go"],
+                    "go" => vec![],
                     "rust" => vec![],
                     "c" | "c++" | "cpp" => vec![],
                     _ => vec![],
