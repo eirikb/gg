@@ -154,7 +154,7 @@ async fn main() -> ExitCode {
 
     info!("System is {system}. {:?}", &target);
 
-    return if no_clap.cmds.first().is_some() {
+    if no_clap.cmds.first().is_some() {
         let mut executors = no_clap
             .cmds
             .iter()
@@ -175,7 +175,8 @@ async fn main() -> ExitCode {
             look_for_deps = false;
             let mut to_add = Vec::new();
             for x in &executors {
-                for dep_name in x.get_deps() {
+                let deps = x.get_deps().await;
+                for dep_name in deps {
                     if !executors
                         .iter()
                         .any(|e| &e.get_name().to_string() == dep_name)
@@ -197,7 +198,7 @@ async fn main() -> ExitCode {
             }
         }
 
-        return if executors.first().is_some() {
+        if executors.first().is_some() {
             let mut env_vars: HashMap<String, String> = HashMap::new();
             let mut path_vars: Vec<String> = vec![];
 
@@ -262,10 +263,10 @@ async fn main() -> ExitCode {
         } else {
             println!("No executor found!");
             ExitCode::from(1)
-        };
+        }
     } else {
         println!("Missing command. Try help");
         print_help(ver);
         ExitCode::from(1)
-    };
+    }
 }

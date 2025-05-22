@@ -62,11 +62,11 @@ impl GgVersion {
             2 => format!("{}.{}.0", parts[0], parts[1]),
             _ => version.to_string(),
         };
-        return if Version::parse(&version).is_ok() {
+        if Version::parse(&version).is_ok() {
             Some(Self(version.to_string()))
         } else {
             None
-        };
+        }
     }
 }
 
@@ -178,14 +178,14 @@ pub struct Download {
 
 impl Download {
     pub fn new(download_url: String, version: &str, variant: Option<Variant>) -> Download {
-        return Download {
+        Download {
             download_url,
             version: GgVersion::new(version),
             os: Some(Os::Any),
             arch: Some(Arch::Any),
             variant,
             tags: HashSet::new(),
-        };
+        }
     }
 }
 
@@ -254,8 +254,8 @@ pub trait Executor {
     ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>>;
     fn get_bins(&self, input: &AppInput) -> Vec<String>;
     fn get_name(&self) -> &str;
-    fn get_deps(&self) -> Vec<&str> {
-        vec![]
+    fn get_deps<'a>(&'a self) -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
+        Box::pin(async move { vec![] })
     }
     fn get_default_include_tags(&self) -> HashSet<String> {
         HashSet::new()
@@ -354,7 +354,7 @@ pub async fn prep(
         }
     }
 
-    pb.set_message(format!("Fetching versions"));
+    pb.set_message("Fetching versions".to_string());
 
     let urls = executor.get_download_urls(input).await;
     pb.set_message(format!("{} versions", &urls.len()));

@@ -196,7 +196,7 @@ impl Executor for GitHub {
         &self.repo
     }
 
-    fn get_deps(&self) -> Vec<&str> {
-        vec![]
+    fn get_deps<'a>(&'a self) -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
+        Box::pin(async move { self.detect_language_and_deps().await })
     }
 }
