@@ -4,32 +4,43 @@ use std::pin::Pin;
 
 use scraper::{Html, Selector};
 
-use crate::Executor;
-use crate::executor::{AppInput, Download, ExecutorCmd, GgVersion};
+use crate::executor::{java_deps, AppInput, Download, ExecutorCmd, GgVersion};
 use crate::target::{Arch, Os, Variant};
+use crate::Executor;
 
 pub struct Maven {
     pub executor_cmd: ExecutorCmd,
 }
 
 fn get_version(link: &str) -> String {
-    link.replace("apache-maven-", "").replace("maven-", "").replace("-bin.tar.gz", "").replace(".tar.gz", "").to_string()
+    link.replace("apache-maven-", "")
+        .replace("maven-", "")
+        .replace("-bin.tar.gz", "")
+        .replace(".tar.gz", "")
+        .to_string()
 }
 
 impl Executor for Maven {
     fn get_executor_cmd(&self) -> &ExecutorCmd {
-        return &self.executor_cmd;
+        &self.executor_cmd
     }
 
-    fn get_download_urls<'a>(&'a self, _input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {
+    fn get_download_urls<'a>(
+        &'a self,
+        _input: &'a AppInput,
+    ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
         Box::pin(async move {
             let url = "https://archive.apache.org/dist/maven/binaries/";
-            let body = reqwest::get(url).await
-                .expect("Unable to connect to archive.apache.org").text().await
+            let body = reqwest::get(url)
+                .await
+                .expect("Unable to connect to archive.apache.org")
+                .text()
+                .await
                 .expect("Unable to download maven list of versions");
 
             let document = Html::parse_document(body.as_str());
-            document.select(&Selector::parse("a").unwrap())
+            document
+                .select(&Selector::parse("a").unwrap())
                 .map(|a| a.text().next().unwrap_or("").trim())
                 .filter(|link| link.contains("maven") && link.ends_with("tar.gz"))
                 .map(|link| {
@@ -48,20 +59,25 @@ impl Executor for Maven {
                         variant: Some(Variant::Any),
                         tags,
                     }
-                }).collect()
+                })
+                .collect()
         })
     }
 
     fn get_bins(&self, _input: &AppInput) -> Vec<String> {
-        vec!["mvn".to_string(), "mvn.bat".to_string(), "maven.bat".to_string()]
+        vec![
+            "mvn".to_string(),
+            "mvn.bat".to_string(),
+            "maven.bat".to_string(),
+        ]
     }
 
     fn get_name(&self) -> &str {
         "maven"
     }
 
-    fn get_deps(&self) -> Vec<&str> {
-        vec!("java")
+    fn get_deps<'a>(&'a self) -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
+        java_deps()
     }
 }
 
@@ -71,7 +87,9 @@ mod tests {
 
     #[tokio::test]
     async fn hello_maven() {
-        let mvn = Maven { executor_cmd: ExecutorCmd::dummy() };
+        let mvn = Maven {
+            executor_cmd: ExecutorCmd::dummy(),
+        };
         let app_input = AppInput::dummy();
         let urls = mvn.get_download_urls(&app_input).await;
         assert_eq!(urls.is_empty(), false);

@@ -8,9 +8,8 @@ use std::pin::Pin;
 use std::process::Command;
 
 use crate::bloody_indiana_jones::BloodyIndianaJones;
-use crate::executors::caddy::Caddy;
 use crate::executors::custom_command::CustomCommand;
-use crate::executors::deno::Deno;
+use crate::executors::github::GitHub;
 use crate::executors::go::Go;
 use crate::executors::gradle::Gradle;
 use crate::executors::java::Java;
@@ -61,11 +60,11 @@ impl GgVersion {
             2 => format!("{}.{}.0", parts[0], parts[1]),
             _ => version.to_string(),
         };
-        return if Version::parse(&version).is_ok() {
+        if Version::parse(&version).is_ok() {
             Some(Self(version.to_string()))
         } else {
             None
-        };
+        }
     }
 }
 
@@ -114,7 +113,7 @@ pub struct GgMeta {
 impl AppInput {
     pub fn dummy() -> Self {
         Self {
-            target: Target::parse(""),
+            target: Target::parse_with_overrides("", None, None),
             no_clap: NoClap::new(),
         }
     }
@@ -177,14 +176,14 @@ pub struct Download {
 
 impl Download {
     pub fn new(download_url: String, version: &str, variant: Option<Variant>) -> Download {
-        return Download {
+        Download {
             download_url,
             version: GgVersion::new(version),
             os: Some(Os::Any),
             arch: Some(Arch::Any),
             variant,
             tags: HashSet::new(),
-        };
+        }
     }
 }
 
@@ -208,19 +207,70 @@ impl ExecutorCmd {
     }
 }
 
+fn create_github_executor(
+    executor_cmd: ExecutorCmd,
+    owner: &str,
+    repo: &str,
+    deps: Option<Vec<String>>,
+    bins: Option<Vec<String>>,
+) -> Box<dyn Executor> {
+    Box::new(GitHub::new_with_config(
+        executor_cmd,
+        owner.to_string(),
+        repo.to_string(),
+        deps,
+        bins,
+    ))
+}
+
 impl dyn Executor {
     pub fn new(executor_cmd: ExecutorCmd) -> Option<Box<Self>> {
+        if executor_cmd.cmd.starts_with("gh/") {
+            let cmd_clone = executor_cmd.cmd.clone();
+            let repo_part = &cmd_clone[3..];
+            if let Some((owner, repo)) = repo_part.split_once('/') {
+                return Some(Box::new(GitHub::new(
+                    executor_cmd,
+                    owner.to_string(),
+                    repo.to_string(),
+                )));
+            }
+        }
+
         match executor_cmd.cmd.as_str() {
             "node" | "npm" | "npx" => Some(Box::new(Node { executor_cmd })),
             "gradle" => Some(Box::new(Gradle::new(executor_cmd))),
             "java" => Some(Box::new(Java { executor_cmd })),
+            "jbang" => Some(create_github_executor(
+                executor_cmd,
+                "jbangdev",
+                "jbang",
+                Some(vec!["java".to_string()]),
+                Some(vec![
+                    "jbang".to_string(),
+                    "jbang.ps1".to_string(),
+                    "jbang.cmd".to_string(),
+                ]),
+            )),
             "maven" | "mvn" => Some(Box::new(Maven { executor_cmd })),
             "openapi" => Some(Box::new(OpenAPIGenerator { executor_cmd })),
             "rat" | "ra" => Some(Box::new(Rat { executor_cmd })),
             "run" => Some(Box::new(CustomCommand { executor_cmd })),
-            "deno" => Some(Box::new(Deno { executor_cmd })),
+            "deno" => Some(create_github_executor(
+                executor_cmd,
+                "denoland",
+                "deno",
+                Some(vec![]),
+                Some(vec!["deno".to_string(), "deno.exe".to_string()]),
+            )),
             "go" => Some(Box::new(Go { executor_cmd })),
-            "caddy" => Some(Box::new(Caddy { executor_cmd })),
+            "caddy" => Some(create_github_executor(
+                executor_cmd,
+                "caddyserver",
+                "caddy",
+                Some(vec![]),
+                Some(vec!["caddy".to_string(), "caddy.exe".to_string()]),
+            )),
             _ => None,
         }
     }
@@ -241,8 +291,8 @@ pub trait Executor {
     ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>>;
     fn get_bins(&self, input: &AppInput) -> Vec<String>;
     fn get_name(&self) -> &str;
-    fn get_deps(&self) -> Vec<&str> {
-        vec![]
+    fn get_deps<'a>(&'a self) -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
+        Box::pin(async move { vec![] })
     }
     fn get_default_include_tags(&self) -> HashSet<String> {
         HashSet::new()
@@ -269,6 +319,10 @@ pub trait Executor {
         true
     }
     fn post_prep(&self, _cache_path: &str) {}
+}
+
+pub fn java_deps<'a>() -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
+    Box::pin(async move { vec!["java"] })
 }
 
 fn get_executor_app_path(
@@ -341,7 +395,7 @@ pub async fn prep(
         }
     }
 
-    pb.set_message(format!("Fetching versions"));
+    pb.set_message("Fetching versions".to_string());
 
     let urls = executor.get_download_urls(input).await;
     pb.set_message(format!("{} versions", &urls.len()));

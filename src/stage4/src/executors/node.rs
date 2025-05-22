@@ -47,11 +47,19 @@ fn get_package_version() -> Option<Box<VersionReq>> {
     if manager.locate_closest().is_ok() {
         if let Ok(json) = manager.read_ref() {
             if json.engines.is_some() {
-                return Some(Box::new(VersionReq::parse(json.clone().engines.clone().unwrap().get("node").unwrap_or(&"".to_string())).unwrap_or(VersionReq::default())));
+                return Some(Box::new(
+                    VersionReq::parse(
+                        json.engines
+                            .as_ref()
+                            .unwrap()
+                            .get("node")
+                            .unwrap_or(&"".to_string()),
+                    )
+                    .unwrap_or(VersionReq::default()),
+                ));
             }
         }
     }
-
 
     if let Ok(nvmrc) = fs::read_to_string(".nvmrc") {
         let nvmrc = Regex::new("^v").unwrap().replace(&nvmrc, "");
@@ -78,7 +86,10 @@ impl Executor for Node {
         }
     }
 
-    fn get_download_urls<'a>(&self, input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {
+    fn get_download_urls<'a>(
+        &self,
+        input: &'a AppInput,
+    ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
         Box::pin(async move { get_node_urls(&input.target).await })
     }
 
@@ -92,9 +103,10 @@ impl Executor for Node {
             _ => match self.executor_cmd.cmd.as_str() {
                 "node" => "node",
                 "npm" => "npm",
-                _ => "npx"
-            }
-        }.to_string()]
+                _ => "npx",
+            },
+        }
+        .to_string()]
     }
 
     fn get_name(&self) -> &str {
@@ -103,11 +115,11 @@ impl Executor for Node {
 }
 
 async fn unofficial_downloads(target: &Target) -> Vec<Download> {
-    return download_urls("unofficial-builds.nodejs.org", target).await;
+    download_urls("unofficial-builds.nodejs.org", target).await
 }
 
 async fn official_downloads(target: &Target) -> Vec<Download> {
-    return download_urls("nodejs.org", target).await;
+    download_urls("nodejs.org", target).await
 }
 
 async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
@@ -124,7 +136,12 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
         (Os::Mac, Arch::Arm64, _) => "osx-arm64-tar",
         _ => "linux-x64",
     };
-    let json = reqwest::get(format!("https://{host}/download/release/index.json")).await.unwrap().text().await.unwrap();
+    let json = reqwest::get(format!("https://{host}/download/release/index.json"))
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
     let root: Root = serde_json::from_str(json.as_str()).expect("JSON was not well-formatted");
 
     root.iter().filter(|r|
@@ -163,6 +180,6 @@ async fn get_node_urls(target: &Target) -> Vec<Download> {
     match (target.os, target.arch, target.variant) {
         (Os::Linux, _, Some(Variant::Musl)) => unofficial_downloads(target).await,
         (Os::Windows, Arch::Arm64, _) => unofficial_downloads(target).await,
-        _ => official_downloads(target).await
+        _ => official_downloads(target).await,
     }
 }

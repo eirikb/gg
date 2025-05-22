@@ -1,10 +1,7 @@
 on:
   workflow_dispatch:
-  push:
-    branches-ignore:
-      - main
   pull_request:
-    types: [ closed ]
+    types: [ opened, synchronize, closed ]
     branches: [ main ]
 
 
@@ -245,12 +242,11 @@ jobs:
           path: gg.cmd
 
   test-OS:
-    if: github.event.pull_request.merged == true
     needs: stage1
     strategy:
       matrix:
         os: [ ubuntu-22.04, windows-2019, windows-2022 ]
-        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v" ]
+        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version" ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -293,12 +289,11 @@ jobs:
 
 
   test-batch:
-    if: github.event.pull_request.merged == true
     needs: stage1
     strategy:
       matrix:
         os: [ windows-2019, windows-2022 ]
-        cmd: [ "node -v", "java -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v" ]
+        cmd: [ "node -v", "java -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version" ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -340,7 +335,6 @@ jobs:
   
   test-container:
     needs: stage1
-    if: github.event.pull_request.merged == true
     strategy:
       matrix:
         container: [ ubuntu, debian, alpine, archlinux ]

@@ -1,11 +1,10 @@
-pub mod java;
 pub mod custom_command;
+pub mod github;
+pub mod go;
 pub mod gradle;
+pub mod gradle_properties;
+pub mod java;
 pub mod maven;
+pub mod node;
 pub mod openapigenerator;
 pub mod rat;
-pub mod node;
-pub mod deno;
-pub mod gradle_properties;
-pub mod go;
-pub mod caddy;

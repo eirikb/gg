@@ -36,6 +36,8 @@ Options:
     -vvv            Trace output
     -w              Even more output
     -V              Print version
+    --os <OS>       Override target OS (windows, linux, mac)
+    --arch <ARCH>   Override target architecture (x86_64, arm64, armv7)
 
 Built in commands:
     update          Update gg.cmd
@@ -62,6 +64,8 @@ Examples:
     ./gg.cmd run:java@17 soapui
     ./gg.cmd run:java@14 env
     ./gg.cmd update
+    ./gg.cmd --os windows --arch x86_64 deno --version    (test Windows Deno on Linux)
+    ./gg.cmd --os mac deno --help                         (test macOS Deno from anywhere)
 
 Supported systems:
     node (npm, npx will also work, version refers to node version)
@@ -103,7 +107,11 @@ async fn main() -> ExitCode {
         .unwrap_or(String::from("x86_64-linux"))
         .trim()
         .to_string();
-    let target = Target::parse(&system);
+    let target = Target::parse_with_overrides(
+        &system,
+        no_clap.override_os.clone(),
+        no_clap.override_arch.clone(),
+    );
 
     let input = &AppInput {
         target,
@@ -152,9 +160,15 @@ async fn main() -> ExitCode {
         };
     }
 
-    info!("System is {system}. {:?}", &target);
+    let override_info = match (&no_clap.override_os, &no_clap.override_arch) {
+        (Some(os), Some(arch)) => format!(" (overridden: OS={}, Arch={})", os, arch),
+        (Some(os), None) => format!(" (overridden: OS={})", os),
+        (None, Some(arch)) => format!(" (overridden: Arch={})", arch),
+        (None, None) => String::new(),
+    };
+    info!("System is {system}{}. {:?}", override_info, &target);
 
-    return if no_clap.cmds.first().is_some() {
+    if no_clap.cmds.first().is_some() {
         let mut executors = no_clap
             .cmds
             .iter()
@@ -175,7 +189,8 @@ async fn main() -> ExitCode {
             look_for_deps = false;
             let mut to_add = Vec::new();
             for x in &executors {
-                for dep_name in x.get_deps() {
+                let deps = x.get_deps().await;
+                for dep_name in deps {
                     if !executors
                         .iter()
                         .any(|e| &e.get_name().to_string() == dep_name)
@@ -197,7 +212,7 @@ async fn main() -> ExitCode {
             }
         }
 
-        return if executors.first().is_some() {
+        if executors.first().is_some() {
             let mut env_vars: HashMap<String, String> = HashMap::new();
             let mut path_vars: Vec<String> = vec![];
 
@@ -262,10 +277,10 @@ async fn main() -> ExitCode {
         } else {
             println!("No executor found!");
             ExitCode::from(1)
-        };
+        }
     } else {
         println!("Missing command. Try help");
         print_help(ver);
         ExitCode::from(1)
-    };
+    }
 }

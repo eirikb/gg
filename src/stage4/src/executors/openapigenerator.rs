@@ -4,8 +4,8 @@ use std::future::Future;
 use std::pin::Pin;
 
 use crate::bloody_maven::get_download_urls_from_maven;
+use crate::executor::{java_deps, AppInput, AppPath, Download, ExecutorCmd};
 use crate::Executor;
-use crate::executor::{AppInput, AppPath, Download, ExecutorCmd};
 
 pub struct OpenAPIGenerator {
     pub executor_cmd: ExecutorCmd,
@@ -13,10 +13,13 @@ pub struct OpenAPIGenerator {
 
 impl Executor for OpenAPIGenerator {
     fn get_executor_cmd(&self) -> &ExecutorCmd {
-        return &self.executor_cmd;
+        &self.executor_cmd
     }
 
-    fn get_download_urls<'a>(&'a self, _input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {
+    fn get_download_urls<'a>(
+        &'a self,
+        _input: &'a AppInput,
+    ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
         get_download_urls_from_maven("openapitools", "openapi-generator-cli")
     }
 
@@ -28,8 +31,8 @@ impl Executor for OpenAPIGenerator {
         "openapi"
     }
 
-    fn get_deps(&self) -> Vec<&str> {
-        vec!("java")
+    fn get_deps<'a>(&'a self) -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
+        java_deps()
     }
 
     fn get_default_exclude_tags(&self) -> HashSet<String> {
@@ -39,12 +42,13 @@ impl Executor for OpenAPIGenerator {
     fn customize_args(&self, input: &AppInput, app_path: &AppPath) -> Vec<String> {
         let jar = "openapi-generator-cli.jar";
         if let Some(path) = app_path.install_dir.join(jar).to_str() {
-            let args = vec!("-jar".to_string(), path.to_string());
-            args.iter().cloned().chain(
-                input.no_clap.app_args.iter().cloned()
-            ).collect()
+            let args = vec!["-jar".to_string(), path.to_string()];
+            args.iter()
+                .cloned()
+                .chain(input.no_clap.app_args.iter().cloned())
+                .collect()
         } else {
-            vec!()
+            vec![]
         }
     }
 
@@ -55,7 +59,11 @@ impl Executor for OpenAPIGenerator {
                 if let Ok(entry) = entry {
                     if let Some(path_str) = entry.path().to_str() {
                         if path_str.contains("openapi-generator-cli") && path_str.ends_with("jar") {
-                            rename(entry.path(), cache_path.to_string() + "/openapi-generator-cli.jar").unwrap();
+                            rename(
+                                entry.path(),
+                                cache_path.to_string() + "/openapi-generator-cli.jar",
+                            )
+                            .unwrap();
                         }
                     }
                 }
