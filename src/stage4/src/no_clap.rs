@@ -14,7 +14,6 @@ pub struct NoClapCmd {
 /// Why not clap? Yes
 #[derive(Debug, Clone)]
 pub struct NoClap {
-    pub gg_args: Vec<String>,
     pub app_args: Vec<String>,
     pub log_level: String,
     pub log_external: bool,
@@ -29,11 +28,16 @@ impl NoClap {
     }
 
     pub fn parse(args: Vec<String>) -> Self {
-        let start_at = args.iter().position(|item| !item.starts_with("-")).unwrap_or(args.len());
+        let start_at = args
+            .iter()
+            .position(|item| !item.starts_with("-"))
+            .unwrap_or(args.len());
         let cmds = args.get(start_at);
         let gg_args: Vec<String> = args.clone().into_iter().take(start_at).collect();
         let app_args: Vec<String> = args.clone().into_iter().skip(start_at + 1).collect();
-        let log_level = vec![("-vvv", "trace"), ("-vv", "debug"), ("-v", "info")].into_iter().find(|(input, _)| gg_args.contains(&input.to_string()));
+        let log_level = vec![("-vvv", "trace"), ("-vv", "debug"), ("-v", "info")]
+            .into_iter()
+            .find(|(input, _)| gg_args.contains(&input.to_string()));
 
         let version = gg_args.contains(&"-V".to_string());
         let log_external = gg_args.contains(&"-w".to_string());
@@ -42,51 +46,66 @@ impl NoClap {
             log_level
         } else {
             "warn"
-        }.to_string();
+        }
+        .to_string();
 
         let default_string = String::default();
         let cmds = cmds.unwrap_or(&default_string);
 
-        let cmds = cmds.split(":").filter(|s| !s.is_empty()).map(|cmd| {
-            let mut cmd = cmd.to_string();
-            let parts: Vec<String> = cmd.split("@").map(String::from).collect();
-            let mut include_tags = HashSet::new();
-            let mut exclude_tags = HashSet::new();
-            let mut version = None;
+        let cmds = cmds
+            .split(":")
+            .filter(|s| !s.is_empty())
+            .map(|cmd| {
+                let mut cmd = cmd.to_string();
+                let parts: Vec<String> = cmd.split("@").map(String::from).collect();
+                let mut include_tags = HashSet::new();
+                let mut exclude_tags = HashSet::new();
+                let mut version = None;
 
-            if parts.len() == 2 {
-                cmd = parts[0].to_string();
+                if parts.len() == 2 {
+                    cmd = parts[0].to_string();
 
-                let r = Regex::new(r"[+-]").unwrap();
-                let alles = parts[1].to_string();
-                let matches = r.find_iter(&alles).collect::<Vec<Match>>();
-                if matches.is_empty() {
-                    version = Some(alles.clone());
+                    let r = Regex::new(r"[+-]").unwrap();
+                    let alles = parts[1].to_string();
+                    let matches = r.find_iter(&alles).collect::<Vec<Match>>();
+                    if matches.is_empty() {
+                        version = Some(alles.clone());
+                    }
+                    matches.iter().enumerate().for_each(|(index, m)| {
+                        if index == 0 && m.start() != 0 {
+                            version = Some(alles[0..m.start()].to_string());
+                        }
+                        let until = if index < matches.len() - 1 {
+                            matches[index + 1].start()
+                        } else {
+                            alles.len()
+                        };
+                        let command = alles[m.start()..m.start() + 1].to_string();
+                        let text = alles[m.start() + 1..until].to_string();
+                        if command == "+" {
+                            include_tags.insert(text);
+                        } else if command == "-" {
+                            exclude_tags.insert(text);
+                        }
+                    });
                 }
-                matches.iter().enumerate().for_each(|(index, m)| {
-                    if index == 0 && m.start() != 0 {
-                        version = Some(alles[0..m.start()].to_string());
-                    }
-                    let until = if index < matches.len() - 1 { matches[index + 1].start() } else { alles.len() };
-                    let command = alles[m.start()..m.start() + 1].to_string();
-                    let text = alles[m.start() + 1..until].to_string();
-                    if command == "+" {
-                        include_tags.insert(text);
-                    } else if command == "-" {
-                        exclude_tags.insert(text);
-                    }
-                });
-            }
 
-            NoClapCmd {
-                cmd,
-                version,
-                include_tags,
-                exclude_tags,
-            }
-        }).collect();
+                NoClapCmd {
+                    cmd,
+                    version,
+                    include_tags,
+                    exclude_tags,
+                }
+            })
+            .collect();
 
-        Self { gg_args, app_args, log_level, log_external, cmds, version }
+        Self {
+            app_args,
+            log_level,
+            log_external,
+            cmds,
+            version,
+        }
     }
 }
 
@@ -97,27 +116,47 @@ mod tests {
     #[test]
     fn node_with_args() {
         let no_clap = NoClap::parse(["node", "hello", "world"].map(String::from).to_vec());
-        assert_eq!(["hello", "world"].map(String::from).to_vec(), no_clap.app_args);
+        assert_eq!(
+            ["hello", "world"].map(String::from).to_vec(),
+            no_clap.app_args
+        );
     }
 
     #[test]
     fn version_is_set() {
         let no_clap = NoClap::parse(["-V", "node", "hello", "world"].map(String::from).to_vec());
-        assert_eq!(["hello", "world"].map(String::from).to_vec(), no_clap.app_args);
+        assert_eq!(
+            ["hello", "world"].map(String::from).to_vec(),
+            no_clap.app_args
+        );
         assert_eq!(true, no_clap.version);
     }
 
     #[test]
     fn version_is_set_but_not_help() {
-        let no_clap = NoClap::parse(["-V", "node", "-h", "hello", "world"].map(String::from).to_vec());
-        assert_eq!(["-h", "hello", "world"].map(String::from).to_vec(), no_clap.app_args);
+        let no_clap = NoClap::parse(
+            ["-V", "node", "-h", "hello", "world"]
+                .map(String::from)
+                .to_vec(),
+        );
+        assert_eq!(
+            ["-h", "hello", "world"].map(String::from).to_vec(),
+            no_clap.app_args
+        );
         assert_eq!(true, no_clap.version);
     }
 
     #[test]
     fn version_is_set_and_help() {
-        let no_clap = NoClap::parse(["-V", "-h", "node", "hello", "world"].map(String::from).to_vec());
-        assert_eq!(["hello", "world"].map(String::from).to_vec(), no_clap.app_args);
+        let no_clap = NoClap::parse(
+            ["-V", "-h", "node", "hello", "world"]
+                .map(String::from)
+                .to_vec(),
+        );
+        assert_eq!(
+            ["hello", "world"].map(String::from).to_vec(),
+            no_clap.app_args
+        );
         assert_eq!(true, no_clap.version);
     }
 
@@ -129,8 +168,15 @@ mod tests {
 
     #[test]
     fn versioning_test() {
-        let no_clap = NoClap::parse(["node@10:gradle@1.2.3", "hello", "world"].map(String::from).to_vec());
-        assert_eq!(["hello", "world"].map(String::from).to_vec(), no_clap.app_args);
+        let no_clap = NoClap::parse(
+            ["node@10:gradle@1.2.3", "hello", "world"]
+                .map(String::from)
+                .to_vec(),
+        );
+        assert_eq!(
+            ["hello", "world"].map(String::from).to_vec(),
+            no_clap.app_args
+        );
 
         assert_eq!("node", no_clap.cmds[0].cmd);
         assert_eq!("10", no_clap.cmds[0].version.as_ref().unwrap());
@@ -159,9 +205,20 @@ mod tests {
 
     #[test]
     fn include_tags() {
-        let no_clap = NoClap::parse(["node@10:gradle@1.2.3+hello+world:java@+azul", "no", "problem"].map(String::from).to_vec());
+        let no_clap = NoClap::parse(
+            [
+                "node@10:gradle@1.2.3+hello+world:java@+azul",
+                "no",
+                "problem",
+            ]
+            .map(String::from)
+            .to_vec(),
+        );
 
-        assert_eq!(["no", "problem"].map(String::from).to_vec(), no_clap.app_args);
+        assert_eq!(
+            ["no", "problem"].map(String::from).to_vec(),
+            no_clap.app_args
+        );
 
         assert_eq!("node", no_clap.cmds[0].cmd);
         assert_eq!("10", no_clap.cmds[0].version.as_ref().unwrap());
