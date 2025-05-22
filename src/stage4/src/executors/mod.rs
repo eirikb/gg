@@ -6,6 +6,7 @@ pub mod go;
 pub mod gradle;
 pub mod gradle_properties;
 pub mod java;
+pub mod jbang;
 pub mod maven;
 pub mod node;
 pub mod openapigenerator;

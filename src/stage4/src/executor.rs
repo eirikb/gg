@@ -15,6 +15,7 @@ use crate::executors::github::GitHub;
 use crate::executors::go::Go;
 use crate::executors::gradle::Gradle;
 use crate::executors::java::Java;
+use crate::executors::jbang::JBang;
 use crate::executors::maven::Maven;
 use crate::executors::node::Node;
 use crate::executors::openapigenerator::OpenAPIGenerator;
@@ -227,6 +228,7 @@ impl dyn Executor {
             "node" | "npm" | "npx" => Some(Box::new(Node { executor_cmd })),
             "gradle" => Some(Box::new(Gradle::new(executor_cmd))),
             "java" => Some(Box::new(Java { executor_cmd })),
+            "jbang" => Some(Box::new(JBang::new(executor_cmd))),
             "maven" | "mvn" => Some(Box::new(Maven { executor_cmd })),
             "openapi" => Some(Box::new(OpenAPIGenerator { executor_cmd })),
             "rat" | "ra" => Some(Box::new(Rat { executor_cmd })),
