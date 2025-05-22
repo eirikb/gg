@@ -10,6 +10,8 @@ pub struct GitHub {
     pub executor_cmd: ExecutorCmd,
     pub owner: String,
     pub repo: String,
+    pub predefined_deps: Option<Vec<String>>,
+    pub predefined_bins: Option<Vec<String>>,
 }
 
 impl GitHub {
@@ -18,6 +20,24 @@ impl GitHub {
             executor_cmd,
             owner,
             repo,
+            predefined_deps: None,
+            predefined_bins: None,
+        }
+    }
+
+    pub fn new_with_config(
+        executor_cmd: ExecutorCmd,
+        owner: String,
+        repo: String,
+        predefined_deps: Option<Vec<String>>,
+        predefined_bins: Option<Vec<String>>,
+    ) -> Self {
+        Self {
+            executor_cmd,
+            owner,
+            repo,
+            predefined_deps,
+            predefined_bins,
         }
     }
 
@@ -178,6 +198,10 @@ impl Executor for GitHub {
     }
 
     fn get_bins(&self, input: &AppInput) -> Vec<String> {
+        if let Some(predefined_bins) = &self.predefined_bins {
+            return predefined_bins.clone();
+        }
+
         let base_name = &self.repo;
 
         vec![
@@ -197,6 +221,11 @@ impl Executor for GitHub {
     }
 
     fn get_deps<'a>(&'a self) -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
-        Box::pin(async move { self.detect_language_and_deps().await })
+        Box::pin(async move {
+            if let Some(predefined_deps) = &self.predefined_deps {
+                return predefined_deps.iter().map(|s| s.as_str()).collect();
+            }
+            self.detect_language_and_deps().await
+        })
     }
 }
