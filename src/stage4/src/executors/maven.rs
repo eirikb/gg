@@ -4,7 +4,7 @@ use std::pin::Pin;
 
 use scraper::{Html, Selector};
 
-use crate::executor::{AppInput, Download, ExecutorCmd, GgVersion};
+use crate::executor::{java_deps, AppInput, Download, ExecutorCmd, GgVersion};
 use crate::target::{Arch, Os, Variant};
 use crate::Executor;
 
@@ -77,7 +77,7 @@ impl Executor for Maven {
     }
 
     fn get_deps<'a>(&'a self) -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
-        Box::pin(async move { vec!["java"] })
+        java_deps()
     }
 }
 

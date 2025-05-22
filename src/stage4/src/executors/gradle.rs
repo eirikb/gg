@@ -7,7 +7,7 @@ use scraper::{Html, Selector};
 use semver::VersionReq;
 use sha256::try_digest;
 
-use crate::executor::{AppInput, Download, ExecutorCmd};
+use crate::executor::{java_deps, AppInput, Download, ExecutorCmd};
 use crate::executors::gradle_properties::GradleAndWrapperProperties;
 use crate::target::Variant;
 use crate::{target, Executor};
@@ -90,7 +90,7 @@ impl Executor for Gradle {
     }
 
     fn get_deps<'a>(&'a self) -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
-        Box::pin(async move { vec!["java"] })
+        java_deps()
     }
 
     fn post_download(&self, download_file_path: String) -> bool {

@@ -284,6 +284,10 @@ pub trait Executor {
     fn post_prep(&self, _cache_path: &str) {}
 }
 
+pub fn java_deps<'a>() -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
+    Box::pin(async move { vec!["java"] })
+}
+
 fn get_executor_app_path(
     _executor: &dyn Executor,
     _input: &AppInput,

@@ -4,7 +4,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use crate::bloody_maven::get_download_urls_from_maven;
-use crate::executor::{AppInput, AppPath, Download, ExecutorCmd};
+use crate::executor::{java_deps, AppInput, AppPath, Download, ExecutorCmd};
 use crate::Executor;
 
 pub struct OpenAPIGenerator {
@@ -32,7 +32,7 @@ impl Executor for OpenAPIGenerator {
     }
 
     fn get_deps<'a>(&'a self) -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
-        Box::pin(async move { vec!["java"] })
+        java_deps()
     }
 
     fn get_default_exclude_tags(&self) -> HashSet<String> {
