@@ -8,14 +8,11 @@ use std::pin::Pin;
 use std::process::Command;
 
 use crate::bloody_indiana_jones::BloodyIndianaJones;
-use crate::executors::caddy::Caddy;
 use crate::executors::custom_command::CustomCommand;
-use crate::executors::deno::Deno;
 use crate::executors::github::GitHub;
 use crate::executors::go::Go;
 use crate::executors::gradle::Gradle;
 use crate::executors::java::Java;
-use crate::executors::jbang::JBang;
 use crate::executors::maven::Maven;
 use crate::executors::node::Node;
 use crate::executors::openapigenerator::OpenAPIGenerator;
@@ -210,6 +207,22 @@ impl ExecutorCmd {
     }
 }
 
+fn create_github_executor(
+    executor_cmd: ExecutorCmd,
+    owner: &str,
+    repo: &str,
+    deps: Option<Vec<String>>,
+    bins: Option<Vec<String>>,
+) -> Box<dyn Executor> {
+    Box::new(GitHub::new_with_config(
+        executor_cmd,
+        owner.to_string(),
+        repo.to_string(),
+        deps,
+        bins,
+    ))
+}
+
 impl dyn Executor {
     pub fn new(executor_cmd: ExecutorCmd) -> Option<Box<Self>> {
         if executor_cmd.cmd.starts_with("gh/") {
@@ -228,14 +241,36 @@ impl dyn Executor {
             "node" | "npm" | "npx" => Some(Box::new(Node { executor_cmd })),
             "gradle" => Some(Box::new(Gradle::new(executor_cmd))),
             "java" => Some(Box::new(Java { executor_cmd })),
-            "jbang" => Some(Box::new(JBang::new(executor_cmd))),
+            "jbang" => Some(create_github_executor(
+                executor_cmd,
+                "jbangdev",
+                "jbang",
+                Some(vec!["java".to_string()]),
+                Some(vec![
+                    "jbang".to_string(),
+                    "jbang.ps1".to_string(),
+                    "jbang.cmd".to_string(),
+                ]),
+            )),
             "maven" | "mvn" => Some(Box::new(Maven { executor_cmd })),
             "openapi" => Some(Box::new(OpenAPIGenerator { executor_cmd })),
             "rat" | "ra" => Some(Box::new(Rat { executor_cmd })),
             "run" => Some(Box::new(CustomCommand { executor_cmd })),
-            "deno" => Some(Box::new(Deno::new(executor_cmd))),
+            "deno" => Some(create_github_executor(
+                executor_cmd,
+                "denoland",
+                "deno",
+                Some(vec![]),
+                Some(vec!["deno".to_string(), "deno.exe".to_string()]),
+            )),
             "go" => Some(Box::new(Go { executor_cmd })),
-            "caddy" => Some(Box::new(Caddy::new(executor_cmd))),
+            "caddy" => Some(create_github_executor(
+                executor_cmd,
+                "caddyserver",
+                "caddy",
+                Some(vec![]),
+                Some(vec!["caddy".to_string(), "caddy.exe".to_string()]),
+            )),
             _ => None,
         }
     }
