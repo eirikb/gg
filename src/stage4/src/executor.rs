@@ -113,7 +113,7 @@ pub struct GgMeta {
 impl AppInput {
     pub fn dummy() -> Self {
         Self {
-            target: Target::parse(""),
+            target: Target::parse_with_overrides("", None, None),
             no_clap: NoClap::new(),
         }
     }
