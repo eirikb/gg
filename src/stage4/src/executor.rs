@@ -211,9 +211,9 @@ impl ExecutorCmd {
 
 impl dyn Executor {
     pub fn new(executor_cmd: ExecutorCmd) -> Option<Box<Self>> {
-        if executor_cmd.cmd.starts_with("github/") {
+        if executor_cmd.cmd.starts_with("gh/") {
             let cmd_clone = executor_cmd.cmd.clone();
-            let repo_part = &cmd_clone[7..];
+            let repo_part = &cmd_clone[3..];
             if let Some((owner, repo)) = repo_part.split_once('/') {
                 return Some(Box::new(GitHub::new(
                     executor_cmd,
