@@ -338,7 +338,7 @@ jobs:
     strategy:
       matrix:
         container: [ ubuntu, debian, alpine, archlinux ]
-        cmd: [ "node@14 -v", "java -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version" ]
+        cmd: [ "node@14 -v", "java -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "jbang -V" ]
 
     runs-on: ubuntu-latest
     container: ${{ matrix.container }}
