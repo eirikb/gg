@@ -61,9 +61,13 @@ Examples:
     ./gg.cmd node@14.17.0 -v
     ./gg.cmd -vv -w npm@14 start
     ./gg.cmd java@-jdk+jre -version
+    ./gg.cmd jbang hello.java
+    ./gg.cmd bld version
+    ./gg.cmd maven compile
     ./gg.cmd run:java@17 soapui
     ./gg.cmd run:java@14 env
     ./gg.cmd update
+    ./gg.cmd gh/cli/cli --version
     ./gg.cmd --os windows --arch x86_64 deno --version    (test Windows Deno on Linux)
     ./gg.cmd --os mac deno --help                         (test macOS Deno from anywhere)
 
@@ -71,13 +75,16 @@ Supported systems:
     node (npm, npx will also work, version refers to node version)
     gradle
     java
-    maven
+    jbang
+    maven (mvn)
+    bld
     openapi
     rat (ra)
     deno
-    run (any arbitrary command)
     go
     caddy
+    run (any arbitrary command)
+    gh/<owner>/<repo> (GitHub releases)
 "
     );
 }
