@@ -1,3 +1,4 @@
+pub mod bld;
 pub mod custom_command;
 pub mod github;
 pub mod go;
