@@ -83,8 +83,13 @@ fn parse_jbang_java_version(content: &str) -> Option<String> {
         if let Some(captures) = java_version_regex.captures(line) {
             if let Some(version) = captures.get(1) {
                 let version_str = version.as_str();
-                let clean_version = version_str.trim_end_matches('+');
-                return Some(clean_version.to_string());
+
+                return if version_str.ends_with('+') {
+                    let base_version = version_str.trim_end_matches('+');
+                    Some(format!(">={}", base_version))
+                } else {
+                    Some(version_str.to_string())
+                };
             }
         }
     }
@@ -119,7 +124,7 @@ public class Hello {
         System.out.println("Hello World");
     }
 }"#;
-        assert_eq!(parse_jbang_java_version(content), Some("21".to_string()));
+        assert_eq!(parse_jbang_java_version(content), Some(">=21".to_string()));
     }
 
     #[test]
@@ -143,5 +148,18 @@ public class Hello {
     }
 }"#;
         assert_eq!(parse_jbang_java_version(content), None);
+    }
+
+    #[test]
+    fn test_parse_jbang_java_version_exact() {
+        let content = r#"///usr/bin/env jbang "$0" "$@" ; exit $?
+//JAVA 11
+
+public class Hello {
+    public static void main(String[] args) {
+        System.out.println("Hello World");
+    }
+}"#;
+        assert_eq!(parse_jbang_java_version(content), Some("11".to_string()));
     }
 }
