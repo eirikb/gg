@@ -13,6 +13,7 @@ use crate::executors::github::GitHub;
 use crate::executors::go::Go;
 use crate::executors::gradle::Gradle;
 use crate::executors::java::Java;
+use crate::executors::jbang::JBangExecutor;
 use crate::executors::maven::Maven;
 use crate::executors::node::Node;
 use crate::executors::openapigenerator::OpenAPIGenerator;
@@ -195,6 +196,12 @@ pub struct ExecutorCmd {
     pub exclude_tags: HashSet<String>,
 }
 
+#[derive(Debug, Clone)]
+pub struct ExecutorDep {
+    pub name: String,
+    pub version: Option<String>,
+}
+
 #[cfg(test)]
 impl ExecutorCmd {
     pub fn dummy() -> Self {
@@ -241,17 +248,7 @@ impl dyn Executor {
             "node" | "npm" | "npx" => Some(Box::new(Node { executor_cmd })),
             "gradle" => Some(Box::new(Gradle::new(executor_cmd))),
             "java" => Some(Box::new(Java { executor_cmd })),
-            "jbang" => Some(create_github_executor(
-                executor_cmd,
-                "jbangdev",
-                "jbang",
-                Some(vec!["java".to_string()]),
-                Some(vec![
-                    "jbang".to_string(),
-                    "jbang.ps1".to_string(),
-                    "jbang.cmd".to_string(),
-                ]),
-            )),
+            "jbang" => Some(Box::new(JBangExecutor::new(executor_cmd))),
             "maven" | "mvn" => Some(Box::new(Maven { executor_cmd })),
             "openapi" => Some(Box::new(OpenAPIGenerator { executor_cmd })),
             "rat" | "ra" => Some(Box::new(Rat { executor_cmd })),
@@ -291,7 +288,10 @@ pub trait Executor {
     ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>>;
     fn get_bins(&self, input: &AppInput) -> Vec<String>;
     fn get_name(&self) -> &str;
-    fn get_deps<'a>(&'a self) -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
+    fn get_deps<'a>(
+        &'a self,
+        _input: &'a AppInput,
+    ) -> Pin<Box<dyn Future<Output = Vec<ExecutorDep>> + 'a>> {
         Box::pin(async move { vec![] })
     }
     fn get_default_include_tags(&self) -> HashSet<String> {
@@ -321,8 +321,13 @@ pub trait Executor {
     fn post_prep(&self, _cache_path: &str) {}
 }
 
-pub fn java_deps<'a>() -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
-    Box::pin(async move { vec!["java"] })
+pub fn java_deps<'a>() -> Pin<Box<dyn Future<Output = Vec<ExecutorDep>> + 'a>> {
+    Box::pin(async move {
+        vec![ExecutorDep {
+            name: "java".to_string(),
+            version: None,
+        }]
+    })
 }
 
 fn get_executor_app_path(

@@ -189,15 +189,15 @@ async fn main() -> ExitCode {
             look_for_deps = false;
             let mut to_add = Vec::new();
             for x in &executors {
-                let deps = x.get_deps().await;
-                for dep_name in deps {
+                let deps = x.get_deps(input).await;
+                for dep in deps {
                     if !executors
                         .iter()
-                        .any(|e| &e.get_name().to_string() == dep_name)
+                        .any(|e| &e.get_name().to_string() == &dep.name)
                     {
                         if let Some(e) = <dyn Executor>::new(ExecutorCmd {
-                            cmd: dep_name.to_string(),
-                            version: None,
+                            cmd: dep.name.clone(),
+                            version: dep.version.as_ref().and_then(|v| GgVersionReq::new(v)),
                             include_tags: Default::default(),
                             exclude_tags: Default::default(),
                         }) {
