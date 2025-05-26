@@ -8,6 +8,7 @@ use std::pin::Pin;
 use std::process::Command;
 
 use crate::bloody_indiana_jones::BloodyIndianaJones;
+use crate::executors::bld::Bld;
 use crate::executors::custom_command::CustomCommand;
 use crate::executors::github::GitHub;
 use crate::executors::go::Go;
@@ -253,6 +254,7 @@ impl dyn Executor {
             "openapi" => Some(Box::new(OpenAPIGenerator { executor_cmd })),
             "rat" | "ra" => Some(Box::new(Rat { executor_cmd })),
             "run" => Some(Box::new(CustomCommand { executor_cmd })),
+            "bld" => Some(Box::new(Bld::new(executor_cmd))),
             "deno" => Some(create_github_executor(
                 executor_cmd,
                 "denoland",
