@@ -7,7 +7,7 @@ use scraper::{Html, Selector};
 use semver::VersionReq;
 use sha256::try_digest;
 
-use crate::executor::{java_deps, AppInput, Download, ExecutorCmd};
+use crate::executor::{java_deps, AppInput, Download, ExecutorCmd, ExecutorDep};
 use crate::executors::gradle_properties::GradleAndWrapperProperties;
 use crate::target::Variant;
 use crate::{target, Executor};
@@ -89,7 +89,10 @@ impl Executor for Gradle {
         "gradle"
     }
 
-    fn get_deps<'a>(&'a self) -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
+    fn get_deps<'a>(
+        &'a self,
+        _input: &'a AppInput,
+    ) -> Pin<Box<dyn Future<Output = Vec<ExecutorDep>> + 'a>> {
         java_deps()
     }
 

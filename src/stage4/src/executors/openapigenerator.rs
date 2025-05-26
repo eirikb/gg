@@ -4,7 +4,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use crate::bloody_maven::get_download_urls_from_maven;
-use crate::executor::{java_deps, AppInput, AppPath, Download, ExecutorCmd};
+use crate::executor::{java_deps, AppInput, AppPath, Download, ExecutorCmd, ExecutorDep};
 use crate::Executor;
 
 pub struct OpenAPIGenerator {
@@ -31,7 +31,10 @@ impl Executor for OpenAPIGenerator {
         "openapi"
     }
 
-    fn get_deps<'a>(&'a self) -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
+    fn get_deps<'a>(
+        &'a self,
+        _input: &'a AppInput,
+    ) -> Pin<Box<dyn Future<Output = Vec<ExecutorDep>> + 'a>> {
         java_deps()
     }
 

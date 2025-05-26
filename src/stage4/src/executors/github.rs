@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::future::Future;
 use std::pin::Pin;
 
-use crate::executor::{AppInput, Download, Executor, ExecutorCmd, GgVersion};
+use crate::executor::{AppInput, Download, Executor, ExecutorCmd, ExecutorDep, GgVersion};
 use crate::target::Os::Windows;
 use crate::target::{Arch, Os, Variant};
 
@@ -41,7 +41,7 @@ impl GitHub {
         }
     }
 
-    async fn detect_language_and_deps(&self) -> Vec<&'static str> {
+    async fn detect_language_and_deps(&self) -> Vec<ExecutorDep> {
         let octocrab = octocrab::Octocrab::builder()
             .base_uri("https://ghapi.ggcmd.io/")
             .unwrap()
@@ -52,8 +52,14 @@ impl GitHub {
             if let Some(language) = repo_info.language {
                 let language_str = language.as_str().unwrap_or("").to_lowercase();
                 return match language_str.as_str() {
-                    "java" | "kotlin" | "scala" | "clojure" => vec!["java"],
-                    "javascript" | "typescript" => vec!["node"],
+                    "java" | "kotlin" | "scala" | "clojure" => vec![ExecutorDep {
+                        name: "java".to_string(),
+                        version: None,
+                    }],
+                    "javascript" | "typescript" => vec![ExecutorDep {
+                        name: "node".to_string(),
+                        version: None,
+                    }],
                     "go" => vec![],
                     "rust" => vec![],
                     "c" | "c++" | "cpp" => vec![],
@@ -222,10 +228,19 @@ impl Executor for GitHub {
         &self.repo
     }
 
-    fn get_deps<'a>(&'a self) -> Pin<Box<dyn Future<Output = Vec<&'a str>> + 'a>> {
+    fn get_deps<'a>(
+        &'a self,
+        _input: &'a AppInput,
+    ) -> Pin<Box<dyn Future<Output = Vec<ExecutorDep>> + 'a>> {
         Box::pin(async move {
             if let Some(predefined_deps) = &self.predefined_deps {
-                return predefined_deps.iter().map(|s| s.as_str()).collect();
+                return predefined_deps
+                    .iter()
+                    .map(|s| ExecutorDep {
+                        name: s.clone(),
+                        version: None,
+                    })
+                    .collect();
             }
             self.detect_language_and_deps().await
         })
