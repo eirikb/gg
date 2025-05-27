@@ -69,7 +69,8 @@ sh gg.cmd npm install
 | <img src="https://github.com/eirikb/gg/assets/241706/71b42988-bf62-49d3-b675-b2e526b3a8cc" width="100px">                     | **deno**                         |            |                           |                                                                                    |              |
 | <img src="https://user-images.githubusercontent.com/241706/231713381-cc8436bb-ef6e-4aa6-ab5c-66ee0a868201.png" width="100px"> | **gradle**                       | java       |                           |                                                                                    |              |
 | <img src="https://user-images.githubusercontent.com/241706/231999543-61a192f0-7931-495d-a845-fdd855e690e5.png" width="100px"> | **maven**<br/>**mvn**            | java       |                           |                                                                                    |              |
-| <img src="https://www.jbang.dev/assets/images/logo.png" width="50%">                                                          | **jbang**                        | java       |                           |                                                                                    |              |
+| <a href="https://rife2.com/bld"><img src="https://rife2.com/images/bld_logo.svg" width="25%"></a>                             | **bld**                          | java       |                           |                                                                                    |              |
+| <a href="https://www.jbang.dev/"><img src="https://www.jbang.dev/assets/images/logo.png" width="50%"></a>                     | **jbang**                        | java       |                           |                                                                                    |              |
 | <img src="https://user-images.githubusercontent.com/241706/231713130-ba667ff2-a129-47be-9d06-9e68e6815108.png" width="100px"> | **java**                         |            | JAVA_HOME                 | jdk<br/>jre<br/>lts<br/>sts<br/>mts<br/>ea<br/>ga<br/>headless<br/>headfull<br/>fx | +jdk<br/>+ga |
 | <img src="https://github.com/eirikb/gg/assets/241706/e674f306-ce32-4718-b560-1b454f49e94c" width="100px">                     | **go**                           |            |                           | beta                                                                               |              |
 | <img src="https://github.com/eirikb/gg/assets/241706/4d8be751-4680-4cc8-a939-f7ee6fac841f" width="100px">                     | **openapi**                      | java       |                           | beta                                                                               |              |
@@ -125,6 +126,14 @@ delete these files:
 * `gradlew`
 * `gradlew.bat`
 
+### Execute bld
+
+In this example, [bld](https://rife2.com/bld) is used to run an app using `bld` for the build process:
+
+```bash
+./gg.cmd bld run
+```
+
 ### Execute JBang
 
 ```bash
@@ -161,19 +170,20 @@ cd my-app
 ### Execute code hosted on GitHub
 
 `gg.cmd` offers a GitHub executor.
-Currently, Java and Node-based projects are supported.
+It smartly checks if the content and the available release files.
 
-For instance, one can run [the Java build tool bld](https://rife2.com/bld) using `gh/rife2/bld`:
+For instance, one can run [GitHub's CLI tool](https://cli.github.com/):
 
 ```bash
-> sh gg.cmd gh/rife2/bld version
-bld 2.2.1
+> sh ./gg.cmd gh/cli/cli --verison
+gh version 2.73.0 (2025-05-19)
+https://github.com/cli/cli/releases/tag/v2.73.0
 ```
 
 ## Contributing
 
-We welcome contributions to gg.cmd. If you have an idea for a new feature or have found a bug, please open an issue on
-the [GitHub repository](https://github.com/example/gg).
+We welcome contributions to `gg.cmd`. If you have an idea for a new feature or have found a bug, please open an issue on
+the [GitHub repository](https://github.com/eirikb/gg).
 
 ## License
 
