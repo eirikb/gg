@@ -72,14 +72,6 @@ sh gg.cmd npm install
 | <img src="https://github.com/eirikb/gg/assets/241706/71b42988-bf62-49d3-b675-b2e526b3a8cc" width="100px">                     | **deno**                         |            |                           |                                                                                    |              |
 | <img src="https://github.com/eirikb/gg/assets/241706/e674f306-ce32-4718-b560-1b454f49e94c" width="100px">                     | **go**                           |            |                           | beta                                                                               |              |
 
-## OS / Arch support table
-
-|         | x86_64  | arm64   |
-|---------|---------|---------|
-| Linux   | &check; | &check; |
-| macOS   | &check; |         |
-| Windows | &check; |         |
-
 ## gradlew
 
 Supports `distributionUrl` in `gradle-wrapper.properties` and  `gradle.properties`.  
