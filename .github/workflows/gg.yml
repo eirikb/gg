@@ -41,8 +41,8 @@ jobs:
             target: x86_64-pc-windows-msvc
           - os: macos-latest
             target: x86_64-apple-darwin
-    #          - os: ubuntu-24.04-arm64
-    #            target: aarch64-unknown-linux-musl
+          - os: ubuntu-24.04-arm64
+            target: aarch64-unknown-linux-musl
 
     runs-on: ${{ matrix.os }}
     needs: version
@@ -264,8 +264,6 @@ jobs:
           sh gg.cmd -v ${{ matrix.cmd }}
 
   test-ARM:
-    if: false
-    #    if: github.event.pull_request.merged == true
     needs: stage1
     strategy:
       matrix:
