@@ -109,29 +109,13 @@ impl GitHub {
     fn is_likely_binary(name: &str) -> bool {
         let name_lower = name.to_lowercase();
 
-        let binary_extensions = [
-            ".exe", ".zip", ".tar.gz", ".tgz", ".tar.bz2", ".deb", ".rpm", ".msi", ".dmg",
-        ];
-        let skip_extensions = [
-            ".md", ".txt", ".json", ".yml", ".yaml", ".xml", ".sig", ".asc", ".sha256", ".sha512",
-        ];
-
-        for ext in &skip_extensions {
-            if name_lower.ends_with(ext) {
-                return false;
-            }
-        }
+        let binary_extensions = [".exe", ".zip", ".tar.gz", ".tgz", ".tar.bz2"];
 
         for ext in &binary_extensions {
             if name_lower.contains(ext) {
                 return true;
             }
         }
-
-        if !name_lower.contains('.') {
-            return true;
-        }
-
         false
     }
 }
