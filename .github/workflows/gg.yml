@@ -302,6 +302,10 @@ jobs:
       - name: Run!
         shell: cmd
         run: |
+          .\gg.cmd -V || true
+          du -a
+          find .cache -type f -exec file {} \;
+          find .cache -type f -exec ldd {} \;
           .\gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
           .\gg.cmd -v ${{ matrix.cmd }}
