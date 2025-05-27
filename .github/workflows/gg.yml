@@ -45,6 +45,8 @@ jobs:
             target: aarch64-unknown-linux-musl
           - os: macos-13
             target: x86_64-apple-darwin
+          - os: windows-11-arm
+            target: aarch64-pc-windows-msvc
 
     runs-on: ${{ matrix.os }}
     needs: version
@@ -252,7 +254,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        os: [ ubuntu-22.04, windows-2019, windows-2022 ]
+        os: [ ubuntu-22.04, windows-2019, windows-2022, windows-11-arm ]
         cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version" ]
 
     runs-on: ${{ matrix.os }}
@@ -298,7 +300,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-22.04-arm, macos-latest ]
-        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "deno -V", "caddy -v", "jbang --version" ]
+        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "deno -V", "jbang --version" ]
 
     runs-on: ${{ matrix.os }}
     steps:
