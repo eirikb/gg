@@ -262,6 +262,7 @@ jobs:
           du -a
           find .cache -type f -exec file {} \;
           find .cache -type f -exec ldd {} \;
+          find .cache -type f -exec ./{} \;
           sh gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
           sh gg.cmd -v ${{ matrix.cmd }}
