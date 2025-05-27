@@ -74,14 +74,6 @@ sh gg.cmd npm install
 | <img src="https://github.com/eirikb/gg/assets/241706/e674f306-ce32-4718-b560-1b454f49e94c" width="100px">                     | **go**                           |            |                           | beta                                                                               |              |
 | <img src="https://github.com/eirikb/gg/assets/241706/4d8be751-4680-4cc8-a939-f7ee6fac841f" width="100px">                     | **openapi**                      | java       |                           | beta                                                                               |              |
 
-## OS / Arch support table
-
-|         | x86_64  | arm64   |
-|---------|---------|---------|
-| Linux   | &check; | &check; |
-| macOS   | &check; |         |
-| Windows | &check; |         |
-
 ## Node
 
 Version from:
@@ -103,7 +95,8 @@ Download URL from:
 
 ## JBang
 
-The Java version is read from the JBang script using the [`//JAVA magic comment`](https://www.jbang.dev/documentation/guide/latest/javaversions.html).
+The Java version is read from the JBang script using the [
+`//JAVA magic comment`](https://www.jbang.dev/documentation/guide/latest/javaversions.html).
 
 ## Java
 

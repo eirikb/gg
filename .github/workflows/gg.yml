@@ -40,9 +40,11 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
           - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-musl
+          - os: macos-13
             target: x86_64-apple-darwin
-    #          - os: ubuntu-24.04-arm64
-    #            target: aarch64-unknown-linux-musl
 
     runs-on: ${{ matrix.os }}
     needs: version
@@ -139,16 +141,21 @@ jobs:
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             stage4: x86_64-unknown-linux-musl
-
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            stage4: x86_64-apple-darwin
-          #          - os: macos-12
-          #            target: x86_64-apple-darwin
-          #            stage4: x86_64-apple-darwin
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-musl
             stage4: x86_64-unknown-linux-musl
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-musl
+            stage4: aarch64-unknown-linux-musl
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+            stage4: aarch64-unknown-linux-musl
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            stage4: aarch64-apple-darwin
+          - os: macos-13
+            target: x86_64-apple-darwin
+            stage4: x86_64-apple-darwin
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -241,7 +248,7 @@ jobs:
           name: gg.cmd
           path: gg.cmd
 
-  test-OS:
+  test-OS1:
     needs: stage1
     strategy:
       matrix:
@@ -263,14 +270,13 @@ jobs:
           echo "Nice, let's try again"
           sh gg.cmd -v ${{ matrix.cmd }}
 
-  test-ARM:
-    if: false
-    #    if: github.event.pull_request.merged == true
+  # Not all tools work on all OSes :/
+  test-OS2:
     needs: stage1
     strategy:
       matrix:
-        os: [ ubuntu-24.04-arm64 ]
-        cmd: [ "java -version" ]
+        os: [ macos-13 ]
+        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V",  "jbang --version" ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -287,6 +293,27 @@ jobs:
           echo "Nice, let's try again"
           sh gg.cmd -v ${{ matrix.cmd }}
 
+  test-OS3:
+    needs: stage1
+    strategy:
+      matrix:
+        os: [ ubuntu-22.04-arm, macos-latest ]
+        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "deno -V", "jbang --version" ]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Download gg
+        uses: actions/download-artifact@v4
+        with:
+          name: gg.cmd
+
+      - name: Run!
+        shell: bash
+        run: |
+          set -x
+          sh gg.cmd -v ${{ matrix.cmd }}
+          echo "Nice, let's try again"
+          sh gg.cmd -v ${{ matrix.cmd }}
 
   test-batch:
     needs: stage1
@@ -308,31 +335,8 @@ jobs:
           .\gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
           .\gg.cmd -v ${{ matrix.cmd }}
-
-
-  test-ARM-container:
-    if: false
-    #    if: github.event.pull_request.merged == true
-    needs: stage1
-    strategy:
-      matrix:
-        os: [ ubuntu-24.04-arm64 ]
-        container: [ alpine ]
-        cmd: [ "java -version" ]
-
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Download gg
-        uses: actions/download-artifact@v4
-        with:
-          name: gg.cmd
-
-      - name: Run!
-        run: |
-          set -x
-          uname -a
-          docker run --rm -i -v $PWD:/b -w /b ${{ matrix.container }} sh gg.cmd -v ${{ matrix.cmd }}
   
+
   test-container:
     needs: stage1
     strategy:
@@ -364,7 +368,7 @@ jobs:
 
   release:
     name: Release!
-    needs: [ version, test-OS, test-batch, test-container ]
+    needs: [ version, test-OS1, test-OS2, test-OS3, test-batch, test-container ]
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
     steps:
