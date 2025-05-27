@@ -139,13 +139,11 @@ jobs:
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
             stage4: x86_64-unknown-linux-musl
-
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-musl
           - os: macos-latest
             target: x86_64-apple-darwin
             stage4: x86_64-apple-darwin
-          #          - os: macos-12
-          #            target: x86_64-apple-darwin
-          #            stage4: x86_64-apple-darwin
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-musl
             stage4: x86_64-unknown-linux-musl
@@ -245,7 +243,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        os: [ ubuntu-22.04, windows-2019, windows-2022 ]
+        os: [ ubuntu-22.04, windows-2019, windows-2022, ubuntu-22.04-arm, macos-latest ]
         cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version" ]
 
     runs-on: ${{ matrix.os }}
@@ -262,29 +260,6 @@ jobs:
           sh gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
           sh gg.cmd -v ${{ matrix.cmd }}
-
-  test-ARM:
-    needs: stage1
-    strategy:
-      matrix:
-        os: [ ubuntu-22.04-arm ]
-        cmd: [ "java -version" ]
-
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Download gg
-        uses: actions/download-artifact@v4
-        with:
-          name: gg.cmd
-
-      - name: Run!
-        shell: bash
-        run: |
-          set -x
-          sh gg.cmd -v ${{ matrix.cmd }}
-          echo "Nice, let's try again"
-          sh gg.cmd -v ${{ matrix.cmd }}
-
 
   test-batch:
     needs: stage1
@@ -306,31 +281,8 @@ jobs:
           .\gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
           .\gg.cmd -v ${{ matrix.cmd }}
-
-
-  test-ARM-container:
-    if: false
-    #    if: github.event.pull_request.merged == true
-    needs: stage1
-    strategy:
-      matrix:
-        os: [ ubuntu-22.04-arm ]
-        container: [ alpine ]
-        cmd: [ "java -version" ]
-
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Download gg
-        uses: actions/download-artifact@v4
-        with:
-          name: gg.cmd
-
-      - name: Run!
-        run: |
-          set -x
-          uname -a
-          docker run --rm -i -v $PWD:/b -w /b ${{ matrix.container }} sh gg.cmd -v ${{ matrix.cmd }}
   
+
   test-container:
     needs: stage1
     strategy:
