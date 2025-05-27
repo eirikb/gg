@@ -275,7 +275,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        os: [ macos-latest, macos-13 ]
+        os: [ macos-13 ]
         cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V",  "jbang --version" ]
 
     runs-on: ${{ matrix.os }}
@@ -297,7 +297,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        os: [ ubuntu-22.04-arm ]
+        os: [ ubuntu-22.04-arm, macos-latest ]
         cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "deno -V", "caddy -v", "jbang --version" ]
 
     runs-on: ${{ matrix.os }}
