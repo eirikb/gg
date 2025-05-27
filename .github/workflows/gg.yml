@@ -247,7 +247,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        os: [ ubuntu-22.04, windows-2019, windows-2022, ubuntu-22.04-arm ]
+        os: [ ubuntu-22.04, windows-2019, windows-2022 ]
         cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version" ]
 
     runs-on: ${{ matrix.os }}
@@ -261,11 +261,6 @@ jobs:
         shell: bash
         run: |
           set -x
-          sh gg.cmd -V || true
-          du -a
-          find .cache -type f -exec file {} \;
-          find .cache -type f -exec ldd {} \;
-          find .cache -type f -exec ./{} \;
           sh gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
           sh gg.cmd -v ${{ matrix.cmd }}
@@ -277,6 +272,28 @@ jobs:
       matrix:
         os: [ macos-latest ]
         cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V",  "jbang --version" ]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Download gg
+        uses: actions/download-artifact@v4
+        with:
+          name: gg.cmd
+
+      - name: Run!
+        shell: bash
+        run: |
+          set -x
+          sh gg.cmd -v ${{ matrix.cmd }}
+          echo "Nice, let's try again"
+          sh gg.cmd -v ${{ matrix.cmd }}
+
+  test-OS3:
+    needs: stage1
+    strategy:
+      matrix:
+        os: [ ubuntu-22.04-arm ]
+        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version" ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -346,7 +363,7 @@ jobs:
 
   release:
     name: Release!
-    needs: [ version, test-OS1, test-OS2, test-batch, test-container ]
+    needs: [ version, test-OS1, test-OS2, test-OS3, test-batch, test-container ]
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
     steps:
