@@ -41,7 +41,7 @@ jobs:
             target: x86_64-pc-windows-msvc
           - os: macos-latest
             target: x86_64-apple-darwin
-          - os: ubuntu-24.04-arm
+          - os: ubuntu-22.04-arm
             target: aarch64-unknown-linux-musl
 
     runs-on: ${{ matrix.os }}
@@ -267,7 +267,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        os: [ ubuntu-24.04-arm ]
+        os: [ ubuntu-22.04-arm ]
         cmd: [ "java -version" ]
 
     runs-on: ${{ matrix.os }}
@@ -314,7 +314,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        os: [ ubuntu-24.04-arm ]
+        os: [ ubuntu-22.04-arm ]
         container: [ alpine ]
         cmd: [ "java -version" ]
 
