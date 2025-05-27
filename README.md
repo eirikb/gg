@@ -165,6 +165,18 @@ cd my-app
 ./gg.cmd npm start
 ```
 
+### Execute code hosted on GitHub
+
+`gg.cmd` offers a GitHub executor.
+Currently, Java and Node-based projects are supported.
+
+For instance, one can run [the Java build tool bld](https://rife2.com/bld) using `gh/rife2/bld`:
+
+```bash
+> sh gg.cmd gh/rife2/bld version
+bld 2.2.1
+```
+
 ## Contributing
 
 We welcome contributions to gg.cmd. If you have an idea for a new feature or have found a bug, please open an issue on
