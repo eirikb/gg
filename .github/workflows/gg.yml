@@ -258,7 +258,7 @@ jobs:
         shell: bash
         run: |
           set -x
-          .\gg.cmd -V || true
+          sh gg.cmd -V || true
           du -a
           find .cache -type f -exec file {} \;
           find .cache -type f -exec ldd {} \;
