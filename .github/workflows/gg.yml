@@ -338,7 +338,7 @@ jobs:
 
   release:
     name: Release!
-    needs: [ version, test-OS, test-batch, test-container ]
+    needs: [ version, test-OS1, test-OS2, test-batch, test-container ]
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
     steps:
