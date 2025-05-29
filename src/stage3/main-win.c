@@ -83,7 +83,7 @@ int __cdecl main() {
   }
 
   FILE *f;
-  fopen_s(&f, "stage4", "wb");
+  fopen_s(&f, "stage4.tmp", "wb");
   if (f == NULL) {
     printf("Error opening file!\n");
     return 1;
@@ -124,10 +124,17 @@ int __cdecl main() {
 
   printf("\n");
 
-    char newHash[SHA512_BLOCK_LENGTH + 1];
-  hashForFile("stage4", newHash);
+  char newHash[SHA512_BLOCK_LENGTH + 1];
+  hashForFile("stage4.tmp", newHash);
   if (strcmp(hash, newHash) != 0) {
     printf("Hash did not match :(\n");
+    remove("stage4.tmp");
+    return 1;
+  }
+
+  if (rename("stage4.tmp", "stage4") != 0) {
+    printf("Failed to rename temp file\n");
+    remove("stage4.tmp");
     return 1;
   }
 

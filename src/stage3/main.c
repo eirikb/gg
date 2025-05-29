@@ -34,7 +34,7 @@ int main() {
         return -1;
     }
 
-    FILE *f = fopen("stage4", "w");
+    FILE *f = fopen("stage4.tmp", "w");
     if (f == NULL) {
         printf("Error opening file!\n");
         exit(1);
@@ -84,9 +84,16 @@ int main() {
     char newHash[129];
     extern void hashForFile(char *fileName, char *hash);
 
-    hashForFile("stage4", newHash);
+    hashForFile("stage4.tmp", newHash);
     if (strcmp(hash, newHash) != 0) {
         printf("Hash did not match :(\n");
+        remove("stage4.tmp");
+        return 1;
+    }
+
+    if (rename("stage4.tmp", "stage4") != 0) {
+        printf("Failed to rename temp file\n");
+        remove("stage4.tmp");
         return 1;
     }
 
