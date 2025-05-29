@@ -2,9 +2,16 @@ $stage4 = ".\.cache\gg\gg-VERVER\stage4.exe"
 
 if (Test-Path $stage4)
 {
-    $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
-    Wait-Process -InputObject $proc
-    exit $proc.ExitCode
+    if ((Get-Item $stage4).Length -gt 0)
+    {
+        $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
+        Wait-Process -InputObject $proc
+        exit $proc.ExitCode
+    }
+    else
+    {
+        Remove-Item $stage4 -Force
+    }
 }
 
 $arch = $Env:PROCESSOR_ARCHITECTURE
@@ -19,7 +26,40 @@ if ($hash)
 {
     "$arch-windows" | Out-File .cache\gg\gg-VERVER\system -Encoding ascii
     $hash = $hash.split("=")[1]
-    Invoke-WebRequest "https://ggcmd.z13.web.core.windows.net/$hash" -OutFile $stage4
+    $tempFile = "$stage4.tmp"
+    
+    if (Test-Path $tempFile)
+    {
+        Remove-Item $tempFile -Force
+    }
+    
+    try
+    {
+        Invoke-WebRequest "https://ggcmd.z13.web.core.windows.net/$hash" -OutFile $tempFile
+        if ((Test-Path $tempFile) -and ((Get-Item $tempFile).Length -gt 0))
+        {
+            Move-Item $tempFile $stage4 -Force
+        }
+        else
+        {
+            Write-Host "Download failed: incomplete file"
+            if (Test-Path $tempFile)
+            {
+                Remove-Item $tempFile -Force
+            }
+            exit 1
+        }
+    }
+    catch
+    {
+        Write-Host "Download error: $_"
+        if (Test-Path $tempFile)
+        {
+            Remove-Item $tempFile -Force
+        }
+        exit 1
+    }
+    
     if (Test-Path $stage4)
     {
         $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
