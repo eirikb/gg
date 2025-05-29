@@ -6,7 +6,7 @@ use semver::VersionReq;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::executor::{AppInput, AppPath, Download, ExecutorCmd, GgVersion};
+use crate::executor::{AppInput, AppPath, BinPattern, Download, ExecutorCmd, GgVersion};
 use crate::executors::gradle_properties::GradleAndWrapperProperties;
 use crate::target::{Arch, Os, Target, Variant};
 use crate::Executor;
@@ -73,12 +73,14 @@ impl Executor for Java {
         Box::pin(async move { get_java_download_urls(&input.target).await })
     }
 
-    fn get_bins(&self, input: &AppInput) -> Vec<String> {
-        vec![match &input.target.os {
-            Os::Windows => "java.exe",
-            _ => "java",
-        }
-        .to_string()]
+    fn get_bins(&self, input: &AppInput) -> Vec<BinPattern> {
+        vec![BinPattern::Exact(
+            match &input.target.os {
+                Os::Windows => "java.exe",
+                _ => "java",
+            }
+            .to_string(),
+        )]
     }
 
     fn get_name(&self) -> &str {

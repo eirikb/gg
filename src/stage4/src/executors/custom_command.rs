@@ -4,8 +4,8 @@ use std::pin::Pin;
 
 use semver::VersionReq;
 
+use crate::executor::{AppInput, AppPath, BinPattern, Download, ExecutorCmd};
 use crate::Executor;
-use crate::executor::{AppInput, AppPath, Download, ExecutorCmd};
 
 pub struct CustomCommand {
     pub executor_cmd: ExecutorCmd,
@@ -20,12 +20,17 @@ impl Executor for CustomCommand {
         None
     }
 
-    fn get_download_urls<'a>(&'a self, _input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {
-        Box::pin(async move { vec!() })
+    fn get_download_urls<'a>(
+        &'a self,
+        _input: &'a AppInput,
+    ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
+        Box::pin(async move { vec![] })
     }
 
-    fn get_bins(&self, input: &AppInput) -> Vec<String> {
-        vec![input.no_clap.app_args[0].as_str().to_string()]
+    fn get_bins(&self, input: &AppInput) -> Vec<BinPattern> {
+        vec![BinPattern::Exact(
+            input.no_clap.app_args[0].as_str().to_string(),
+        )]
     }
 
     fn get_name(&self) -> &str {
@@ -37,6 +42,8 @@ impl Executor for CustomCommand {
     }
 
     fn custom_prep(&self, _input: &AppInput) -> Option<AppPath> {
-        Some(AppPath { install_dir: PathBuf::new() })
+        Some(AppPath {
+            install_dir: PathBuf::new(),
+        })
     }
 }

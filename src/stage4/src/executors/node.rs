@@ -10,7 +10,7 @@ use semver::VersionReq;
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::executor::{AppInput, Download, Executor, ExecutorCmd, GgVersion};
+use crate::executor::{AppInput, BinPattern, Download, Executor, ExecutorCmd, GgVersion};
 use crate::target::{Arch, Os, Target, Variant};
 
 type Root = Vec<Root2>;
@@ -93,20 +93,22 @@ impl Executor for Node {
         Box::pin(async move { get_node_urls(&input.target).await })
     }
 
-    fn get_bins(&self, input: &AppInput) -> Vec<String> {
-        vec![match &input.target.os {
-            Os::Windows => match self.executor_cmd.cmd.as_str() {
-                "node" => "node.exe",
-                "npm" => "npm.cmd",
-                _ => "npx.cmd",
-            },
-            _ => match self.executor_cmd.cmd.as_str() {
-                "node" => "node",
-                "npm" => "npm",
-                _ => "npx",
-            },
-        }
-        .to_string()]
+    fn get_bins(&self, input: &AppInput) -> Vec<BinPattern> {
+        vec![BinPattern::Exact(
+            match &input.target.os {
+                Os::Windows => match self.executor_cmd.cmd.as_str() {
+                    "node" => "node.exe",
+                    "npm" => "npm.cmd",
+                    _ => "npx.cmd",
+                },
+                _ => match self.executor_cmd.cmd.as_str() {
+                    "node" => "node",
+                    "npm" => "npm",
+                    _ => "npx",
+                },
+            }
+            .to_string(),
+        )]
     }
 
     fn get_name(&self) -> &str {

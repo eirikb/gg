@@ -276,7 +276,7 @@ jobs:
     strategy:
       matrix:
         os: [ macos-13 ]
-        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V",  "jbang --version" ]
+        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V",  "jbang --version", "gh/cli/cli version" ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -320,7 +320,7 @@ jobs:
     strategy:
       matrix:
         os: [ windows-2019, windows-2022 ]
-        cmd: [ "node -v", "java -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version" ]
+        cmd: [ "node -v", "java -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version", "gh/cli/cli version" ]
 
     runs-on: ${{ matrix.os }}
     steps:

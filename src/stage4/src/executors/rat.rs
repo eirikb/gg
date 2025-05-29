@@ -5,7 +5,7 @@ use std::future::Future;
 use std::os::unix::fs::PermissionsExt;
 use std::pin::Pin;
 
-use crate::executor::{AppInput, Download, Executor, ExecutorCmd, GgVersion};
+use crate::executor::{AppInput, BinPattern, Download, Executor, ExecutorCmd, GgVersion};
 use crate::target::{Arch, Os, Variant};
 
 pub struct Rat {
@@ -17,37 +17,52 @@ impl Executor for Rat {
         &self.executor_cmd
     }
 
-    fn get_download_urls<'a>(&'a self, _input: &'a AppInput) -> Pin<Box<dyn Future<Output=Vec<Download>> + 'a>> {
+    fn get_download_urls<'a>(
+        &'a self,
+        _input: &'a AppInput,
+    ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
         Box::pin(async move {
-            let versions: Vec<String> = reqwest::get("https://ratbinsa.z1.web.core.windows.net/list.json").await.unwrap().json().await.unwrap();
-            versions.into_iter().map(|name| {
-                let url = format!("https://ratbinsa.z1.web.core.windows.net/{}", name);
-                let name = name.clone();
-                let parts = name.split("-");
-                let version = parts.clone().nth(1).unwrap_or("NA");
-                let os = match parts.clone().nth(2) {
-                    Some("windows") => Some(Os::Windows),
-                    Some("linux") => Some(Os::Linux),
-                    Some("macos") => Some(Os::Mac),
-                    _ => None
-                };
-                Download {
-                    version: GgVersion::new(version),
-                    tags: Default::default(),
-                    download_url: url,
-                    arch: Some(Arch::X86_64),
-                    os,
-                    variant: Some(Variant::Any),
-                }
-            }).collect()
+            let versions: Vec<String> =
+                reqwest::get("https://ratbinsa.z1.web.core.windows.net/list.json")
+                    .await
+                    .unwrap()
+                    .json()
+                    .await
+                    .unwrap();
+            versions
+                .into_iter()
+                .map(|name| {
+                    let url = format!("https://ratbinsa.z1.web.core.windows.net/{}", name);
+                    let name = name.clone();
+                    let parts = name.split("-");
+                    let version = parts.clone().nth(1).unwrap_or("NA");
+                    let os = match parts.clone().nth(2) {
+                        Some("windows") => Some(Os::Windows),
+                        Some("linux") => Some(Os::Linux),
+                        Some("macos") => Some(Os::Mac),
+                        _ => None,
+                    };
+                    Download {
+                        version: GgVersion::new(version),
+                        tags: Default::default(),
+                        download_url: url,
+                        arch: Some(Arch::X86_64),
+                        os,
+                        variant: Some(Variant::Any),
+                    }
+                })
+                .collect()
         })
     }
 
-    fn get_bins(&self, input: &AppInput) -> Vec<String> {
-        vec![match &input.target.os {
-            Os::Windows => "rat.exe",
-            _ => "rat.bin"
-        }.to_string()]
+    fn get_bins(&self, input: &AppInput) -> Vec<BinPattern> {
+        vec![BinPattern::Exact(
+            match &input.target.os {
+                Os::Windows => "rat.exe",
+                _ => "rat.bin",
+            }
+            .to_string(),
+        )]
     }
 
     fn get_name(&self) -> &str {

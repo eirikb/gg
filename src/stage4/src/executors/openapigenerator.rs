@@ -4,7 +4,9 @@ use std::future::Future;
 use std::pin::Pin;
 
 use crate::bloody_maven::get_download_urls_from_maven;
-use crate::executor::{java_deps, AppInput, AppPath, Download, ExecutorCmd, ExecutorDep};
+use crate::executor::{
+    java_deps, AppInput, AppPath, BinPattern, Download, ExecutorCmd, ExecutorDep,
+};
 use crate::Executor;
 
 pub struct OpenAPIGenerator {
@@ -23,8 +25,8 @@ impl Executor for OpenAPIGenerator {
         get_download_urls_from_maven("openapitools", "openapi-generator-cli")
     }
 
-    fn get_bins(&self, _input: &AppInput) -> Vec<String> {
-        vec!["java".to_string()]
+    fn get_bins(&self, _input: &AppInput) -> Vec<BinPattern> {
+        vec![BinPattern::Exact("java".to_string())]
     }
 
     fn get_name(&self) -> &str {

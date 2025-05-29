@@ -3,7 +3,7 @@ use std::fs;
 use std::future::Future;
 use std::pin::Pin;
 
-use crate::executor::{AppInput, Download, Executor, ExecutorCmd, ExecutorDep};
+use crate::executor::{AppInput, BinPattern, Download, Executor, ExecutorCmd, ExecutorDep};
 use crate::executors::github::GitHub;
 
 pub struct JBangExecutor {
@@ -40,7 +40,7 @@ impl Executor for JBangExecutor {
         self.github.get_download_urls(input)
     }
 
-    fn get_bins(&self, input: &AppInput) -> Vec<String> {
+    fn get_bins(&self, input: &AppInput) -> Vec<BinPattern> {
         self.github.get_bins(input)
     }
 

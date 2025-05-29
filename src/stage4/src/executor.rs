@@ -23,9 +23,10 @@ use crate::no_clap::NoClap;
 use crate::target::{Arch, Os, Target, Variant};
 use indicatif::ProgressBar;
 use log::{debug, info};
+use regex::Regex;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
-use which::which_in;
+use which::{which_in, which_re_in};
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct AppPath {
@@ -279,6 +280,12 @@ impl dyn Executor {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum BinPattern {
+    Exact(String),
+    Regex(String),
+}
+
 pub trait Executor {
     fn get_executor_cmd(&self) -> &ExecutorCmd;
     fn get_version_req(&self) -> Option<VersionReq> {
@@ -288,7 +295,7 @@ pub trait Executor {
         &'a self,
         input: &'a AppInput,
     ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>>;
-    fn get_bins(&self, input: &AppInput) -> Vec<String>;
+    fn get_bins(&self, input: &AppInput) -> Vec<BinPattern>;
     fn get_name(&self) -> &str;
     fn get_deps<'a>(
         &'a self,
@@ -572,16 +579,29 @@ pub async fn try_run(
     });
     info!("PATH: {all_paths}");
     let bins = executor.get_bins(&input);
-    info!("Trying to find these bins: {}", bins.join(","));
+    info!("Trying to find these bins: {:?}", bins);
     for bin in bins {
-        let bin_paths = which_in(bin, Some(&all_paths), ".");
-        if let Ok(bin_path) = bin_paths {
+        let bin_path = match bin {
+            BinPattern::Exact(name) => which_in(&name, Some(&all_paths), "."),
+            BinPattern::Regex(pattern) => {
+                if let Ok(regex) = Regex::new(&pattern) {
+                    which_re_in(regex, Some(&all_paths))
+                        .ok()
+                        .and_then(|mut iter| iter.next())
+                        .ok_or(which::Error::CannotFindBinaryPath)
+                } else {
+                    Err(which::Error::CannotFindBinaryPath)
+                }
+            }
+        };
+
+        if let Ok(bin_path) = bin_path {
             info!("Executing: {:?}. With args:{:?}", bin_path, args);
             let mut command = Command::new(&bin_path);
             let res = command
-                .env("PATH", all_paths)
-                .envs(env_vars)
-                .args(args)
+                .env("PATH", all_paths.clone())
+                .envs(env_vars.clone())
+                .args(args.clone())
                 .spawn()
                 .map_err(|e| e.to_string())?
                 .wait()

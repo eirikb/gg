@@ -7,7 +7,7 @@ use scraper::{Html, Selector};
 use semver::VersionReq;
 use sha256::try_digest;
 
-use crate::executor::{java_deps, AppInput, Download, ExecutorCmd, ExecutorDep};
+use crate::executor::{java_deps, AppInput, BinPattern, Download, ExecutorCmd, ExecutorDep};
 use crate::executors::gradle_properties::GradleAndWrapperProperties;
 use crate::target::Variant;
 use crate::{target, Executor};
@@ -77,12 +77,14 @@ impl Executor for Gradle {
         })
     }
 
-    fn get_bins(&self, input: &AppInput) -> Vec<String> {
-        vec![match &input.target.os {
-            target::Os::Windows => "gradle.bat",
-            _ => "gradle",
-        }
-        .to_string()]
+    fn get_bins(&self, input: &AppInput) -> Vec<BinPattern> {
+        vec![BinPattern::Exact(
+            match &input.target.os {
+                target::Os::Windows => "gradle.bat",
+                _ => "gradle",
+            }
+            .to_string(),
+        )]
     }
 
     fn get_name(&self) -> &str {

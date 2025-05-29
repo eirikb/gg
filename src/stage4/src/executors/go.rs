@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::future::Future;
 use std::pin::Pin;
 
-use crate::executor::{AppInput, Download, Executor, ExecutorCmd, GgVersion};
+use crate::executor::{AppInput, BinPattern, Download, Executor, ExecutorCmd, GgVersion};
 use crate::target::Arch::{Arm64, X86_64};
 use crate::target::Os::{Linux, Mac, Windows};
 use crate::target::Variant::Any;
@@ -90,12 +90,14 @@ impl Executor for Go {
         })
     }
 
-    fn get_bins(&self, input: &AppInput) -> Vec<String> {
-        vec![match &input.target.os {
-            Windows => "go.exe",
-            _ => "go",
-        }
-        .to_string()]
+    fn get_bins(&self, input: &AppInput) -> Vec<BinPattern> {
+        vec![BinPattern::Exact(
+            match &input.target.os {
+                Windows => "go.exe",
+                _ => "go",
+            }
+            .to_string(),
+        )]
     }
 
     fn get_name(&self) -> &str {
