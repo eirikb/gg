@@ -271,6 +271,13 @@ impl dyn Executor {
                 Some(vec![]),
                 Some(vec!["caddy".to_string(), "caddy.exe".to_string()]),
             )),
+            "gh" => Some(create_github_executor(
+                executor_cmd,
+                "cli",
+                "cli",
+                Some(vec![]),
+                Some(vec!["gh".to_string(), "gh.exe".to_string()]),
+            )),
             _ => None,
         }
     }
