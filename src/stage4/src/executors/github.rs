@@ -2,7 +2,9 @@ use std::collections::HashSet;
 use std::future::Future;
 use std::pin::Pin;
 
-use crate::executor::{AppInput, Download, Executor, ExecutorCmd, ExecutorDep, GgVersion};
+use crate::executor::{
+    AppInput, BinPattern, Download, Executor, ExecutorCmd, ExecutorDep, GgVersion,
+};
 use crate::target::Os::Windows;
 use crate::target::{Arch, Os, Variant};
 
@@ -187,25 +189,39 @@ impl Executor for GitHub {
         })
     }
 
-    fn get_bins(&self, input: &AppInput) -> Vec<String> {
+    fn get_bins(&self, input: &AppInput) -> Vec<BinPattern> {
         if let Some(predefined_bins) = &self.predefined_bins {
-            return predefined_bins.clone();
+            return predefined_bins
+                .iter()
+                .map(|s| BinPattern::Exact(s.clone()))
+                .collect();
         }
 
         let base_name = &self.repo;
 
-        vec![
-            match &input.target.os {
+        let mut patterns = vec![
+            BinPattern::Exact(match &input.target.os {
                 Windows => format!("{}.exe", base_name),
                 _ => base_name.clone(),
-            },
-            match &input.target.os {
+            }),
+            BinPattern::Exact(match &input.target.os {
                 Windows => format!("{}.exe", base_name.to_lowercase()),
                 _ => base_name.to_lowercase(),
-            },
-            base_name.clone(),
-            base_name.to_lowercase(),
-        ]
+            }),
+            BinPattern::Exact(base_name.clone()),
+            BinPattern::Exact(base_name.to_lowercase()),
+        ];
+
+        match &input.target.os {
+            Windows => {
+                patterns.push(BinPattern::Regex(r".*\.exe$".to_string()));
+            }
+            _ => {}
+        }
+
+        patterns.push(BinPattern::Regex(r"^[^.]*$".to_string()));
+
+        patterns
     }
 
     fn get_name(&self) -> &str {

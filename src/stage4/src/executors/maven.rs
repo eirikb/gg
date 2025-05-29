@@ -4,7 +4,9 @@ use std::pin::Pin;
 
 use scraper::{Html, Selector};
 
-use crate::executor::{java_deps, AppInput, Download, ExecutorCmd, ExecutorDep, GgVersion};
+use crate::executor::{
+    java_deps, AppInput, BinPattern, Download, ExecutorCmd, ExecutorDep, GgVersion,
+};
 use crate::target::{Arch, Os, Variant};
 use crate::Executor;
 
@@ -64,11 +66,11 @@ impl Executor for Maven {
         })
     }
 
-    fn get_bins(&self, _input: &AppInput) -> Vec<String> {
+    fn get_bins(&self, _input: &AppInput) -> Vec<BinPattern> {
         vec![
-            "mvn".to_string(),
-            "mvn.bat".to_string(),
-            "maven.bat".to_string(),
+            BinPattern::Exact("mvn".to_string()),
+            BinPattern::Exact("mvn.bat".to_string()),
+            BinPattern::Exact("maven.bat".to_string()),
         ]
     }
 
