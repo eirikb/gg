@@ -5,7 +5,10 @@ if (Test-Path $stage4)
     if ((Get-Item $stage4).Length -gt 0)
     {
         $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
-        Wait-Process -InputObject $proc
+        if (-not $proc.HasExited)
+        {
+            Wait-Process -InputObject $proc
+        }
         exit $proc.ExitCode
     }
     else
@@ -27,12 +30,12 @@ if ($hash)
     "$arch-windows" | Out-File .cache\gg\gg-VERVER\system -Encoding ascii
     $hash = $hash.split("=")[1]
     $tempFile = "$stage4.tmp"
-    
+
     if (Test-Path $tempFile)
     {
         Remove-Item $tempFile -Force
     }
-    
+
     try
     {
         Invoke-WebRequest "https://ggcmd.z13.web.core.windows.net/$hash" -OutFile $tempFile
@@ -59,11 +62,14 @@ if ($hash)
         }
         exit 1
     }
-    
+
     if (Test-Path $stage4)
     {
         $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
-        Wait-Process -InputObject $proc
+        if (-not $proc.HasExited)
+        {
+            Wait-Process -InputObject $proc
+        }
         exit $proc.ExitCode
     }
     else
