@@ -1,4 +1,23 @@
-$stage4 = ".\.cache\gg\gg-VERVER\stage4.exe"
+$localCache = $false
+foreach ($arg in $args) {
+    if ($arg -eq "-l" -or $arg -eq "--local-cache") {
+        $localCache = $true
+        break
+    }
+}
+
+if ($localCache) {
+    $cacheBase = ".cache\gg"
+} else {
+    $cacheBase = "$env:LOCALAPPDATA\gg"
+}
+
+$cacheDir = "$cacheBase\gg-VERVER"
+$stage4 = "$cacheDir\stage4.exe"
+
+if (-not (Test-Path $cacheDir)) {
+    New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null
+}
 
 if (Test-Path $stage4)
 {
@@ -23,11 +42,11 @@ if ($arch -Eq "AMD64")
     $arch = "x86_64"
 }
 
-$hashes = (Get-Content .cache/gg/gg-VERVER/hashes).Split("`n")
+$hashes = (Get-Content $cacheDir\hashes).Split("`n")
 $hash = ($hashes | Where-Object { $_ -match "$arch.*windows" })
 if ($hash)
 {
-    "$arch-windows" | Out-File .cache\gg\gg-VERVER\system -Encoding ascii
+    "$arch-windows" | Out-File $cacheDir\system -Encoding ascii
     $hash = $hash.split("=")[1]
     $tempFile = "$stage4.tmp"
 
