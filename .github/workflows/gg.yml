@@ -253,7 +253,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-22.04, windows-2019, windows-2022 ]
-        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version" ]
+        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version", "just -V" ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -276,7 +276,7 @@ jobs:
     strategy:
       matrix:
         os: [ macos-13 ]
-        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V",  "jbang --version", "gh/cli/cli version", "gh version" ]
+        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V",  "jbang --version", "gh/cli/cli version", "gh version", "just -V" ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -298,7 +298,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-22.04-arm, macos-latest ]
-        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "deno -V", "jbang --version" ]
+        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "deno -V", "jbang --version", "just -V" ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -320,7 +320,7 @@ jobs:
     strategy:
       matrix:
         os: [ windows-2019, windows-2022 ]
-        cmd: [ "node -v", "java -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version", "gh/cli/cli version", "gh version" ]
+        cmd: [ "node -v", "java -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version", "gh/cli/cli version", "gh version", "just -V" ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -335,6 +335,12 @@ jobs:
           .\gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
           .\gg.cmd -v ${{ matrix.cmd }}
+
+      - name: Test version flag
+        shell: cmd
+        run: |
+          .\gg.cmd -V
+          echo Exit code was %errorlevel%
   
 
   test-container:

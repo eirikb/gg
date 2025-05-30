@@ -95,6 +95,7 @@ Supported systems:
     deno
     go
     caddy
+    just
     run (any arbitrary command)
     gh/<owner>/<repo> (GitHub releases)
 "

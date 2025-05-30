@@ -279,6 +279,13 @@ impl dyn Executor {
                 Some(vec![]),
                 Some(vec!["gh".to_string(), "gh.exe".to_string()]),
             )),
+            "just" => Some(create_github_executor(
+                executor_cmd,
+                "casey",
+                "just",
+                Some(vec![]),
+                Some(vec!["just".to_string(), "just.exe".to_string()]),
+            )),
             _ => None,
         }
     }
