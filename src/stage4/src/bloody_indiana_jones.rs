@@ -12,27 +12,28 @@ fn get_file_name(url: &str) -> String {
     reqwest::Url::parse(url).unwrap().path_segments().unwrap().last().unwrap().to_string()
 }
 
-const DOWNLOADS_DIR: &str = ".cache/gg/downloads";
-
 pub struct BloodyIndianaJones {
     url: String,
     path: String,
     file_name: String,
     pub file_path: String,
     pb: ProgressBar,
+    downloads_dir: PathBuf,
 }
 
 impl BloodyIndianaJones {
     pub fn new(url: String, path: String, pb: ProgressBar) -> Self {
         let file_name = get_file_name(&url);
-        let file_path = format!("{DOWNLOADS_DIR}/{file_name}");
-        Self { url, path, file_name, file_path, pb }
+        let downloads_dir = PathBuf::from(&path).parent().unwrap().join("downloads");
+        let file_path = downloads_dir.join(&file_name).to_str().unwrap().to_string();
+        Self { url, path, file_name, file_path, pb, downloads_dir }
     }
 
     pub fn new_with_file_name(url: String, path: String, pb: ProgressBar) -> Self {
         let file_name = get_file_name(&url);
         let file_path = path.clone();
-        Self { url, path, file_name, file_path, pb }
+        let downloads_dir = PathBuf::from(&path).parent().unwrap_or(Path::new(".")).to_path_buf();
+        Self { url, path, file_name, file_path, pb, downloads_dir }
     }
 
     pub async fn download(&self) {
@@ -40,7 +41,7 @@ impl BloodyIndianaJones {
         self.pb.reset();
         self.pb.set_message("Preparing");
 
-        create_dir_all(DOWNLOADS_DIR).expect("Unable to create download dir");
+        create_dir_all(&self.downloads_dir).expect("Unable to create download dir");
 
         self.pb.set_message("Downloading");
         let client = reqwest::Client::new();
@@ -85,7 +86,7 @@ impl BloodyIndianaJones {
         info!("Extracting {}", self.file_name);
         let ext = Path::new(&self.file_name).extension().unwrap().to_str();
         let file_buf_reader = tokio::io::BufReader::new(tokio::fs::File::open(&self.file_path).await.unwrap());
-        let file_path_decomp = &Path::new(&format!("{DOWNLOADS_DIR}/{}", self.file_name)).with_extension("").to_str().unwrap().to_string();
+        let file_path_decomp = &self.downloads_dir.join(&self.file_name).with_extension("").to_str().unwrap().to_string();
 
         match ext {
             Some("xz") | Some("gz") => {
@@ -127,7 +128,7 @@ impl BloodyIndianaJones {
             }
         }
 
-        let file_name = Path::new(&format!(".cache/gg/downloads/{}", self.file_name)).with_extension("").to_str().unwrap().to_string();
+        let file_name = self.downloads_dir.join(&self.file_name).with_extension("").to_str().unwrap().to_string();
 
         if let Some(extension) = Path::new(&file_name).extension() {
             if extension == "tar" {

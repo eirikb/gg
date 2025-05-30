@@ -19,6 +19,7 @@ use crate::executors::maven::Maven;
 use crate::executors::node::Node;
 use crate::executors::openapigenerator::OpenAPIGenerator;
 use crate::executors::rat::Rat;
+use crate::get_cache_dir;
 use crate::no_clap::NoClap;
 use crate::target::{Arch, Os, Target, Variant};
 use indicatif::ProgressBar;
@@ -348,11 +349,11 @@ pub fn java_deps<'a>() -> Pin<Box<dyn Future<Output = Vec<ExecutorDep>> + 'a>> {
 
 fn get_executor_app_path(
     _executor: &dyn Executor,
-    _input: &AppInput,
+    input: &AppInput,
     path: &str,
 ) -> Option<AppPath> {
     info!("Trying to find {path}");
-    if let Ok(app_path) = get_app_path(path) {
+    if let Ok(app_path) = get_app_path(path, input.no_clap.local_cache) {
         Some(app_path)
     } else {
         None
@@ -442,7 +443,8 @@ pub async fn prep(
 
     debug!("{:?}", url_string);
 
-    let cache_path = format!(".cache/gg/{path}");
+    let cache_dir = get_cache_dir(input.no_clap.local_cache);
+    let cache_path = cache_dir.join(path).to_str().unwrap().to_string();
     let bloody_indiana_jones =
         BloodyIndianaJones::new(url_string.to_string(), cache_path.clone(), pb.clone());
     bloody_indiana_jones.download().await;
@@ -553,11 +555,9 @@ fn get_url_matches(
     urls_match.into_iter().map(|d| d.clone()).collect()
 }
 
-fn get_app_path(path: &str) -> Result<AppPath, String> {
-    let path = env::current_dir()
-        .map_err(|_| "Current dir not found")?
-        .join(".cache/gg")
-        .join(path);
+fn get_app_path(path: &str, local_cache: bool) -> Result<AppPath, String> {
+    let cache_dir = get_cache_dir(local_cache);
+    let path = cache_dir.join(path);
 
     if path.exists() {
         Ok(AppPath { install_dir: path })

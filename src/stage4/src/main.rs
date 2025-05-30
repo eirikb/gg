@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
+use std::path::PathBuf;
 use std::process::ExitCode;
 
 use futures_util::future::join_all;
@@ -21,6 +22,16 @@ mod executors;
 mod no_clap;
 mod target;
 
+pub fn get_cache_dir(local_cache: bool) -> PathBuf {
+    if local_cache {
+        PathBuf::from(".cache/gg")
+    } else {
+        dirs::cache_dir()
+            .expect("Unable to determine cache directory")
+            .join("gg")
+    }
+}
+
 fn print_help(ver: &str) {
     println!(
         r"
@@ -36,6 +47,7 @@ Options:
     -vvv            Trace output
     -w              Even more output
     -V              Print version
+    -l              Use local cache (.cache/gg) instead of global cache
     --os <OS>       Override target OS (windows, linux, mac)
     --arch <ARCH>   Override target architecture (x86_64, arm64, armv7)
 
@@ -110,7 +122,8 @@ async fn main() -> ExitCode {
             .init();
     }
 
-    let system = fs::read_to_string(format!("./.cache/gg/gg-{ver}/system"))
+    let cache_dir = get_cache_dir(no_clap.local_cache);
+    let system = fs::read_to_string(cache_dir.join(format!("gg-{ver}/system")))
         .unwrap_or(String::from("x86_64-linux"))
         .trim()
         .to_string();
@@ -160,7 +173,8 @@ async fn main() -> ExitCode {
             }
             "clean-cache" => {
                 println!("Cleaning cache");
-                let _ = fs::remove_dir_all(".cache/gg");
+                let cache_dir = get_cache_dir(no_clap.local_cache);
+                let _ = fs::remove_dir_all(cache_dir);
                 return ExitCode::from(0);
             }
             _ => {}

@@ -21,6 +21,7 @@ pub struct NoClap {
     pub version: bool,
     pub override_os: Option<String>,
     pub override_arch: Option<String>,
+    pub local_cache: bool,
 }
 
 impl NoClap {
@@ -54,6 +55,7 @@ impl NoClap {
 
         let version = gg_args.contains(&"-V".to_string());
         let log_external = gg_args.contains(&"-w".to_string());
+        let local_cache = gg_args.contains(&"-l".to_string()) || gg_args.contains(&"--local-cache".to_string());
 
         let override_os = Self::extract_flag_value(&gg_args, "--os");
         let override_arch = Self::extract_flag_value(&gg_args, "--arch");
@@ -123,6 +125,7 @@ impl NoClap {
             version,
             override_os,
             override_arch,
+            local_cache,
         }
     }
 
