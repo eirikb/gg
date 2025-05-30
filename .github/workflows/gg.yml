@@ -335,6 +335,12 @@ jobs:
           .\gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
           .\gg.cmd -v ${{ matrix.cmd }}
+
+      - name: Test version flag
+        shell: cmd
+        run: |
+          .\gg.cmd -V
+          echo Exit code was %errorlevel%
   
 
   test-container:
