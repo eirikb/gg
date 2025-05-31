@@ -5,6 +5,7 @@ pub mod go;
 pub mod gradle;
 pub mod gradle_properties;
 pub mod java;
+pub mod java_distributions;
 pub mod jbang;
 pub mod maven;
 pub mod node;

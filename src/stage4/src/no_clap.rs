@@ -7,6 +7,7 @@ use regex::{Match, Regex};
 pub struct NoClapCmd {
     pub cmd: String,
     pub version: Option<String>,
+    pub distribution: Option<String>,
     pub include_tags: HashSet<String>,
     pub exclude_tags: HashSet<String>,
 }
@@ -77,38 +78,90 @@ impl NoClap {
                 let mut include_tags = HashSet::new();
                 let mut exclude_tags = HashSet::new();
                 let mut version = None;
+                let mut distribution = None;
 
                 if parts.len() == 2 {
                     cmd = parts[0].to_string();
 
-                    let r = Regex::new(r"[+-]").unwrap();
+                    // Ok. Bah. A bit of hack here because of tags
+                    // Plan: Look for + or - that are NOT part of a version-distribution
+                    // We'll find the first + or - that comes after a space or after a distribution name
+                    // Meaning @ver-var should mean ver-var is a version-distribution. I hope
+
                     let alles = parts[1].to_string();
-                    let matches = r.find_iter(&alles).collect::<Vec<Match>>();
-                    if matches.is_empty() {
-                        version = Some(alles.clone());
+                    let mut version_dist_end = alles.len();
+                    let mut chars = alles.char_indices().peekable();
+                    let in_version = true;
+                    let mut found_dash_in_version = false;
+
+                    while let Some((i, ch)) = chars.next() {
+                        match ch {
+                            '-' if in_version => {
+                                if let Some((_, next_ch)) = chars.peek() {
+                                    if next_ch.is_alphabetic() && !found_dash_in_version {
+                                        found_dash_in_version = true;
+                                        continue;
+                                    }
+                                }
+                                version_dist_end = i;
+                                break;
+                            }
+                            '+' => {
+                                version_dist_end = i;
+                                break;
+                            }
+                            '-' if !in_version => {
+                                version_dist_end = i;
+                                break;
+                            }
+                            _ => {}
+                        }
                     }
-                    matches.iter().enumerate().for_each(|(index, m)| {
-                        if index == 0 && m.start() != 0 {
-                            version = Some(alles[0..m.start()].to_string());
-                        }
-                        let until = if index < matches.len() - 1 {
-                            matches[index + 1].start()
+
+                    let version_dist_part = alles[0..version_dist_end].to_string();
+
+                    if let Some(dash_pos) = version_dist_part.find('-') {
+                        let version_str = version_dist_part[0..dash_pos].to_string();
+                        version = if version_str.is_empty() {
+                            None
                         } else {
-                            alles.len()
+                            Some(version_str)
                         };
-                        let command = alles[m.start()..m.start() + 1].to_string();
-                        let text = alles[m.start() + 1..until].to_string();
-                        if command == "+" {
-                            include_tags.insert(text);
-                        } else if command == "-" {
-                            exclude_tags.insert(text);
-                        }
-                    });
+                        distribution = Some(version_dist_part[dash_pos + 1..].to_string());
+                    } else {
+                        version = if version_dist_part.is_empty() {
+                            None
+                        } else {
+                            Some(version_dist_part)
+                        };
+                    }
+
+                    if version_dist_end < alles.len() {
+                        let tag_regex = Regex::new(r"[+-]").unwrap();
+                        let tag_part = &alles[version_dist_end..];
+                        let tag_matches = tag_regex.find_iter(tag_part).collect::<Vec<Match>>();
+
+                        tag_matches.iter().enumerate().for_each(|(index, m)| {
+                            let until = if index < tag_matches.len() - 1 {
+                                tag_matches[index + 1].start()
+                            } else {
+                                tag_part.len()
+                            };
+                            let command = tag_part[m.start()..m.start() + 1].to_string();
+                            let text = tag_part[m.start() + 1..until].to_string();
+                            if command == "+" {
+                                include_tags.insert(text);
+                            } else if command == "-" {
+                                exclude_tags.insert(text);
+                            }
+                        });
+                    }
                 }
 
                 NoClapCmd {
                     cmd,
                     version,
+                    distribution,
                     include_tags,
                     exclude_tags,
                 }
@@ -278,5 +331,38 @@ mod tests {
 
         assert_eq!("java", no_clap.cmds[2].cmd);
         assert_eq!(None, no_clap.cmds[2].version);
+    }
+
+    #[test]
+    fn distribution_parsing() {
+        let no_clap = NoClap::parse(["java@17-temurin", "hello"].map(String::from).to_vec());
+
+        assert_eq!("java", no_clap.cmds[0].cmd);
+        assert_eq!("17", no_clap.cmds[0].version.as_ref().unwrap());
+        assert_eq!("temurin", no_clap.cmds[0].distribution.as_ref().unwrap());
+    }
+
+    #[test]
+    fn distribution_with_tags() {
+        let no_clap = NoClap::parse(
+            ["java@17-temurin+lts-ea", "hello"]
+                .map(String::from)
+                .to_vec(),
+        );
+
+        assert_eq!("java", no_clap.cmds[0].cmd);
+        assert_eq!("17", no_clap.cmds[0].version.as_ref().unwrap());
+        assert_eq!("temurin", no_clap.cmds[0].distribution.as_ref().unwrap());
+        assert!(no_clap.cmds[0].include_tags.contains("lts"));
+        assert!(no_clap.cmds[0].exclude_tags.contains("ea"));
+    }
+
+    #[test]
+    fn distribution_short_form() {
+        let no_clap = NoClap::parse(["java@20.0.2-tem", "hello"].map(String::from).to_vec());
+
+        assert_eq!("java", no_clap.cmds[0].cmd);
+        assert_eq!("20.0.2", no_clap.cmds[0].version.as_ref().unwrap());
+        assert_eq!("tem", no_clap.cmds[0].distribution.as_ref().unwrap());
     }
 }

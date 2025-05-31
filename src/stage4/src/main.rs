@@ -186,6 +186,7 @@ async fn main() -> ExitCode {
                     version: GgVersionReq::new(
                         cmd.version.clone().unwrap_or("".to_string()).as_str(),
                     ),
+                    distribution: cmd.distribution.clone(),
                     include_tags: cmd.include_tags.clone(),
                     exclude_tags: cmd.exclude_tags.clone(),
                 })
@@ -206,6 +207,7 @@ async fn main() -> ExitCode {
                         if let Some(e) = <dyn Executor>::new(ExecutorCmd {
                             cmd: dep.name.clone(),
                             version: dep.version.as_ref().and_then(|v| GgVersionReq::new(v)),
+                            distribution: None,
                             include_tags: Default::default(),
                             exclude_tags: Default::default(),
                         }) {
