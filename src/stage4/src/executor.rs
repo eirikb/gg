@@ -194,6 +194,7 @@ impl Download {
 pub struct ExecutorCmd {
     pub cmd: String,
     pub version: Option<GgVersionReq>,
+    pub distribution: Option<String>,
     pub include_tags: HashSet<String>,
     pub exclude_tags: HashSet<String>,
 }
@@ -210,6 +211,7 @@ impl ExecutorCmd {
         Self {
             cmd: String::new(),
             version: None,
+            distribution: None,
             include_tags: HashSet::new(),
             exclude_tags: HashSet::new(),
         }
