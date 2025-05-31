@@ -232,6 +232,9 @@ fn get_temurin_downloads(target: &Target) -> Pin<Box<dyn Future<Output = Vec<Dow
                                 let os_match = match (&target.os, binary.os.as_str()) {
                                     (Os::Windows, "windows") => true,
                                     (Os::Linux, "linux") => true,
+                                    (Os::Linux, "alpine-linux") => {
+                                        target.variant == Some(Variant::Musl)
+                                    }
                                     (Os::Mac, "mac") => true,
                                     (Os::Any, _) => true,
                                     _ => false,
@@ -263,6 +266,7 @@ fn get_temurin_downloads(target: &Target) -> Pin<Box<dyn Future<Output = Vec<Dow
                                     let os = match binary.os.as_str() {
                                         "windows" => Some(Os::Windows),
                                         "linux" => Some(Os::Linux),
+                                        "alpine-linux" => Some(Os::Linux),
                                         "mac" => Some(Os::Mac),
                                         _ => None,
                                     };
@@ -275,12 +279,18 @@ fn get_temurin_downloads(target: &Target) -> Pin<Box<dyn Future<Output = Vec<Dow
                                         _ => None,
                                     };
 
+                                    let variant = if binary.os == "alpine-linux" {
+                                        Some(Variant::Musl)
+                                    } else {
+                                        target.variant.clone()
+                                    };
+
                                     downloads.push(Download {
                                         download_url: binary.package.link,
                                         version: GgVersion::new(&release.version_data.semver),
                                         os,
                                         arch,
-                                        variant: target.variant.clone(),
+                                        variant,
                                         tags,
                                     });
                                 }
