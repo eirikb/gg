@@ -3,45 +3,13 @@ use std::future::Future;
 use std::pin::Pin;
 
 use semver::VersionReq;
-use serde::Deserialize;
-use serde::Serialize;
 
-use crate::executor::{AppInput, AppPath, BinPattern, Download, ExecutorCmd, GgVersion};
+use crate::executor::{AppInput, AppPath, BinPattern, Download, ExecutorCmd};
 use crate::executors::gradle_properties::GradleAndWrapperProperties;
-use crate::target::{Arch, Os, Target, Variant};
+use crate::executors::java_distributions::JavaDistributions;
+use crate::target::Os;
 use crate::Executor;
 
-type Root = Vec<Root2>;
-
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Root2 {
-    pub abi: String,
-    pub arch: String,
-    #[serde(rename = "bundle_type")]
-    pub bundle_type: String,
-    #[serde(rename = "cpu_gen")]
-    pub cpu_gen: Vec<String>,
-    pub ext: String,
-    pub features: Vec<String>,
-    #[serde(rename = "hw_bitness")]
-    pub hw_bitness: String,
-    #[serde(rename = "java_version")]
-    pub java_version: Vec<i64>,
-    pub javafx: bool,
-    #[serde(rename = "jdk_version")]
-    pub jdk_version: Vec<i64>,
-    pub latest: bool,
-    pub name: String,
-    #[serde(rename = "openjdk_build_number")]
-    pub openjdk_build_number: Option<i64>,
-    pub os: String,
-    #[serde(rename = "release_status")]
-    pub release_status: String,
-    #[serde(rename = "support_term")]
-    pub support_term: String,
-    pub url: String,
-}
 
 pub struct Java {
     pub executor_cmd: ExecutorCmd,
@@ -67,10 +35,19 @@ impl Executor for Java {
     }
 
     fn get_download_urls<'a>(
-        &self,
+        &'a self,
         input: &'a AppInput,
     ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
-        Box::pin(async move { get_java_download_urls(&input.target).await })
+        Box::pin(async move { 
+            let distribution = if let Some(ref dist_name) = self.executor_cmd.distribution {
+                JavaDistributions::get_by_name(dist_name)
+                    .unwrap_or_else(|| JavaDistributions::get_default())
+            } else {
+                JavaDistributions::get_default()
+            };
+            
+            (distribution.handler)(&input.target).await
+        })
     }
 
     fn get_bins(&self, input: &AppInput) -> Vec<BinPattern> {
@@ -88,7 +65,14 @@ impl Executor for Java {
     }
 
     fn get_default_include_tags(&self) -> HashSet<String> {
-        vec!["jdk", "ga"]
+        let distribution = if let Some(ref dist_name) = self.executor_cmd.distribution {
+            JavaDistributions::get_by_name(dist_name)
+                .unwrap_or_else(|| JavaDistributions::get_default())
+        } else {
+            JavaDistributions::get_default()
+        };
+        
+        distribution.default_tags
             .into_iter()
             .map(|s| s.to_string())
             .collect()
@@ -103,56 +87,4 @@ impl Executor for Java {
         .cloned()
         .collect()
     }
-}
-
-async fn get_java_download_urls(target: &Target) -> Vec<Download> {
-    let json = reqwest::get("https://www.azul.com/wp-admin/admin-ajax.php?action=bundles&endpoint=community&use_stage=false&include_fields=java_version,release_status,abi,arch,bundle_type,cpu_gen,ext,features,hw_bitness,javafx,latest,os,support_term").await.unwrap().text().await.unwrap();
-    let root: Root = serde_json::from_str(json.as_str()).expect("JSON was not well-formatted");
-    root.iter()
-        .filter(|node| match target.os {
-            Os::Windows => node.ext == "zip",
-            _ => node.ext == "tar.gz",
-        })
-        .map(|node| {
-            let n = node.clone();
-            let mut tags = HashSet::new();
-            tags.insert(n.bundle_type);
-            tags.insert(n.support_term);
-            tags.insert(n.release_status);
-
-            for feature in n.features {
-                tags.insert(feature);
-            }
-            let os = Some(match node.os.as_str() {
-                "windows" => Os::Windows,
-                x if x.contains("linux") => Os::Linux,
-                _ => Os::Mac,
-            });
-            let arch = match (node.arch.as_str(), node.hw_bitness.as_str()) {
-                ("x86", "64") => Some(Arch::X86_64),
-                ("arm", "32") => Some(Arch::Armv7),
-                ("arm", "64") => Some(Arch::Arm64),
-                _ => None,
-            };
-            let variant = if node.os.as_str().contains("musl") {
-                Some(Variant::Musl)
-            } else {
-                None
-            };
-            Download {
-                download_url: n.url,
-                version: GgVersion::new(
-                    &n.java_version
-                        .into_iter()
-                        .map(|i| i.to_string())
-                        .collect::<Vec<String>>()
-                        .join("."),
-                ),
-                os,
-                arch,
-                variant,
-                tags,
-            }
-        })
-        .collect()
 }
