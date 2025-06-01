@@ -231,7 +231,7 @@ fn get_temurin_downloads(target: &Target) -> Pin<Box<dyn Future<Output = Vec<Dow
 
                                 let os_match = match (&target.os, binary.os.as_str()) {
                                     (Os::Windows, "windows") => true,
-                                    (Os::Linux, "linux") => true,
+                                    (Os::Linux, "linux") => target.variant != Some(Variant::Musl),
                                     (Os::Linux, "alpine-linux") => {
                                         target.variant == Some(Variant::Musl)
                                     }
