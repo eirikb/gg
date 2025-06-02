@@ -560,10 +560,18 @@ fn get_url_matches(
         .collect::<Vec<_>>();
 
     urls_match.sort_by(|a, b| {
-        b.version
-            .clone()
-            .map(|v| v.to_version())
-            .cmp(&a.version.clone().map(|v| v.to_version()))
+        let a_specific = a.os != Some(Os::Any) || a.arch != Some(Arch::Any);
+        let b_specific = b.os != Some(Os::Any) || b.arch != Some(Arch::Any);
+
+        match (a_specific, b_specific) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => b
+                .version
+                .clone()
+                .map(|v| v.to_version())
+                .cmp(&a.version.clone().map(|v| v.to_version())),
+        }
     });
 
     urls_match.into_iter().map(|d| d.clone()).collect()
