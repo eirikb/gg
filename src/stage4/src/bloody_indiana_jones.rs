@@ -63,8 +63,8 @@ impl BloodyIndianaJones {
         create_dir_all(DOWNLOADS_DIR).expect("Unable to create download dir");
 
         self.pb.set_message("Downloading");
-        let client = create_http_client()
-            .await
+        let client = reqwest::Client::builder()
+            .build()
             .expect("Failed to create HTTP client");
         let res = client
             .get(&self.url)

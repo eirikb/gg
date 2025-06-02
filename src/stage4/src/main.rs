@@ -18,7 +18,6 @@ mod bloody_maven;
 mod checker;
 mod executor;
 mod executors;
-mod http_client;
 mod no_clap;
 mod target;
 
