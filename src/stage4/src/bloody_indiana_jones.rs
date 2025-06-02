@@ -180,11 +180,19 @@ impl BloodyIndianaJones {
             }
         }
 
-        let file_name = Path::new(&format!(".cache/gg/downloads/{}", self.file_name))
-            .with_extension("")
-            .to_str()
-            .unwrap()
-            .to_string();
+        let file_name = if ext == Some("tgz") {
+            Path::new(&format!(".cache/gg/downloads/{}", self.file_name))
+                .with_extension("tar")
+                .to_str()
+                .unwrap()
+                .to_string()
+        } else {
+            Path::new(&format!(".cache/gg/downloads/{}", self.file_name))
+                .with_extension("")
+                .to_str()
+                .unwrap()
+                .to_string()
+        };
 
         if let Some(extension) = Path::new(&file_name).extension() {
             if extension == "tar" {
