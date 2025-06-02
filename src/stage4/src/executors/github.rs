@@ -5,6 +5,7 @@ use std::pin::Pin;
 use crate::executor::{
     AppInput, BinPattern, Download, Executor, ExecutorCmd, ExecutorDep, GgVersion,
 };
+use crate::http_client::create_octocrab_instance;
 use crate::target::Os::Windows;
 use crate::target::{Arch, Os, Variant};
 
@@ -136,11 +137,9 @@ impl Executor for GitHub {
 
         Box::pin(async move {
             let mut downloads: Vec<Download> = vec![];
-            let octocrab = octocrab::Octocrab::builder()
-                .base_uri("https://ghapi.ggcmd.io/")
-                .unwrap()
-                .build()
-                .unwrap();
+            let octocrab = create_octocrab_instance("https://ghapi.ggcmd.io/")
+                .await
+                .expect("Failed to create GitHub API client");
 
             let mut page: u32 = 1;
             loop {

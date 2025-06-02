@@ -8,6 +8,8 @@ use indicatif::ProgressBar;
 use log::{debug, info};
 use tokio::task;
 
+use crate::http_client::create_http_client;
+
 fn get_file_name(url: &str) -> String {
     reqwest::Url::parse(url).unwrap().path_segments().unwrap().last().unwrap().to_string()
 }
@@ -43,7 +45,8 @@ impl BloodyIndianaJones {
         create_dir_all(DOWNLOADS_DIR).expect("Unable to create download dir");
 
         self.pb.set_message("Downloading");
-        let client = reqwest::Client::new();
+        let client = create_http_client().await
+            .expect("Failed to create HTTP client");
         let res = client.get(&self.url)
             .send()
             .await
