@@ -1,5 +1,5 @@
 use std::cmp::min;
-use std::fs::{create_dir_all, File, read_dir, remove_dir, rename};
+use std::fs::{create_dir_all, read_dir, remove_dir, rename, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -8,10 +8,14 @@ use indicatif::ProgressBar;
 use log::{debug, info};
 use tokio::task;
 
-use crate::http_client::create_http_client;
-
 fn get_file_name(url: &str) -> String {
-    reqwest::Url::parse(url).unwrap().path_segments().unwrap().last().unwrap().to_string()
+    reqwest::Url::parse(url)
+        .unwrap()
+        .path_segments()
+        .unwrap()
+        .last()
+        .unwrap()
+        .to_string()
 }
 
 const DOWNLOADS_DIR: &str = ".cache/gg/downloads";
@@ -28,13 +32,25 @@ impl BloodyIndianaJones {
     pub fn new(url: String, path: String, pb: ProgressBar) -> Self {
         let file_name = get_file_name(&url);
         let file_path = format!("{DOWNLOADS_DIR}/{file_name}");
-        Self { url, path, file_name, file_path, pb }
+        Self {
+            url,
+            path,
+            file_name,
+            file_path,
+            pb,
+        }
     }
 
     pub fn new_with_file_name(url: String, path: String, pb: ProgressBar) -> Self {
         let file_name = get_file_name(&url);
         let file_path = path.clone();
-        Self { url, path, file_name, file_path, pb }
+        Self {
+            url,
+            path,
+            file_name,
+            file_path,
+            pb,
+        }
     }
 
     pub async fn download(&self) {
@@ -45,9 +61,11 @@ impl BloodyIndianaJones {
         create_dir_all(DOWNLOADS_DIR).expect("Unable to create download dir");
 
         self.pb.set_message("Downloading");
-        let client = create_http_client().await
+        let client = reqwest::Client::builder()
+            .build()
             .expect("Failed to create HTTP client");
-        let res = client.get(&self.url)
+        let res = client
+            .get(&self.url)
             .send()
             .await
             .expect(format!("Failed to get {}", &self.url).as_str());
@@ -71,8 +89,7 @@ impl BloodyIndianaJones {
 
         while let Some(item) = stream.next().await {
             let chunk = item.expect(format!("Error while downloading file").as_str());
-            file.write_all(&chunk)
-                .expect("Error while writing to file");
+            file.write_all(&chunk).expect("Error while writing to file");
             let new = min(downloaded + (chunk.len() as u64), total_size);
             downloaded = new;
             self.pb.set_position(new);
@@ -87,24 +104,39 @@ impl BloodyIndianaJones {
 
         info!("Extracting {}", self.file_name);
         let ext = Path::new(&self.file_name).extension().unwrap().to_str();
-        let file_buf_reader = tokio::io::BufReader::new(tokio::fs::File::open(&self.file_path).await.unwrap());
-        let file_path_decomp = &Path::new(&format!("{DOWNLOADS_DIR}/{}", self.file_name)).with_extension("").to_str().unwrap().to_string();
+        let file_buf_reader =
+            tokio::io::BufReader::new(tokio::fs::File::open(&self.file_path).await.unwrap());
+        let file_path_decomp = &Path::new(&format!("{DOWNLOADS_DIR}/{}", self.file_name))
+            .with_extension("")
+            .to_str()
+            .unwrap()
+            .to_string();
 
         match ext {
             Some("xz") | Some("gz") => {
                 match ext {
                     Some("xz") => {
                         info!("Decompressing Xz");
-                        let mut decoder = async_compression::tokio::bufread::XzDecoder::new(file_buf_reader);
-                        let mut file_writer = tokio::io::BufWriter::new(tokio::fs::File::create(file_path_decomp).await.unwrap());
-                        tokio::io::copy(&mut decoder, &mut file_writer).await.unwrap();
+                        let mut decoder =
+                            async_compression::tokio::bufread::XzDecoder::new(file_buf_reader);
+                        let mut file_writer = tokio::io::BufWriter::new(
+                            tokio::fs::File::create(file_path_decomp).await.unwrap(),
+                        );
+                        tokio::io::copy(&mut decoder, &mut file_writer)
+                            .await
+                            .unwrap();
                     }
                     _ => {
                         info!("Decompressing Gzip");
                         self.pb.set_message("Gunzip");
-                        let mut decoder = async_compression::tokio::bufread::GzipDecoder::new(file_buf_reader);
-                        let mut file_writer = tokio::io::BufWriter::new(tokio::fs::File::create(file_path_decomp).await.unwrap());
-                        tokio::io::copy(&mut decoder, &mut file_writer).await.unwrap();
+                        let mut decoder =
+                            async_compression::tokio::bufread::GzipDecoder::new(file_buf_reader);
+                        let mut file_writer = tokio::io::BufWriter::new(
+                            tokio::fs::File::create(file_path_decomp).await.unwrap(),
+                        );
+                        tokio::io::copy(&mut decoder, &mut file_writer)
+                            .await
+                            .unwrap();
                     }
                 };
             }
@@ -117,26 +149,38 @@ impl BloodyIndianaJones {
                 task::spawn_blocking(move || {
                     create_dir_all(&path_string).expect("Unable to create download dir");
                     let target_dir = PathBuf::from(&path_string);
-                    zip_extract::extract(File::open(file_path_string).unwrap(), &target_dir, true).unwrap();
-                }).await.expect("Unable to unzip");
+                    zip_extract::extract(File::open(file_path_string).unwrap(), &target_dir, true)
+                        .unwrap();
+                })
+                .await
+                .expect("Unable to unzip");
             }
             Some("tar") => (),
             _ => {
                 self.pb.set_message("Move");
                 create_dir_all(&self.path).expect("Unable to create download dir");
-                rename(&self.file_path, self.path.to_string() + "/" + self.file_name.as_str()).unwrap();
+                rename(
+                    &self.file_path,
+                    self.path.to_string() + "/" + self.file_name.as_str(),
+                )
+                .unwrap();
                 self.pb.finish_with_message("Done");
                 return;
             }
         }
 
-        let file_name = Path::new(&format!(".cache/gg/downloads/{}", self.file_name)).with_extension("").to_str().unwrap().to_string();
+        let file_name = Path::new(&format!(".cache/gg/downloads/{}", self.file_name))
+            .with_extension("")
+            .to_str()
+            .unwrap()
+            .to_string();
 
         if let Some(extension) = Path::new(&file_name).extension() {
             if extension == "tar" {
                 info!("Untar {file_name}");
                 self.pb.set_message("Untar");
-                let mut archive = tar::Archive::new(std::io::BufReader::new(File::open(file_name).unwrap()));
+                let mut archive =
+                    tar::Archive::new(std::io::BufReader::new(File::open(file_name).unwrap()));
                 archive.unpack(&self.path).expect("Unable to extract");
             }
         }
@@ -152,13 +196,16 @@ impl BloodyIndianaJones {
                     for entry in entries {
                         if let Ok(entry) = entry {
                             if entry.path().is_dir() {
-                                debug!("Extracted files are contained in sub-folder. Moving them up");
+                                debug!(
+                                    "Extracted files are contained in sub-folder. Moving them up"
+                                );
                                 let parent = entry.path();
                                 if let Ok(entries) = read_dir(&parent) {
                                     for entry in entries {
                                         if let Ok(entry) = entry {
                                             let path = entry.path();
-                                            let new_path = parent_path.join(path.file_name().unwrap());
+                                            let new_path =
+                                                parent_path.join(path.file_name().unwrap());
                                             rename(&path, new_path).unwrap();
                                         }
                                     }
@@ -169,7 +216,9 @@ impl BloodyIndianaJones {
                     }
                 }
             }
-        }).await.expect("Unable to move files");
+        })
+        .await
+        .expect("Unable to move files");
         self.pb.finish_with_message("Done");
     }
 }
