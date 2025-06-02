@@ -287,6 +287,13 @@ impl dyn Executor {
                 Some(vec![]),
                 Some(vec!["just".to_string(), "just.exe".to_string()]),
             )),
+            "fortio" => Some(create_github_executor(
+                executor_cmd,
+                "fortio",
+                "fortio",
+                Some(vec![]),
+                Some(vec!["usr/bin/fortio".to_string(), "fortio.exe".to_string()]),
+            )),
             _ => None,
         }
     }
