@@ -1,12 +1,15 @@
-use std::fs;
+use crate::barus::create_barus;
+use crate::executor::{prep, AppInput, GgMeta};
+use crate::get_cache_dir;
+use crate::Executor;
 use dialoguer::Confirm;
 use log::{debug, info};
-use crate::barus::create_barus;
-use crate::executor::{AppInput, GgMeta, prep};
-use crate::Executor;
+use std::fs;
 
 pub async fn check(input: &AppInput, update: bool) {
-    let entries = walkdir::WalkDir::new("./.cache/gg").into_iter()
+    let cache_dir = get_cache_dir(input.no_clap.local_cache);
+    let entries = walkdir::WalkDir::new(cache_dir)
+        .into_iter()
         .filter_map(|x| x.ok())
         .filter(|x| x.file_name().to_string_lossy() == "gg-meta.json");
     for entry in entries {
@@ -25,15 +28,30 @@ pub async fn check(input: &AppInput, update: bool) {
                 if let Some(urls_match) = urls_match {
                     let current_version = meta.download.version;
                     let latest_version = &urls_match.version;
-                    println!("{} ({}): Current version: {}. Latest version: {}", executor.get_name(), meta.version_req.to_string(), current_version.clone().map(|v| v.to_string()).unwrap_or("NA".to_string()), latest_version.clone().map(|v| v.to_string()).unwrap_or("NA".to_string()));
+                    println!(
+                        "{} ({}): Current version: {}. Latest version: {}",
+                        executor.get_name(),
+                        meta.version_req.to_string(),
+                        current_version
+                            .clone()
+                            .map(|v| v.to_string())
+                            .unwrap_or("NA".to_string()),
+                        latest_version
+                            .clone()
+                            .map(|v| v.to_string())
+                            .unwrap_or("NA".to_string())
+                    );
 
-                    if latest_version.clone().map(|v| v.to_version()) > current_version.clone().map(|v| v.to_version()) {
+                    if latest_version.clone().map(|v| v.to_version())
+                        > current_version.clone().map(|v| v.to_version())
+                    {
                         println!(" ** {}: New version available!", executor.get_name());
                         if update {
                             if Confirm::new()
                                 .with_prompt("Do you want to update?")
                                 .interact()
-                                .unwrap_or(false) {
+                                .unwrap_or(false)
+                            {
                                 println!("Updating...");
                                 if let Some(parent) = entry.path().parent() {
                                     if fs::remove_dir_all(parent).is_ok() {
