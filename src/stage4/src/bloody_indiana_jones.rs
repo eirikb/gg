@@ -8,8 +8,6 @@ use indicatif::ProgressBar;
 use log::{debug, info};
 use tokio::task;
 
-use crate::http_client::create_http_client;
-
 fn get_file_name(url: &str) -> String {
     reqwest::Url::parse(url)
         .unwrap()
