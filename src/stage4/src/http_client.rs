@@ -10,6 +10,7 @@ use std::io::Write;
 // This code attempts to download a fresh set of CA certificates from curl.se and use them.
 // Note note note; this still relies on the CA for curl.se being valid and trusted.
 // And it is only a fallback mechanism.
+// See https://github.com/eirikb/gg/issues/119
 
 const CA_CERT_URL: &str = "https://curl.se/ca/cacert.pem";
 const CA_CERT_PATH: &str = ".cache/gg/cacert.pem";
