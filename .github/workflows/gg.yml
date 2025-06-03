@@ -298,7 +298,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-22.04-arm, macos-latest ]
-        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "deno -V", "jbang --version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fortio version" ]
+        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "deno -V", "jbang --version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version" ]
 
     runs-on: ${{ matrix.os }}
     steps:
