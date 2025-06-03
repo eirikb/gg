@@ -84,6 +84,7 @@ Supported systems:
     go
     caddy
     just
+    fortio
     run (any arbitrary command)
     gh/<owner>/<repo> (GitHub releases)
 "

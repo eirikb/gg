@@ -287,6 +287,13 @@ impl dyn Executor {
                 Some(vec![]),
                 Some(vec!["just".to_string(), "just.exe".to_string()]),
             )),
+            "fortio" => Some(create_github_executor(
+                executor_cmd,
+                "fortio",
+                "fortio",
+                Some(vec![]),
+                Some(vec!["bin/fortio".to_string(), "fortio.exe".to_string()]),
+            )),
             _ => None,
         }
     }
@@ -553,10 +560,18 @@ fn get_url_matches(
         .collect::<Vec<_>>();
 
     urls_match.sort_by(|a, b| {
-        b.version
-            .clone()
-            .map(|v| v.to_version())
-            .cmp(&a.version.clone().map(|v| v.to_version()))
+        let a_specific = a.os != Some(Os::Any) || a.arch != Some(Arch::Any);
+        let b_specific = b.os != Some(Os::Any) || b.arch != Some(Arch::Any);
+
+        match (a_specific, b_specific) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => b
+                .version
+                .clone()
+                .map(|v| v.to_version())
+                .cmp(&a.version.clone().map(|v| v.to_version())),
+        }
     });
 
     urls_match.into_iter().map(|d| d.clone()).collect()
@@ -584,7 +599,7 @@ pub async fn try_run(
 ) -> Result<bool, String> {
     let args = executor.customize_args(&input, &app_path);
     let path_string = &env::var("PATH").unwrap_or("".to_string());
-    let paths = env::join_paths(path_vars)
+    let paths = env::join_paths(path_vars.clone())
         .unwrap()
         .to_str()
         .unwrap()
@@ -598,7 +613,32 @@ pub async fn try_run(
     info!("Trying to find these bins: {:?}", bins);
     for bin in bins {
         let bin_path = match bin {
-            BinPattern::Exact(name) => which_in(&name, Some(&all_paths), "."),
+            BinPattern::Exact(name) => {
+                if name.contains('/') {
+                    let path_parts: Vec<&str> = name.split('/').collect();
+                    if let Some(binary_name) = path_parts.last() {
+                        let custom_paths: Vec<String> = path_vars
+                            .iter()
+                            .map(|base| {
+                                let mut path = PathBuf::from(base);
+                                for part in &path_parts[..path_parts.len() - 1] {
+                                    path.push(part);
+                                }
+                                path.to_str().unwrap_or("").to_string()
+                            })
+                            .collect();
+                        let custom_paths_str = custom_paths.join(match env::consts::OS {
+                            "windows" => ";",
+                            _ => ":",
+                        });
+                        which_in(binary_name, Some(&custom_paths_str), ".")
+                    } else {
+                        which_in(&name, Some(&all_paths), ".")
+                    }
+                } else {
+                    which_in(&name, Some(&all_paths), ".")
+                }
+            }
             BinPattern::Regex(pattern) => {
                 if let Ok(regex) = Regex::new(&pattern) {
                     which_re_in(regex, Some(&all_paths))

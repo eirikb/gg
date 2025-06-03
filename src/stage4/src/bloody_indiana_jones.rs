@@ -106,14 +106,23 @@ impl BloodyIndianaJones {
         let ext = Path::new(&self.file_name).extension().unwrap().to_str();
         let file_buf_reader =
             tokio::io::BufReader::new(tokio::fs::File::open(&self.file_path).await.unwrap());
-        let file_path_decomp = &Path::new(&format!("{DOWNLOADS_DIR}/{}", self.file_name))
-            .with_extension("")
-            .to_str()
-            .unwrap()
-            .to_string();
+        let file_path_decomp = if ext == Some("tgz") {
+            // For .tgz files, replace extension with .tar
+            &Path::new(&format!("{DOWNLOADS_DIR}/{}", self.file_name))
+                .with_extension("tar")
+                .to_str()
+                .unwrap()
+                .to_string()
+        } else {
+            &Path::new(&format!("{DOWNLOADS_DIR}/{}", self.file_name))
+                .with_extension("")
+                .to_str()
+                .unwrap()
+                .to_string()
+        };
 
         match ext {
-            Some("xz") | Some("gz") => {
+            Some("xz") | Some("gz") | Some("tgz") => {
                 match ext {
                     Some("xz") => {
                         info!("Decompressing Xz");
@@ -169,11 +178,19 @@ impl BloodyIndianaJones {
             }
         }
 
-        let file_name = Path::new(&format!(".cache/gg/downloads/{}", self.file_name))
-            .with_extension("")
-            .to_str()
-            .unwrap()
-            .to_string();
+        let file_name = if ext == Some("tgz") {
+            Path::new(&format!(".cache/gg/downloads/{}", self.file_name))
+                .with_extension("tar")
+                .to_str()
+                .unwrap()
+                .to_string()
+        } else {
+            Path::new(&format!(".cache/gg/downloads/{}", self.file_name))
+                .with_extension("")
+                .to_str()
+                .unwrap()
+                .to_string()
+        };
 
         if let Some(extension) = Path::new(&file_name).extension() {
             if extension == "tar" {

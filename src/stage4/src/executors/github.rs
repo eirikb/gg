@@ -164,7 +164,9 @@ impl Executor for GitHub {
                             let os = Self::detect_os_from_name(&asset.name);
                             let arch = Self::detect_arch_from_name(&asset.name);
 
-                            if (os.is_some() && arch.is_some()) || (os.is_none() && arch.is_none())
+                            if (os.is_some() && arch.is_some())
+                                || (os.is_none() && arch.is_none()
+                                    || (os == Some(Os::Windows) && arch.is_none()))
                             {
                                 downloads.push(Download {
                                     download_url: asset.browser_download_url.to_string(),

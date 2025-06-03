@@ -253,7 +253,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-22.04, windows-2019, windows-2022 ]
-        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version" ]
+        cmd: [ "node -v", "java -version", "gradle -version",  "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fortio version" ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -320,7 +320,7 @@ jobs:
     strategy:
       matrix:
         os: [ windows-2019, windows-2022 ]
-        cmd: [ "node -v", "java -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version", "gh/cli/cli version", "gh version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version" ]
+        cmd: [ "node -v", "java -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version", "gh/cli/cli version", "gh version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fortio version" ]
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -348,7 +348,7 @@ jobs:
     strategy:
       matrix:
         container: [ ubuntu, debian, alpine, archlinux ]
-        cmd: [ "node@14 -v", "java -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "just -V" ]
+        cmd: [ "node@14 -v", "java -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "just -V", "fortio version" ]
 
     runs-on: ubuntu-latest
     container: ${{ matrix.container }}
