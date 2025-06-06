@@ -53,7 +53,8 @@ impl NoClap {
             .into_iter()
             .find(|(input, _)| gg_args.contains(&input.to_string()));
 
-        let version = gg_args.contains(&"-V".to_string());
+        let version =
+            gg_args.contains(&"-V".to_string()) || gg_args.contains(&"--version".to_string());
         let log_external = gg_args.contains(&"-w".to_string());
 
         let override_os = Self::extract_flag_value(&gg_args, "--os");
