@@ -35,7 +35,7 @@ Options:
     -vv             Debug output
     -vvv            Trace output
     -w              Even more output
-    -V              Print version
+    -V, --version   Print version
     --os <OS>       Override target OS (windows, linux, mac)
     --arch <ARCH>   Override target architecture (x86_64, arm64, armv7)
 
