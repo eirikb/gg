@@ -560,6 +560,31 @@ fn get_url_matches(
         .collect::<Vec<_>>();
 
     urls_match.sort_by(|a, b| {
+        let tool_name = executor.get_name().to_lowercase();
+
+        // Split for file name - or else we will get a match from the repo on every file
+        let a_filename = a
+            .download_url
+            .split('/')
+            .last()
+            .unwrap_or("")
+            .to_lowercase();
+        let b_filename = b
+            .download_url
+            .split('/')
+            .last()
+            .unwrap_or("")
+            .to_lowercase();
+
+        let a_contains_tool = a_filename.contains(&tool_name);
+        let b_contains_tool = b_filename.contains(&tool_name);
+
+        match (a_contains_tool, b_contains_tool) {
+            (true, false) => return std::cmp::Ordering::Less,
+            (false, true) => return std::cmp::Ordering::Greater,
+            _ => {}
+        }
+
         let a_specific = a.os != Some(Os::Any) || a.arch != Some(Arch::Any);
         let b_specific = b.os != Some(Os::Any) || b.arch != Some(Arch::Any);
 
