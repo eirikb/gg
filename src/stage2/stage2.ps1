@@ -1,10 +1,14 @@
 $stage4 = ".\.cache\gg\gg-VERVER\stage4.exe"
 
+$quotedArgs = $args | ForEach-Object {
+    if ($_ -match '\s') { '"{0}"' -f $_ } else { $_ }
+}
+
 if (Test-Path $stage4)
 {
     if ((Get-Item $stage4).Length -gt 0)
     {
-        $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
+        $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $quotedArgs
         if (-not $proc.HasExited)
         {
             Wait-Process -InputObject $proc
