@@ -138,14 +138,44 @@ async fn main() -> ExitCode {
         match cmd.cmd.as_str() {
             "update" => {
                 println!("Updating gg.cmd...");
+                println!("Current version: {}", ver);
+
                 let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
                 let pb = create_barus();
+                let file_path = "gg.cmd";
                 let bloody_indiana_jones = BloodyIndianaJones::new_with_file_name(
                     url.to_string(),
-                    "gg.cmd".to_string(),
+                    file_path.to_string(),
                     pb.clone(),
                 );
                 bloody_indiana_jones.download().await;
+
+                // Just in case
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+                match fs::read(file_path) {
+                    Ok(bytes) => {
+                        // Gotta read it special since it is partially binary
+                        let content = String::from_utf8_lossy(&bytes);
+
+                        if let Some(line) = content.lines().find(|line| line.contains(": VERSION:"))
+                        {
+                            if let Some(version_str) = line.split(": VERSION:").nth(1) {
+                                let new_version = version_str.trim();
+                                println!("Successfully updated to version {}!", new_version);
+                            } else {
+                                println!("Update completed!");
+                            }
+                        } else {
+                            println!("Update completed!");
+                        }
+                    }
+                    Err(e) => {
+                        println!("Failed to read file: {}", e);
+                        println!("Update completed!");
+                    }
+                }
+
                 return ExitCode::from(0);
             }
             "help" => {
