@@ -21,6 +21,40 @@ mod executors;
 mod no_clap;
 mod target;
 
+async fn update_download() {
+    let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
+    let pb = create_barus();
+    let file_path = "gg.cmd";
+    let bloody_indiana_jones =
+        BloodyIndianaJones::new_with_file_name(url.to_string(), file_path.to_string(), pb.clone());
+    bloody_indiana_jones.download().await;
+
+    // Just in case
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    match fs::read(file_path) {
+        Ok(bytes) => {
+            // Gotta read it special since it is partially binary
+            let content = String::from_utf8_lossy(&bytes);
+
+            if let Some(line) = content.lines().find(|line| line.contains(": VERSION:")) {
+                if let Some(version_str) = line.split(": VERSION:").nth(1) {
+                    let new_version = version_str.trim();
+                    println!("Successfully updated to version {}!", new_version);
+                } else {
+                    println!("Update completed!");
+                }
+            } else {
+                println!("Update completed!");
+            }
+        }
+        Err(e) => {
+            println!("Failed to read file: {}", e);
+            println!("Update completed!");
+        }
+    }
+}
+
 fn print_help(ver: &str) {
     println!(
         r"
@@ -137,42 +171,30 @@ async fn main() -> ExitCode {
     if let Some(cmd) = no_clap.cmds.first() {
         match cmd.cmd.as_str() {
             "update" => {
-                println!("Updating gg.cmd...");
+                println!("Checking for updates...");
                 println!("Current version: {}", ver);
 
-                let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
-                let pb = create_barus();
-                let file_path = "gg.cmd";
-                let bloody_indiana_jones = BloodyIndianaJones::new_with_file_name(
-                    url.to_string(),
-                    file_path.to_string(),
-                    pb.clone(),
-                );
-                bloody_indiana_jones.download().await;
+                let octocrab = octocrab::Octocrab::builder()
+                    .base_uri("https://ghapi.ggcmd.io/")
+                    .unwrap()
+                    .build()
+                    .expect("Failed to create GitHub API client");
 
-                // Just in case
-                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                match octocrab.repos("eirikb", "gg").releases().get_latest().await {
+                    Ok(release) => {
+                        let latest_version = release.tag_name.trim_start_matches('v');
 
-                match fs::read(file_path) {
-                    Ok(bytes) => {
-                        // Gotta read it special since it is partially binary
-                        let content = String::from_utf8_lossy(&bytes);
-
-                        if let Some(line) = content.lines().find(|line| line.contains(": VERSION:"))
-                        {
-                            if let Some(version_str) = line.split(": VERSION:").nth(1) {
-                                let new_version = version_str.trim();
-                                println!("Successfully updated to version {}!", new_version);
-                            } else {
-                                println!("Update completed!");
-                            }
-                        } else {
-                            println!("Update completed!");
+                        if latest_version == ver {
+                            println!("Already up to date (version {}).", ver);
+                            return ExitCode::from(0);
                         }
+
+                        println!("Updating to version {}...", latest_version);
+                        update_download().await;
                     }
-                    Err(e) => {
-                        println!("Failed to read file: {}", e);
-                        println!("Update completed!");
+                    Err(_) => {
+                        println!("Failed to check for updates. Proceeding with download...");
+                        update_download().await;
                     }
                 }
 
