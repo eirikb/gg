@@ -11,8 +11,9 @@
 ![Image](https://github.com/user-attachments/assets/93876050-9c28-4389-a77c-5a88f5af2811)
 
 `gg.cmd` is a cross-platform and cross-architecture command-line interface (CLI) that acts as an executable wrapper for
-various tools such as Gradle, JDK/JVM, Node.js, and Java. It requires minimal dependencies and is similar in
-functionality to gradlew.
+various tools such as Gradle, JDK/JVM, Node.js, and Java. **It requires zero external dependencies** - works on plain
+Alpine and Ubuntu containers without curl/wget or updated CA certificates (all networking is built-in). Similar in
+functionality to gradlew (without need for JDK initially installed).
 
 Install with bash (wget):
 > wget ggcmd.io/gg.cmd
@@ -34,6 +35,7 @@ As a result, your colleagues would not have to install anything on their host ma
 
 ## Features
 
+- **Zero dependencies** - Works on minimal containers (Alpine, Ubuntu) without curl/wget or CA certificates
 - Simplify the management of other executables in your project
 - Automatically detect and execute the required executable version using project configuration files (such
   as `package.json` for Node.js projects)
