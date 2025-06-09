@@ -121,6 +121,12 @@ Supported systems:
     fortio
     run (any arbitrary command)
     gh/<owner>/<repo> (GitHub releases)
+
+Available tags by system:
+    java: +jdk, +jre, +lts, +sts, +mts, +ea, +ga, +headless, +headfull, +fx, +normal, +hotspot (defaults: +jdk, +ga)
+    node: +lts
+    go: +beta (excluded by default)
+    openapi: +beta (excluded by default)
 "
     );
 }

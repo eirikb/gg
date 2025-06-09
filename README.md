@@ -61,19 +61,56 @@ by the desired executable and its required dependencies:
 sh gg.cmd npm install
 ```
 
-## Support table
+```
+Usage: ./gg.cmd [options] <executable name>@<version>:<dependent executable name>@<version> [program arguments]
 
-| Logo                                                                                                                          | Commands                         | Depends on | Set environment variables | Available tags                                                                     | Default tags |
-|-------------------------------------------------------------------------------------------------------------------------------|----------------------------------|------------|---------------------------|------------------------------------------------------------------------------------|--------------|
-| <img src="https://user-images.githubusercontent.com/241706/231715452-4e04052a-d13c-4bca-afa5-0bb19239b6f0.png" width="100px"> | **node**<br/>**npm**<br/>**npx** |            |                           | lts                                                                                |              |
-| <img src="https://github.com/eirikb/gg/assets/241706/71b42988-bf62-49d3-b675-b2e526b3a8cc" width="100px">                     | **deno**                         |            |                           |                                                                                    |              |
-| <img src="https://user-images.githubusercontent.com/241706/231713381-cc8436bb-ef6e-4aa6-ab5c-66ee0a868201.png" width="100px"> | **gradle**                       | java       |                           |                                                                                    |              |
-| <img src="https://user-images.githubusercontent.com/241706/231999543-61a192f0-7931-495d-a845-fdd855e690e5.png" width="100px"> | **maven**<br/>**mvn**            | java       |                           |                                                                                    |              |
-| <a href="https://rife2.com/bld"><img src="https://rife2.com/images/bld_logo.svg" width="25%"></a>                             | **bld**                          | java       |                           |                                                                                    |              |
-| <a href="https://www.jbang.dev/"><img src="https://www.jbang.dev/assets/images/logo.png" width="50%"></a>                     | **jbang**                        | java       |                           |                                                                                    |              |
-| <img src="https://user-images.githubusercontent.com/241706/231713130-ba667ff2-a129-47be-9d06-9e68e6815108.png" width="100px"> | **java**                         |            | JAVA_HOME                 | jdk<br/>jre<br/>lts<br/>sts<br/>mts<br/>ea<br/>ga<br/>headless<br/>headfull<br/>fx | +jdk<br/>+ga |
-| <img src="https://github.com/eirikb/gg/assets/241706/e674f306-ce32-4718-b560-1b454f49e94c" width="100px">                     | **go**                           |            |                           | beta                                                                               |              |
-| <img src="https://github.com/eirikb/gg/assets/241706/4d8be751-4680-4cc8-a939-f7ee6fac841f" width="100px">                     | **openapi**                      | java       |                           | beta                                                                               |              |
+Options:
+    -v              Info output
+    -vv             Debug output
+    -vvv            Trace output
+    -w              Even more output
+    -V, --version   Print version
+    --os <OS>       Override target OS (windows, linux, mac)
+    --arch <ARCH>   Override target architecture (x86_64, arm64, armv7)
+
+Built in commands:
+    update          Update gg.cmd
+    help            Print help
+    check           Check for updates
+    check-update    Check for updates and update if available
+    clean-cache     Clean cache
+
+Version syntax:
+    @X              Any X.y.z version (e.g. node@14 for any Node.js 14.x.y)
+    @X.Y            Any X.Y.z patch version (e.g. node@14.17 for any Node.js 14.17.z)
+    @X.Y.Z          Exactly X.Y.Z version (e.g. node@14.17.0 for exactly Node.js 14.17.0)
+    @^X.Y.Z         X.Y.Z or any compatible newer version (caret prefix)
+    @~X.Y.Z         X.Y.Z or any newer patch version (tilde prefix)
+    @=X.Y.Z         Exactly X.Y.Z version (equals prefix, same as X.Y.Z without prefix)
+
+Supported systems:
+    node (npm, npx will also work, version refers to node version)
+    gradle
+    java
+    jbang
+    maven (mvn)
+    bld
+    openapi
+    rat (ra)
+    deno
+    go
+    caddy
+    just
+    fortio
+    run (any arbitrary command)
+    gh/<owner>/<repo> (GitHub releases)
+
+Available tags by system:
+    java: +jdk, +jre, +lts, +sts, +mts, +ea, +ga, +headless, +headfull, +fx, +normal, +hotspot (defaults: +jdk, +ga)
+    node: +lts
+    go: +beta (excluded by default)
+    openapi: +beta (excluded by default)
+```
 
 ## Node
 
