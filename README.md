@@ -11,8 +11,9 @@
 ![Image](https://github.com/user-attachments/assets/93876050-9c28-4389-a77c-5a88f5af2811)
 
 `gg.cmd` is a cross-platform and cross-architecture command-line interface (CLI) that acts as an executable wrapper for
-various tools such as Gradle, JDK/JVM, Node.js, and Java. It requires minimal dependencies and is similar in
-functionality to gradlew.
+various tools such as Gradle, JDK/JVM, Node.js, and Java. **It requires zero external dependencies** - works on plain
+Alpine and Ubuntu containers without curl/wget or updated CA certificates (all networking is built-in). Similar in
+functionality to gradlew (without need for JDK initially installed).
 
 Install with bash (wget):
 > wget ggcmd.io/gg.cmd
@@ -34,6 +35,7 @@ As a result, your colleagues would not have to install anything on their host ma
 
 ## Features
 
+- **Zero dependencies** - Works on minimal containers (Alpine, Ubuntu) without curl/wget or CA certificates
 - Simplify the management of other executables in your project
 - Automatically detect and execute the required executable version using project configuration files (such
   as `package.json` for Node.js projects)
@@ -42,7 +44,7 @@ As a result, your colleagues would not have to install anything on their host ma
 - Cross-architecture compatibility (x86_64 and ARM)
 - Fast and lightweight
 
-Installs tool locally in a folder called `.cache`. Global install not supported.
+Installs tools locally in a folder called `.cache`. Global install not supported.
 Adds every dependency into `PATH` before executing.
 
 ## Usage
@@ -61,19 +63,56 @@ by the desired executable and its required dependencies:
 sh gg.cmd npm install
 ```
 
-## Support table
+```
+Usage: ./gg.cmd [options] <executable name>@<version>:<dependent executable name>@<version> [program arguments]
 
-| Logo                                                                                                                          | Commands                         | Depends on | Set environment variables | Available tags                                                                     | Default tags |
-|-------------------------------------------------------------------------------------------------------------------------------|----------------------------------|------------|---------------------------|------------------------------------------------------------------------------------|--------------|
-| <img src="https://user-images.githubusercontent.com/241706/231715452-4e04052a-d13c-4bca-afa5-0bb19239b6f0.png" width="100px"> | **node**<br/>**npm**<br/>**npx** |            |                           | lts                                                                                |              |
-| <img src="https://github.com/eirikb/gg/assets/241706/71b42988-bf62-49d3-b675-b2e526b3a8cc" width="100px">                     | **deno**                         |            |                           |                                                                                    |              |
-| <img src="https://user-images.githubusercontent.com/241706/231713381-cc8436bb-ef6e-4aa6-ab5c-66ee0a868201.png" width="100px"> | **gradle**                       | java       |                           |                                                                                    |              |
-| <img src="https://user-images.githubusercontent.com/241706/231999543-61a192f0-7931-495d-a845-fdd855e690e5.png" width="100px"> | **maven**<br/>**mvn**            | java       |                           |                                                                                    |              |
-| <a href="https://rife2.com/bld"><img src="https://rife2.com/images/bld_logo.svg" width="25%"></a>                             | **bld**                          | java       |                           |                                                                                    |              |
-| <a href="https://www.jbang.dev/"><img src="https://www.jbang.dev/assets/images/logo.png" width="50%"></a>                     | **jbang**                        | java       |                           |                                                                                    |              |
-| <img src="https://user-images.githubusercontent.com/241706/231713130-ba667ff2-a129-47be-9d06-9e68e6815108.png" width="100px"> | **java**                         |            | JAVA_HOME                 | jdk<br/>jre<br/>lts<br/>sts<br/>mts<br/>ea<br/>ga<br/>headless<br/>headfull<br/>fx | +jdk<br/>+ga |
-| <img src="https://github.com/eirikb/gg/assets/241706/e674f306-ce32-4718-b560-1b454f49e94c" width="100px">                     | **go**                           |            |                           | beta                                                                               |              |
-| <img src="https://github.com/eirikb/gg/assets/241706/4d8be751-4680-4cc8-a939-f7ee6fac841f" width="100px">                     | **openapi**                      | java       |                           | beta                                                                               |              |
+Options:
+    -v              Info output
+    -vv             Debug output
+    -vvv            Trace output
+    -w              Even more output
+    -V, --version   Print version
+    --os <OS>       Override target OS (windows, linux, mac)
+    --arch <ARCH>   Override target architecture (x86_64, arm64, armv7)
+
+Built in commands:
+    update          Update gg.cmd
+    help            Print help
+    check           Check for updates
+    check-update    Check for updates and update if available
+    clean-cache     Clean cache
+
+Version syntax:
+    @X              Any X.y.z version (e.g. node@14 for any Node.js 14.x.y)
+    @X.Y            Any X.Y.z patch version (e.g. node@14.17 for any Node.js 14.17.z)
+    @X.Y.Z          Exactly X.Y.Z version (e.g. node@14.17.0 for exactly Node.js 14.17.0)
+    @^X.Y.Z         X.Y.Z or any compatible newer version (caret prefix)
+    @~X.Y.Z         X.Y.Z or any newer patch version (tilde prefix)
+    @=X.Y.Z         Exactly X.Y.Z version (equals prefix, same as X.Y.Z without prefix)
+
+Supported tools:
+    node (npm, npx will also work, version refers to node version)
+    gradle
+    java
+    jbang
+    maven (mvn)
+    bld
+    openapi
+    rat (ra)
+    deno
+    go
+    caddy
+    just
+    fortio
+    run (any arbitrary command)
+    gh/<owner>/<repo> (GitHub releases)
+
+Available tags by tools:
+    java: +jdk, +jre, +lts, +sts, +mts, +ea, +ga, +headless, +headfull, +fx, +normal, +hotspot (defaults: +jdk, +ga)
+    node: +lts
+    go: +beta (excluded by default)
+    openapi: +beta (excluded by default)
+```
 
 ## Node
 
@@ -170,12 +209,12 @@ cd my-app
 ### Execute code hosted on GitHub
 
 `gg.cmd` offers a GitHub executor.
-It smartly checks if the content and the available release files.
+It smartly checks the content and the available release files.
 
 For instance, one can run [GitHub's CLI tool](https://cli.github.com/):
 
 ```bash
-> sh ./gg.cmd gh/cli/cli --verison
+> sh ./gg.cmd gh/cli/cli --version
 gh version 2.73.0 (2025-05-19)
 https://github.com/cli/cli/releases/tag/v2.73.0
 ```
