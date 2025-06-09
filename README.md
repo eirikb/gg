@@ -42,7 +42,7 @@ As a result, your colleagues would not have to install anything on their host ma
 - Cross-architecture compatibility (x86_64 and ARM)
 - Fast and lightweight
 
-Installs tool locally in a folder called `.cache`. Global install not supported.
+Installs tools locally in a folder called `.cache`. Global install not supported.
 Adds every dependency into `PATH` before executing.
 
 ## Usage
@@ -88,7 +88,7 @@ Version syntax:
     @~X.Y.Z         X.Y.Z or any newer patch version (tilde prefix)
     @=X.Y.Z         Exactly X.Y.Z version (equals prefix, same as X.Y.Z without prefix)
 
-Supported systems:
+Supported tools:
     node (npm, npx will also work, version refers to node version)
     gradle
     java
@@ -105,7 +105,7 @@ Supported systems:
     run (any arbitrary command)
     gh/<owner>/<repo> (GitHub releases)
 
-Available tags by system:
+Available tags by tools:
     java: +jdk, +jre, +lts, +sts, +mts, +ea, +ga, +headless, +headfull, +fx, +normal, +hotspot (defaults: +jdk, +ga)
     node: +lts
     go: +beta (excluded by default)
@@ -207,12 +207,12 @@ cd my-app
 ### Execute code hosted on GitHub
 
 `gg.cmd` offers a GitHub executor.
-It smartly checks if the content and the available release files.
+It smartly checks the content and the available release files.
 
 For instance, one can run [GitHub's CLI tool](https://cli.github.com/):
 
 ```bash
-> sh ./gg.cmd gh/cli/cli --verison
+> sh ./gg.cmd gh/cli/cli --version
 gh version 2.73.0 (2025-05-19)
 https://github.com/cli/cli/releases/tag/v2.73.0
 ```

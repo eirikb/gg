@@ -105,7 +105,7 @@ Examples:
     ./gg.cmd --os windows --arch x86_64 deno --version    (test Windows Deno on Linux)
     ./gg.cmd --os mac deno --help                         (test macOS Deno from anywhere)
 
-Supported systems:
+Supported tools:
     node (npm, npx will also work, version refers to node version)
     gradle
     java
@@ -122,7 +122,7 @@ Supported systems:
     run (any arbitrary command)
     gh/<owner>/<repo> (GitHub releases)
 
-Available tags by system:
+Available tags by tools:
     java: +jdk, +jre, +lts, +sts, +mts, +ea, +ga, +headless, +headfull, +fx, +normal, +hotspot (defaults: +jdk, +ga)
     node: +lts
     go: +beta (excluded by default)
