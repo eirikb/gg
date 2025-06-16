@@ -1,4 +1,5 @@
-$stage4 = ".\.cache\gg\gg-VERVER\stage4.exe"
+$cacheDir = "$env:LocalAppData\gg.cmd"
+$stage4 = "$cacheDir\gg-VERVER\stage4.exe"
 
 $quotedArgs = $args | ForEach-Object {
     if ($_ -match '\s') { '"{0}"' -f $_ } else { $_ }
@@ -27,11 +28,11 @@ if ($arch -Eq "AMD64")
     $arch = "x86_64"
 }
 
-$hashes = (Get-Content .cache/gg/gg-VERVER/hashes).Split("`n")
+$hashes = (Get-Content "$cacheDir\gg-VERVER\hashes").Split("`n")
 $hash = ($hashes | Where-Object { $_ -match "$arch.*windows" })
 if ($hash)
 {
-    "$arch-windows" | Out-File .cache\gg\gg-VERVER\system -Encoding ascii
+    "$arch-windows" | Out-File "$cacheDir\gg-VERVER\system" -Encoding ascii
     $hash = $hash.split("=")[1]
     $tempFile = "$stage4.tmp"
 
