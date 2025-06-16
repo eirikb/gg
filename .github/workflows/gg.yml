@@ -262,6 +262,22 @@ jobs:
         with:
           name: gg.cmd
 
+      - name: Debug cache state
+        shell: bash
+        run: |
+          echo "=== DEBUG: Cache directory contents ==="
+          if [ -d "$HOME/.cache/gg" ]; then
+            find "$HOME/.cache/gg" -type f | head -20
+            echo "=== DEBUG: System files ==="
+            find "$HOME/.cache/gg" -name "system" -exec echo "File: {}" \; -exec cat {} \; -exec echo "" \; || true
+          else
+            echo "Cache directory $HOME/.cache/gg does not exist"
+          fi
+          if [ -d "$USERPROFILE/.cache/gg" ]; then
+            find "$USERPROFILE/.cache/gg" -type f | head -20 || true
+            find "$USERPROFILE/.cache/gg" -name "system" -exec echo "File: {}" \; -exec cat {} \; -exec echo "" \; || true
+          fi
+
       - name: Run!
         shell: bash
         run: |
