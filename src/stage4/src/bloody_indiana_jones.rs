@@ -18,7 +18,7 @@ fn get_file_name(url: &str) -> String {
         .to_string()
 }
 
-const DOWNLOADS_DIR: &str = ".cache/gg/downloads";
+const DOWNLOADS_DIR: &str = "downloads";
 
 pub struct BloodyIndianaJones {
     url: String,
@@ -49,6 +49,7 @@ impl BloodyIndianaJones {
     ) -> Self {
         let file_name = get_file_name(&url);
         let file_path = format!("{cache_base_dir}/downloads/{file_name}");
+        info!("BloodyIndianaJones downloads path: {}", file_path);
         Self {
             url,
             path,

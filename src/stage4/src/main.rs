@@ -153,6 +153,7 @@ async fn main() -> ExitCode {
     }
 
     let cache_base_dir = no_clap.cache_dir.as_deref().unwrap_or(".cache/gg");
+    info!("Using cache directory: {}", cache_base_dir);
     let system = fs::read_to_string(format!("{}/gg-{ver}/system", cache_base_dir))
         .unwrap_or(String::from("x86_64-linux"))
         .trim()
