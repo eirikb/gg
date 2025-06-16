@@ -134,7 +134,9 @@ impl BloodyIndianaJones {
                         let mut decoder =
                             async_compression::tokio::bufread::XzDecoder::new(file_buf_reader);
                         let mut file_writer = tokio::io::BufWriter::new(
-                            tokio::fs::File::create(file_path_decomp).await.unwrap(),
+                            tokio::fs::File::create(file_path_decomp.clone())
+                                .await
+                                .unwrap(),
                         );
                         tokio::io::copy(&mut decoder, &mut file_writer)
                             .await
@@ -146,7 +148,9 @@ impl BloodyIndianaJones {
                         let mut decoder =
                             async_compression::tokio::bufread::GzipDecoder::new(file_buf_reader);
                         let mut file_writer = tokio::io::BufWriter::new(
-                            tokio::fs::File::create(file_path_decomp).await.unwrap(),
+                            tokio::fs::File::create(file_path_decomp.clone())
+                                .await
+                                .unwrap(),
                         );
                         tokio::io::copy(&mut decoder, &mut file_writer)
                             .await
@@ -183,19 +187,7 @@ impl BloodyIndianaJones {
             }
         }
 
-        let file_name = if ext == Some("tgz") {
-            Path::new(&format!(".cache/gg/downloads/{}", self.file_name))
-                .with_extension("tar")
-                .to_str()
-                .unwrap()
-                .to_string()
-        } else {
-            Path::new(&format!(".cache/gg/downloads/{}", self.file_name))
-                .with_extension("")
-                .to_str()
-                .unwrap()
-                .to_string()
-        };
+        let file_name = &file_path_decomp;
 
         if let Some(extension) = Path::new(&file_name).extension() {
             if extension == "tar" {
