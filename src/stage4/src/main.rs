@@ -152,7 +152,8 @@ async fn main() -> ExitCode {
             .init();
     }
 
-    let system = fs::read_to_string(format!("./.cache/gg/gg-{ver}/system"))
+    let cache_base_dir = no_clap.cache_dir.as_deref().unwrap_or(".cache/gg");
+    let system = fs::read_to_string(format!("{}/gg-{ver}/system", cache_base_dir))
         .unwrap_or(String::from("x86_64-linux"))
         .trim()
         .to_string();
@@ -220,7 +221,8 @@ async fn main() -> ExitCode {
             }
             "clean-cache" => {
                 println!("Cleaning cache");
-                let _ = fs::remove_dir_all(".cache/gg");
+                let cache_base_dir = no_clap.cache_dir.as_deref().unwrap_or(".cache/gg");
+                let _ = fs::remove_dir_all(cache_base_dir);
                 return ExitCode::from(0);
             }
             _ => {}

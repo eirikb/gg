@@ -20,7 +20,7 @@ fi
 
 if [ -f "$CACHE_DIR/gg-VERVER/stage4" ]; then
   chmod +x "$CACHE_DIR/gg-VERVER/stage4"
-  "$CACHE_DIR/gg-VERVER/stage4" "$@"
+  "$CACHE_DIR/gg-VERVER/stage4" --cache-dir="$CACHE_DIR" "$@"
   exit $?
 fi
 

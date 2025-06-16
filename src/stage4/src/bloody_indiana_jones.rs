@@ -41,6 +41,23 @@ impl BloodyIndianaJones {
         }
     }
 
+    pub fn new_with_cache_dir(
+        url: String,
+        path: String,
+        cache_base_dir: &str,
+        pb: ProgressBar,
+    ) -> Self {
+        let file_name = get_file_name(&url);
+        let file_path = format!("{cache_base_dir}/downloads/{file_name}");
+        Self {
+            url,
+            path,
+            file_name,
+            file_path,
+            pb,
+        }
+    }
+
     pub fn new_with_file_name(url: String, path: String, pb: ProgressBar) -> Self {
         let file_name = get_file_name(&url);
         let file_path = path.clone();

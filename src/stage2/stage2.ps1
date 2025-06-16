@@ -9,7 +9,8 @@ if (Test-Path $stage4)
 {
     if ((Get-Item $stage4).Length -gt 0)
     {
-        $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $quotedArgs
+        $allArgs = @("--cache-dir=$cacheDir") + $quotedArgs
+        $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $allArgs
         if (-not $proc.HasExited)
         {
             Wait-Process -InputObject $proc
@@ -70,7 +71,8 @@ if ($hash)
 
     if (Test-Path $stage4)
     {
-        $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
+        $allArgs = @("--cache-dir=$cacheDir") + $args
+        $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $allArgs
         if (-not $proc.HasExited)
         {
             Wait-Process -InputObject $proc
