@@ -18,8 +18,6 @@ fn get_file_name(url: &str) -> String {
         .to_string()
 }
 
-const DOWNLOADS_DIR: &str = "downloads";
-
 pub struct BloodyIndianaJones {
     url: String,
     path: String,
@@ -64,7 +62,9 @@ impl BloodyIndianaJones {
         self.pb.reset();
         self.pb.set_message("Preparing");
 
-        create_dir_all(DOWNLOADS_DIR).expect("Unable to create download dir");
+        if let Some(parent) = Path::new(&self.file_path).parent() {
+            create_dir_all(parent).expect("Unable to create download dir");
+        }
 
         self.pb.set_message("Downloading");
         let client = reqwest::Client::builder()
@@ -113,14 +113,13 @@ impl BloodyIndianaJones {
         let file_buf_reader =
             tokio::io::BufReader::new(tokio::fs::File::open(&self.file_path).await.unwrap());
         let file_path_decomp = if ext == Some("tgz") {
-            // For .tgz files, replace extension with .tar
-            &Path::new(&format!("{DOWNLOADS_DIR}/{}", self.file_name))
+            Path::new(&self.file_path)
                 .with_extension("tar")
                 .to_str()
                 .unwrap()
                 .to_string()
         } else {
-            &Path::new(&format!("{DOWNLOADS_DIR}/{}", self.file_name))
+            Path::new(&self.file_path)
                 .with_extension("")
                 .to_str()
                 .unwrap()
