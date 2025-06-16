@@ -1,4 +1,4 @@
-$cacheDir = "$env:LocalAppData\gg.cmd"
+$cacheDir = "$env:UserProfile\.cache\gg"
 $stage4 = "$cacheDir\gg-VERVER\stage4.exe"
 
 $quotedArgs = $args | ForEach-Object {

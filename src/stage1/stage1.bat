@@ -1,7 +1,7 @@
 : <<BATCH
     @echo off
     : VERSION: VERVER
-    set CACHE_DIR=%LocalAppData%\gg.cmd
+    set CACHE_DIR=%UserProfile%\.cache\gg
     if exist "%CACHE_DIR%\gg-VERVER\stage2.ps1" (
         powershell -executionpolicy bypass -file "%CACHE_DIR%\gg-VERVER\stage2.ps1" %*
         exit /b %errorlevel%
