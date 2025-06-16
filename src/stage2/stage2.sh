@@ -1,8 +1,12 @@
 CACHE_DIR="$HOME/.cache/gg"
+if [ "$1" = "--cache-dir" ] && [ -n "$2" ]; then
+  CACHE_DIR="$2"
+  shift 2
+fi
 
 if [ "$OSTYPE" = "cygwin" ] || [ "$OSTYPE" = "msys" ]; then
   which powershell
-  powershell "$CACHE_DIR/gg-VERVER/stage2.ps1" "$@"
+  powershell "$CACHE_DIR/gg-VERVER/stage2.ps1" --cache-dir="$CACHE_DIR" "$@"
   exit $?
 fi
 

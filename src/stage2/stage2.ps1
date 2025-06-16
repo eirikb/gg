@@ -1,8 +1,31 @@
 $cacheDir = "$env:UserProfile\.cache\gg"
+$remainingArgs = @()
+$i = 0
+while ($i -lt $args.Length)
+{
+    if ($args[$i] -eq "--cache-dir" -and ($i + 1) -lt $args.Length)
+    {
+        $cacheDir = $args[$i + 1]
+        $i += 2
+    }
+    else
+    {
+        $remainingArgs += $args[$i]
+        $i++
+    }
+}
+
 $stage4 = "$cacheDir\gg-VERVER\stage4.exe"
 
-$quotedArgs = $args | ForEach-Object {
-    if ($_ -match '\s') { '"{0}"' -f $_ } else { $_ }
+$quotedArgs = $remainingArgs | ForEach-Object {
+    if ($_ -match '\s')
+    {
+        '"{0}"' -f $_
+    }
+    else
+    {
+        $_
+    }
 }
 
 if (Test-Path $stage4)
