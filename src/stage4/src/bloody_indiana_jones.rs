@@ -29,18 +29,6 @@ pub struct BloodyIndianaJones {
 }
 
 impl BloodyIndianaJones {
-    pub fn new(url: String, path: String, pb: ProgressBar) -> Self {
-        let file_name = get_file_name(&url);
-        let file_path = format!("{DOWNLOADS_DIR}/{file_name}");
-        Self {
-            url,
-            path,
-            file_name,
-            file_path,
-            pb,
-        }
-    }
-
     pub fn new_with_cache_dir(
         url: String,
         path: String,
