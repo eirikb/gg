@@ -215,22 +215,22 @@ jobs:
           mv src/stage2 _stage2
           mv src/stage3 _stage3
           VERSION=${{needs.version.outputs.version}}
-          rm -rf .cache/gg/gg-$VERSION
-          mkdir -p .cache/gg/gg-$VERSION
+          rm -rf gg-$VERSION
+          mkdir -p gg-$VERSION
           rm -rf src
           for dir in stage3*; do
             for file in "$dir"/*; do
-              cp "$file" .cache/gg/gg-$VERSION/
+              cp "$file" gg-$VERSION/
             done
           done
           # Prevent wine from trying to run (if installed on users PC)
           # mv .cache/gg/stage3_x86_64-pc-windows-msvc .cache/gg/stage3_zz_x86_64-pc-windows-msvc
           sed -i "s/VERVER/$VERSION/g" _stage2/stage2.*
-          cp _stage2/stage2.sh .cache/gg/gg-$VERSION/
-          cp _stage2/stage2.ps1 .cache/gg/gg-$VERSION/
-          cp hashes/hashes .cache/gg/gg-$VERSION/
-          chmod +x .cache/gg/gg-$VERSION/stage2.sh
-          tar -zpvcf gg.tgz .cache
+          cp _stage2/stage2.sh gg-$VERSION/
+          cp _stage2/stage2.ps1 gg-$VERSION/
+          cp hashes/hashes gg-$VERSION/
+          chmod +x gg-$VERSION/stage2.sh
+          tar -zpvcf gg.tgz gg-$VERSION
           
           sed -i "s/VERVER/$VERSION/g" _stage1/stage1.*
           unix2dos _stage1/stage1.bat
