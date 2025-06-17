@@ -204,10 +204,32 @@ async fn main() -> ExitCode {
 
                         println!("Updating to version {}...", latest_version);
                         update_download().await;
+
+                        println!("Preparing updated version for faster subsequent updates...");
+                        let current_exe = env::current_exe().unwrap_or_else(|_| "gg.cmd".into());
+                        let output = std::process::Command::new(&current_exe)
+                            .arg("--version")
+                            .output();
+
+                        match output {
+                            Ok(_) => println!("Update preparation completed!"),
+                            Err(_) => println!("Update completed! (preparation step failed, but this won't affect functionality)"),
+                        }
                     }
                     Err(_) => {
                         println!("Failed to check for updates. Proceeding with download...");
                         update_download().await;
+
+                        println!("Preparing updated version for faster subsequent updates...");
+                        let current_exe = env::current_exe().unwrap_or_else(|_| "gg.cmd".into());
+                        let output = std::process::Command::new(&current_exe)
+                            .arg("--version")
+                            .output();
+
+                        match output {
+                            Ok(_) => println!("Update preparation completed!"),
+                            Err(_) => println!("Update completed! (preparation step failed, but this won't affect functionality)"),
+                        }
                     }
                 }
 
