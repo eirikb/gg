@@ -458,10 +458,10 @@ pub async fn prep(
 
     debug!("{:?}", url_string);
 
-    let cache_base_dir = input.no_clap.cache_dir.as_deref().unwrap_or(".cache/gg");
+    let cache_base_dir = std::env::var("GG_CACHE_DIR").unwrap_or_else(|_| ".cache/gg".to_string());
     let cache_path = format!("{cache_base_dir}/{path}");
     let bloody_indiana_jones =
-        BloodyIndianaJones::new_with_cache_dir(url_string.to_string(), cache_path.clone(), cache_base_dir, pb.clone());
+        BloodyIndianaJones::new_with_cache_dir(url_string.to_string(), cache_path.clone(), &cache_base_dir, pb.clone());
     bloody_indiana_jones.download().await;
     if !executor.post_download(bloody_indiana_jones.file_path.clone()) {
         return Err("Post download failed".to_string());
@@ -603,8 +603,8 @@ fn get_url_matches(
     urls_match.into_iter().map(|d| d.clone()).collect()
 }
 
-fn get_app_path(path: &str, input: &AppInput) -> Result<AppPath, String> {
-    let cache_base_dir = input.no_clap.cache_dir.as_deref().unwrap_or(".cache/gg");
+fn get_app_path(path: &str, _input: &AppInput) -> Result<AppPath, String> {
+    let cache_base_dir = std::env::var("GG_CACHE_DIR").unwrap_or_else(|_| ".cache/gg".to_string());
     let path = env::current_dir()
         .map_err(|_| "Current dir not found")?
         .join(cache_base_dir)

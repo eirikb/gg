@@ -22,7 +22,6 @@ pub struct NoClap {
     pub version: bool,
     pub override_os: Option<String>,
     pub override_arch: Option<String>,
-    pub cache_dir: Option<String>,
 }
 
 impl NoClap {
@@ -41,7 +40,7 @@ impl NoClap {
             if !arg.starts_with("-") {
                 start_at = i;
                 break;
-            } else if (arg == "--os" || arg == "--arch" || arg == "--cache-dir") && i + 1 < args.len() {
+            } else if (arg == "--os" || arg == "--arch") && i + 1 < args.len() {
                 i += 2;
             } else {
                 i += 1;
@@ -60,7 +59,6 @@ impl NoClap {
 
         let override_os = Self::extract_flag_value(&gg_args, "--os");
         let override_arch = Self::extract_flag_value(&gg_args, "--arch");
-        let cache_dir = Self::extract_flag_value(&gg_args, "--cache-dir");
 
         let log_level = if let Some((_, log_level)) = log_level {
             log_level
@@ -179,7 +177,6 @@ impl NoClap {
             version,
             override_os,
             override_arch,
-            cache_dir,
         }
     }
 

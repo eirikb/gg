@@ -1,23 +1,14 @@
-$cacheDir = "$env:UserProfile\.cache\gg"
-$remainingArgs = @()
-$i = 0
-while ($i -lt $args.Length)
+$cacheDir = if ($env:GG_CACHE_DIR)
 {
-    if ($args[$i] -eq "--cache-dir" -and ($i + 1) -lt $args.Length)
-    {
-        $cacheDir = $args[$i + 1]
-        $i += 2
-    }
-    else
-    {
-        $remainingArgs += $args[$i]
-        $i++
-    }
+    $env:GG_CACHE_DIR
 }
-
+else
+{
+    "$env:UserProfile\.cache\gg"
+}
 $stage4 = "$cacheDir\gg-VERVER\stage4.exe"
 
-$quotedArgs = $remainingArgs | ForEach-Object {
+$quotedArgs = $args | ForEach-Object {
     if ($_ -match '\s')
     {
         '"{0}"' -f $_
@@ -32,7 +23,7 @@ if (Test-Path $stage4)
 {
     if ((Get-Item $stage4).Length -gt 0)
     {
-        $allArgs = @("--cache-dir=$cacheDir") + $quotedArgs
+        $allArgs = $quotedArgs
         $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $allArgs
         if (-not $proc.HasExited)
         {
@@ -94,7 +85,7 @@ if ($hash)
 
     if (Test-Path $stage4)
     {
-        $allArgs = @("--cache-dir=$cacheDir") + $args
+        $allArgs = $args
         $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $allArgs
         if (-not $proc.HasExited)
         {

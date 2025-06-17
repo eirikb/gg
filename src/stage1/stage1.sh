@@ -1,15 +1,15 @@
 if [ "$1" = "-l" ]; then
-  CACHE_DIR=".cache/gg"
+  export GG_CACHE_DIR=".cache/gg"
   shift
 else
-  CACHE_DIR="$HOME/.cache/gg"
+  export GG_CACHE_DIR="$HOME/.cache/gg"
 fi
 
-if [ -f "$CACHE_DIR/gg-VERVER/stage2.sh" ]; then
-  "$CACHE_DIR/gg-VERVER/stage2.sh" --cache-dir="$CACHE_DIR" "$@"
+if [ -f "$GG_CACHE_DIR/gg-VERVER/stage2.sh" ]; then
+  "$GG_CACHE_DIR/gg-VERVER/stage2.sh" "$@"
   exit
 fi
 
-mkdir -p "$CACHE_DIR"
-tail -c +BBB gg.cmd | tar -zpx -C "$CACHE_DIR" && "$CACHE_DIR/gg-VERVER/stage2.sh" --cache-dir="$CACHE_DIR" "$@"
+mkdir -p "$GG_CACHE_DIR"
+tail -c +BBB gg.cmd | tar -zpx -C "$GG_CACHE_DIR" && "$GG_CACHE_DIR/gg-VERVER/stage2.sh" "$@"
 exit

@@ -1,12 +1,8 @@
-CACHE_DIR="$HOME/.cache/gg"
-if [ "$1" = "--cache-dir" ] && [ -n "$2" ]; then
-  CACHE_DIR="$2"
-  shift 2
-fi
+CACHE_DIR="${GG_CACHE_DIR:-$HOME/.cache/gg}"
 
 if [ "$OSTYPE" = "cygwin" ] || [ "$OSTYPE" = "msys" ]; then
   which powershell
-  powershell "$CACHE_DIR/gg-VERVER/stage2.ps1" --cache-dir="$CACHE_DIR" "$@"
+  powershell "$CACHE_DIR/gg-VERVER/stage2.ps1" "$@"
   exit $?
 fi
 
@@ -24,7 +20,7 @@ fi
 
 if [ -f "$CACHE_DIR/gg-VERVER/stage4" ]; then
   chmod +x "$CACHE_DIR/gg-VERVER/stage4"
-  "$CACHE_DIR/gg-VERVER/stage4" --cache-dir="$CACHE_DIR" "$@"
+  "$CACHE_DIR/gg-VERVER/stage4" "$@"
   exit $?
 fi
 

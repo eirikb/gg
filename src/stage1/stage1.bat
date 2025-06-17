@@ -2,19 +2,19 @@
     @echo off
     : VERSION: VERVER
     if "%1"=="-l" (
-        set CACHE_DIR=.cache\gg
+        set GG_CACHE_DIR=.cache\gg
         shift /1
     ) else (
-        set CACHE_DIR=%UserProfile%\.cache\gg
+        set GG_CACHE_DIR=%UserProfile%\.cache\gg
     )
-    if exist "%CACHE_DIR%\gg-VERVER\stage2.ps1" (
-        powershell -executionpolicy bypass -file "%CACHE_DIR%\gg-VERVER\stage2.ps1" --cache-dir="%CACHE_DIR%" %*
+    if exist "%GG_CACHE_DIR%\gg-VERVER\stage2.ps1" (
+        powershell -executionpolicy bypass -file "%GG_CACHE_DIR%\gg-VERVER\stage2.ps1" %*
         exit /b %errorlevel%
     )
-    if not exist "%CACHE_DIR%" mkdir "%CACHE_DIR%"
+    if not exist "%GG_CACHE_DIR%" mkdir "%GG_CACHE_DIR%"
     powershell -c "sc m2 ([byte[]](gc gg.cmd -Encoding Byte | select -Skip AAA)) -Encoding Byte"
-    tar -zxf m2 -C "%CACHE_DIR%"
+    tar -zxf m2 -C "%GG_CACHE_DIR%"
     del m2
-    powershell -executionpolicy bypass -file "%CACHE_DIR%\gg-VERVER\stage2.ps1" --cache-dir="%CACHE_DIR%" %*
+    powershell -executionpolicy bypass -file "%GG_CACHE_DIR%\gg-VERVER\stage2.ps1" %*
     exit /b %errorlevel%
 BATCH

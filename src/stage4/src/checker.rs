@@ -6,7 +6,7 @@ use crate::executor::{AppInput, GgMeta, prep};
 use crate::Executor;
 
 pub async fn check(input: &AppInput, update: bool) {
-    let cache_base_dir = input.no_clap.cache_dir.as_deref().unwrap_or(".cache/gg");
+    let cache_base_dir = std::env::var("GG_CACHE_DIR").unwrap_or_else(|_| ".cache/gg".to_string());
     let entries = walkdir::WalkDir::new(cache_base_dir).into_iter()
         .filter_map(|x| x.ok())
         .filter(|x| x.file_name().to_string_lossy() == "gg-meta.json");
