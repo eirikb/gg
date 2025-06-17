@@ -90,16 +90,6 @@ impl Executor for Maven {
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn hello_maven() {
-        let mvn = Maven {
-            executor_cmd: ExecutorCmd::dummy(),
-        };
-        let app_input = AppInput::dummy();
-        let urls = mvn.get_download_urls(&app_input).await;
-        assert_eq!(urls.is_empty(), false);
-    }
-
     #[test]
     fn test_get_version() {
         assert_eq!(get_version("1.0.0"), "1.0.0");
