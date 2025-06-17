@@ -15,5 +15,5 @@ if [ -f "$GG_CACHE_DIR/gg-VERVER/stage2.sh" ]; then
 fi
 
 mkdir -p "$GG_CACHE_DIR"
-tail -c +BBBB gg.cmd | tar -zpx -C "$GG_CACHE_DIR" && "$GG_CACHE_DIR/gg-VERVER/stage2.sh" "$@"
+tail -c +BBBB "$0" | tar -zpx -C "$GG_CACHE_DIR" && "$GG_CACHE_DIR/gg-VERVER/stage2.sh" "$@"
 exit
