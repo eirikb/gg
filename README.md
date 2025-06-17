@@ -83,7 +83,7 @@ Built in commands:
     help            Print help
     check           Check for updates
     check-update    Check for updates and update if available
-    clean-cache     Clean cache
+    clean-cache     Clean cache (prompts for confirmation)
 
 Version syntax:
     @X              Any X.y.z version (e.g. node@14 for any Node.js 14.x.y)

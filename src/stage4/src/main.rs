@@ -17,6 +17,7 @@ mod barus;
 mod bloody_indiana_jones;
 mod bloody_maven;
 mod checker;
+mod cleaner;
 mod executor;
 mod executors;
 mod no_clap;
@@ -80,7 +81,7 @@ Built in commands:
     help            Print help
     check           Check for updates
     check-update    Check for updates and update if available
-    clean-cache     Clean cache
+    clean-cache     Clean cache (prompts for confirmation)
 
 Version syntax:
     @X              Any X.y.z version (e.g. node@14 for any Node.js 14.x.y)
@@ -225,10 +226,10 @@ async fn main() -> ExitCode {
                 return ExitCode::from(0);
             }
             "clean-cache" => {
-                println!("Cleaning cache");
-                let cache_base_dir =
-                    env::var("GG_CACHE_DIR").unwrap_or_else(|_| ".cache/gg".to_string());
-                let _ = fs::remove_dir_all(cache_base_dir);
+                if let Err(e) = cleaner::clean_cache() {
+                    println!("Error: {}", e);
+                    return ExitCode::from(1);
+                }
                 return ExitCode::from(0);
             }
             _ => {}
