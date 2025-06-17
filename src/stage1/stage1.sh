@@ -1,8 +1,12 @@
-if [ "$1" = "-l" ]; then
-  export GG_CACHE_DIR=".cache/gg"
+if [ -z "$GG_CACHE_DIR" ]; then
+  if [ "$1" = "-l" ]; then
+    export GG_CACHE_DIR=".cache/gg"
+    shift
+  else
+    export GG_CACHE_DIR="$HOME/.cache/gg"
+  fi
+elif [ "$1" = "-l" ]; then
   shift
-else
-  export GG_CACHE_DIR="$HOME/.cache/gg"
 fi
 
 if [ -f "$GG_CACHE_DIR/gg-VERVER/stage2.sh" ]; then

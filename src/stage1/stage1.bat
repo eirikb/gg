@@ -1,11 +1,15 @@
 : <<BATCH
     @echo off
     : VERSION: VERVER
-    if "%1"=="-l" (
-        set GG_CACHE_DIR=.cache\gg
-        shift /1
+    if not defined GG_CACHE_DIR (
+        if "%1"=="-l" (
+            set GG_CACHE_DIR=.cache\gg
+            shift /1
+        ) else (
+            set GG_CACHE_DIR=%UserProfile%\.cache\gg
+        )
     ) else (
-        set GG_CACHE_DIR=%UserProfile%\.cache\gg
+        if "%1"=="-l" shift /1
     )
     if exist "%GG_CACHE_DIR%\gg-VERVER\stage2.ps1" (
         powershell -executionpolicy bypass -file "%GG_CACHE_DIR%\gg-VERVER\stage2.ps1" %*
