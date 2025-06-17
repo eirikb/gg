@@ -66,6 +66,7 @@ Version: {ver}
 Usage: ./gg.cmd [options] <executable name>@<version>:<dependent executable name>@<version> [program arguments]
 
 Options:
+    -l              Use local cache (.cache/gg) instead of global cache
     -v              Info output
     -vv             Debug output
     -vvv            Trace output
@@ -91,7 +92,9 @@ Version syntax:
 
 Examples:
     ./gg.cmd node
+    ./gg.cmd -l node                                      (use local cache)
     ./gg.cmd gradle@6:java@17 clean build
+    ./gg.cmd -l gradle@6:java@17 clean build             (use local cache)
     ./gg.cmd node@10 -e 'console.log(1)'
     ./gg.cmd node@14.17.0 -v
     ./gg.cmd -vv -w npm@14 start
@@ -223,7 +226,8 @@ async fn main() -> ExitCode {
             }
             "clean-cache" => {
                 println!("Cleaning cache");
-                let cache_base_dir = env::var("GG_CACHE_DIR").unwrap_or_else(|_| ".cache/gg".to_string());
+                let cache_base_dir =
+                    env::var("GG_CACHE_DIR").unwrap_or_else(|_| ".cache/gg".to_string());
                 let _ = fs::remove_dir_all(cache_base_dir);
                 return ExitCode::from(0);
             }

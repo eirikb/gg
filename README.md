@@ -44,7 +44,9 @@ As a result, your colleagues would not have to install anything on their host ma
 - Cross-architecture compatibility (x86_64 and ARM)
 - Fast and lightweight
 
-Installs tools locally in a folder called `.cache`. Global install not supported.
+By default, installs tools in a global cache directory (`$HOME/.cache/gg` on Unix, `%UserProfile%\.cache\gg` on
+Windows).
+Use the `-l` flag to use a local cache (`.cache/gg` in current directory) instead.
 Adds every dependency into `PATH` before executing.
 
 ## Usage
@@ -67,6 +69,7 @@ sh gg.cmd npm install
 Usage: ./gg.cmd [options] <executable name>@<version>:<dependent executable name>@<version> [program arguments]
 
 Options:
+    -l              Use local cache (.cache/gg) instead of global cache
     -v              Info output
     -vv             Debug output
     -vvv            Trace output
@@ -218,6 +221,43 @@ For instance, one can run [GitHub's CLI tool](https://cli.github.com/):
 gh version 2.73.0 (2025-05-19)
 https://github.com/cli/cli/releases/tag/v2.73.0
 ```
+
+## Cache Management
+
+`gg.cmd` supports both global and local cache modes:
+
+### Global Cache (Default)
+
+By default, tools are cached globally and shared across all projects:
+
+- **Unix/Linux/macOS**: `$HOME/.cache/gg`
+- **Windows**: `%UserProfile%\.cache\gg`
+
+```bash
+./gg.cmd node -v          # Uses global cache
+./gg.cmd gradle build     # Uses global cache
+```
+
+### Local Cache
+
+Use the `-l` flag to cache tools locally in the current project:
+
+```bash
+./gg.cmd -l node -v       # Uses .cache/gg in current directory
+./gg.cmd -l gradle build  # Uses .cache/gg in current directory
+```
+
+### Custom Cache Location
+
+Set the `GG_CACHE_DIR` environment variable to use a custom cache location:
+
+```bash
+export GG_CACHE_DIR="/path/to/custom/cache"
+./gg.cmd node -v          # Uses /path/to/custom/cache
+./gg.cmd -l node -v       # Still uses /path/to/custom/cache (ignores -l)
+```
+
+**Note**: When `GG_CACHE_DIR` is set, it takes precedence over both global and local cache modes.
 
 ## Contributing
 
