@@ -1,5 +1,5 @@
 use std::fs;
-use std::fs::{read_dir, rename};
+use std::fs::rename;
 use std::future::Future;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -70,30 +70,28 @@ impl Executor for Rat {
     }
 
     fn post_prep(&self, cache_path: &str) {
-        let entries = read_dir(&cache_path);
-        if let Ok(entries) = entries {
-            entries.for_each(|entry| {
-                if let Ok(entry) = entry {
-                    if let Some(path_str) = entry.path().to_str() {
-                        let to_path = if path_str.ends_with(".bin") {
-                            Some(cache_path.to_string() + "/rat.bin")
-                        } else if path_str.ends_with(".exe") {
-                            Some(cache_path.to_string() + "/rat.exe")
-                        } else {
-                            None
-                        };
-                        if let Some(to_path) = to_path {
-                            rename(entry.path(), &to_path).unwrap();
-                            #[cfg(unix)]
-                            {
-                                let mut perms = fs::metadata(&to_path).unwrap().permissions();
-                                perms.set_mode(0o755);
-                                fs::set_permissions(to_path, perms).unwrap();
-                            }
+        let pattern = format!("{}/*.{{bin,exe}}", cache_path);
+        if let Ok(paths) = glob::glob(&pattern) {
+            for path in paths.flatten() {
+                if let Some(path_str) = path.to_str() {
+                    let to_path = if path_str.ends_with(".bin") {
+                        Some(format!("{}/rat.bin", cache_path))
+                    } else if path_str.ends_with(".exe") {
+                        Some(format!("{}/rat.exe", cache_path))
+                    } else {
+                        None
+                    };
+                    if let Some(to_path) = to_path {
+                        rename(&path, &to_path).unwrap();
+                        #[cfg(unix)]
+                        {
+                            let mut perms = fs::metadata(&to_path).unwrap().permissions();
+                            perms.set_mode(0o755);
+                            fs::set_permissions(to_path, perms).unwrap();
                         }
                     }
                 }
-            });
+            }
         }
     }
 }

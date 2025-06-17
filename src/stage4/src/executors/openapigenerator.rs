@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::fs::{read_dir, rename};
+use std::fs::rename;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -58,21 +58,11 @@ impl Executor for OpenAPIGenerator {
     }
 
     fn post_prep(&self, cache_path: &str) {
-        let entries = read_dir(&cache_path);
-        if let Ok(entries) = entries {
-            entries.for_each(|entry| {
-                if let Ok(entry) = entry {
-                    if let Some(path_str) = entry.path().to_str() {
-                        if path_str.contains("openapi-generator-cli") && path_str.ends_with("jar") {
-                            rename(
-                                entry.path(),
-                                cache_path.to_string() + "/openapi-generator-cli.jar",
-                            )
-                            .unwrap();
-                        }
-                    }
-                }
-            });
+        let pattern = format!("{}/*openapi-generator-cli*.jar", cache_path);
+        if let Ok(paths) = glob::glob(&pattern) {
+            for path in paths.flatten() {
+                rename(&path, format!("{}/openapi-generator-cli.jar", cache_path)).unwrap();
+            }
         }
     }
 }
