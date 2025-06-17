@@ -335,7 +335,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        os: [ windows-2019, windows-2022 ]
+        os: [ windows-2022 ]
         cmd: [ "node -v", "java -version", "gradle -version", "maven -v", "openapi version", "rat -V", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version", "gh/cli/cli version", "gh version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fortio version" ]
 
     runs-on: ${{ matrix.os }}
