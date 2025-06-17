@@ -364,11 +364,11 @@ pub fn java_deps<'a>() -> Pin<Box<dyn Future<Output = Vec<ExecutorDep>> + 'a>> {
 
 fn get_executor_app_path(
     _executor: &dyn Executor,
-    _input: &AppInput,
+    input: &AppInput,
     path: &str,
 ) -> Option<AppPath> {
     info!("Trying to find {path}");
-    if let Ok(app_path) = get_app_path(path) {
+    if let Ok(app_path) = get_app_path(path, input) {
         Some(app_path)
     } else {
         None
@@ -458,9 +458,10 @@ pub async fn prep(
 
     debug!("{:?}", url_string);
 
-    let cache_path = format!(".cache/gg/{path}");
+    let cache_base_dir = std::env::var("GG_CACHE_DIR").unwrap_or_else(|_| ".cache/gg".to_string());
+    let cache_path = format!("{cache_base_dir}/{path}");
     let bloody_indiana_jones =
-        BloodyIndianaJones::new(url_string.to_string(), cache_path.clone(), pb.clone());
+        BloodyIndianaJones::new_with_cache_dir(url_string.to_string(), cache_path.clone(), &cache_base_dir, pb.clone());
     bloody_indiana_jones.download().await;
     if !executor.post_download(bloody_indiana_jones.file_path.clone()) {
         return Err("Post download failed".to_string());
@@ -602,10 +603,11 @@ fn get_url_matches(
     urls_match.into_iter().map(|d| d.clone()).collect()
 }
 
-fn get_app_path(path: &str) -> Result<AppPath, String> {
+fn get_app_path(path: &str, _input: &AppInput) -> Result<AppPath, String> {
+    let cache_base_dir = std::env::var("GG_CACHE_DIR").unwrap_or_else(|_| ".cache/gg".to_string());
     let path = env::current_dir()
         .map_err(|_| "Current dir not found")?
-        .join(".cache/gg")
+        .join(cache_base_dir)
         .join(path);
 
     if path.exists() {

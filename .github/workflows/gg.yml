@@ -215,22 +215,22 @@ jobs:
           mv src/stage2 _stage2
           mv src/stage3 _stage3
           VERSION=${{needs.version.outputs.version}}
-          rm -rf .cache/gg/gg-$VERSION
-          mkdir -p .cache/gg/gg-$VERSION
+          rm -rf gg-$VERSION
+          mkdir -p gg-$VERSION
           rm -rf src
           for dir in stage3*; do
             for file in "$dir"/*; do
-              cp "$file" .cache/gg/gg-$VERSION/
+              cp "$file" gg-$VERSION/
             done
           done
           # Prevent wine from trying to run (if installed on users PC)
           # mv .cache/gg/stage3_x86_64-pc-windows-msvc .cache/gg/stage3_zz_x86_64-pc-windows-msvc
           sed -i "s/VERVER/$VERSION/g" _stage2/stage2.*
-          cp _stage2/stage2.sh .cache/gg/gg-$VERSION/
-          cp _stage2/stage2.ps1 .cache/gg/gg-$VERSION/
-          cp hashes/hashes .cache/gg/gg-$VERSION/
-          chmod +x .cache/gg/gg-$VERSION/stage2.sh
-          tar -zpvcf gg.tgz .cache
+          cp _stage2/stage2.sh gg-$VERSION/
+          cp _stage2/stage2.ps1 gg-$VERSION/
+          cp hashes/hashes gg-$VERSION/
+          chmod +x gg-$VERSION/stage2.sh
+          tar -zpvcf gg.tgz gg-$VERSION
           
           sed -i "s/VERVER/$VERSION/g" _stage1/stage1.*
           unix2dos _stage1/stage1.bat
@@ -238,8 +238,8 @@ jobs:
           a=$(du -cb 1 | tail -n 1 | awk '{print $1}')
           b=a
           ((b++))
-          sed -i "s/AAA/$a/" 1;
-          sed -i "s/BBB/$b/" 1;
+          sed -i "s/AAAA/$a/" 1;
+          sed -i "s/BBBB/$b/" 1;
           cat 1 gg.tgz > gg.cmd
 
       - name: Upload artifact
@@ -261,6 +261,22 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: gg.cmd
+
+      - name: Debug cache state
+        shell: bash
+        run: |
+          echo "=== DEBUG: Cache directory contents ==="
+          if [ -d "$HOME/.cache/gg" ]; then
+            find "$HOME/.cache/gg" -type f | head -20
+            echo "=== DEBUG: System files ==="
+            find "$HOME/.cache/gg" -name "system" -exec echo "File: {}" \; -exec cat {} \; -exec echo "" \; || true
+          else
+            echo "Cache directory $HOME/.cache/gg does not exist"
+          fi
+          if [ -d "$USERPROFILE/.cache/gg" ]; then
+            find "$USERPROFILE/.cache/gg" -type f | head -20 || true
+            find "$USERPROFILE/.cache/gg" -name "system" -exec echo "File: {}" \; -exec cat {} \; -exec echo "" \; || true
+          fi
 
       - name: Run!
         shell: bash

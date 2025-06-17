@@ -1,14 +1,30 @@
-$stage4 = ".\.cache\gg\gg-VERVER\stage4.exe"
+$cacheDir = if ($env:GG_CACHE_DIR)
+{
+    $env:GG_CACHE_DIR
+}
+else
+{
+    "$env:UserProfile\.cache\gg"
+}
+$stage4 = "$cacheDir\gg-VERVER\stage4.exe"
 
 $quotedArgs = $args | ForEach-Object {
-    if ($_ -match '\s') { '"{0}"' -f $_ } else { $_ }
+    if ($_ -match '\s')
+    {
+        '"{0}"' -f $_
+    }
+    else
+    {
+        $_
+    }
 }
 
 if (Test-Path $stage4)
 {
     if ((Get-Item $stage4).Length -gt 0)
     {
-        $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $quotedArgs
+        $allArgs = $quotedArgs
+        $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $allArgs
         if (-not $proc.HasExited)
         {
             Wait-Process -InputObject $proc
@@ -27,11 +43,11 @@ if ($arch -Eq "AMD64")
     $arch = "x86_64"
 }
 
-$hashes = (Get-Content .cache/gg/gg-VERVER/hashes).Split("`n")
+$hashes = (Get-Content "$cacheDir\gg-VERVER\hashes").Split("`n")
 $hash = ($hashes | Where-Object { $_ -match "$arch.*windows" })
 if ($hash)
 {
-    "$arch-windows" | Out-File .cache\gg\gg-VERVER\system -Encoding ascii
+    "$arch-windows" | Out-File "$cacheDir\gg-VERVER\system" -Encoding ascii
     $hash = $hash.split("=")[1]
     $tempFile = "$stage4.tmp"
 
@@ -69,7 +85,8 @@ if ($hash)
 
     if (Test-Path $stage4)
     {
-        $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
+        $allArgs = $args
+        $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $allArgs
         if (-not $proc.HasExited)
         {
             Wait-Process -InputObject $proc

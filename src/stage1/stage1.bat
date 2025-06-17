@@ -1,13 +1,24 @@
 : <<BATCH
     @echo off
     : VERSION: VERVER
-    if exist .cache\gg\gg-VERVER\stage2.ps1 (
-        powershell -executionpolicy bypass -file .cache\gg\gg-VERVER\stage2.ps1 %*
+    if not defined GG_CACHE_DIR (
+        if "%1"=="-l" (
+            set GG_CACHE_DIR=.cache\gg
+            shift /1
+        ) else (
+            set GG_CACHE_DIR=%UserProfile%\.cache\gg
+        )
+    ) else (
+        if "%1"=="-l" shift /1
+    )
+    if exist "%GG_CACHE_DIR%\gg-VERVER\stage2.ps1" (
+        powershell -executionpolicy bypass -file "%GG_CACHE_DIR%\gg-VERVER\stage2.ps1" %*
         exit /b %errorlevel%
     )
-    powershell -c "sc m2 ([byte[]](gc gg.cmd -Encoding Byte | select -Skip AAA)) -Encoding Byte"
-    tar -zxf m2
+    if not exist "%GG_CACHE_DIR%" mkdir "%GG_CACHE_DIR%"
+    powershell -c "sc m2 ([byte[]](gc gg.cmd -Encoding Byte | select -Skip AAAA)) -Encoding Byte"
+    tar -zxf m2 -C "%GG_CACHE_DIR%"
     del m2
-    powershell -executionpolicy bypass -file .cache\gg\gg-VERVER\stage2.ps1 %*
+    powershell -executionpolicy bypass -file "%GG_CACHE_DIR%\gg-VERVER\stage2.ps1" %*
     exit /b %errorlevel%
 BATCH
