@@ -238,8 +238,8 @@ jobs:
           a=$(du -cb 1 | tail -n 1 | awk '{print $1}')
           b=a
           ((b++))
-          sed -i "s/AAA/$a/" 1;
-          sed -i "s/BBB/$b/" 1;
+          sed -i "s/AAAA/$a/" 1;
+          sed -i "s/BBBB/$b/" 1;
           cat 1 gg.tgz > gg.cmd
 
       - name: Upload artifact
