@@ -66,6 +66,8 @@ pub async fn perform_update(ver: &str) {
 
     update_download().await;
 
+    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+
     println!("Preparing updated version for faster subsequent updates...");
     let current_exe = env::current_exe().unwrap_or_else(|_| "gg.cmd".into());
     let child = std::process::Command::new(&current_exe)
