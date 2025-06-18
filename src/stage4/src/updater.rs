@@ -1,6 +1,8 @@
 use std::env;
 use std::fs;
 
+use log::info;
+
 use crate::barus::create_barus;
 use crate::bloody_indiana_jones::BloodyIndianaJones;
 
@@ -8,6 +10,7 @@ async fn update_download() {
     let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
     let pb = create_barus();
     let file_path = env::var("GG_CMD_PATH").unwrap_or_else(|_| "gg.cmd".to_string());
+    info!("GG_CMD_PATH for download: {}", file_path);
     let bloody_indiana_jones =
         BloodyIndianaJones::new_with_file_name(url.to_string(), file_path.clone(), pb.clone());
     bloody_indiana_jones.download().await;
@@ -66,11 +69,9 @@ pub async fn perform_update(ver: &str) {
 
     update_download().await;
 
-    // Just in case :D (wait for FS)
-    tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-
     println!("Preparing updated version for faster subsequent updates...");
     let gg_cmd_path = env::var("GG_CMD_PATH").unwrap_or_else(|_| "gg.cmd".to_string());
+    info!("GG_CMD_PATH for execution: {}", gg_cmd_path);
     let child = std::process::Command::new(&gg_cmd_path)
         .arg("--version")
         .spawn();
