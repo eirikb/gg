@@ -8,7 +8,6 @@ use indicatif::MultiProgress;
 use log::{debug, info, LevelFilter};
 
 use crate::barus::create_barus;
-use crate::bloody_indiana_jones::BloodyIndianaJones;
 use crate::executor::{prep, try_run, AppInput, Executor, ExecutorCmd, GgVersionReq};
 use crate::no_clap::NoClap;
 use crate::target::Target;
@@ -22,40 +21,8 @@ mod executor;
 mod executors;
 mod no_clap;
 mod target;
+mod updater;
 
-async fn update_download() {
-    let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
-    let pb = create_barus();
-    let file_path = "gg.cmd";
-    let bloody_indiana_jones =
-        BloodyIndianaJones::new_with_file_name(url.to_string(), file_path.to_string(), pb.clone());
-    bloody_indiana_jones.download().await;
-
-    // Just in case
-    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-    match fs::read(file_path) {
-        Ok(bytes) => {
-            // Gotta read it special since it is partially binary
-            let content = String::from_utf8_lossy(&bytes);
-
-            if let Some(line) = content.lines().find(|line| line.contains(": VERSION:")) {
-                if let Some(version_str) = line.split(": VERSION:").nth(1) {
-                    let new_version = version_str.trim();
-                    println!("Successfully updated to version {}!", new_version);
-                } else {
-                    println!("Update completed!");
-                }
-            } else {
-                println!("Update completed!");
-            }
-        }
-        Err(e) => {
-            println!("Failed to read file: {}", e);
-            println!("Update completed!");
-        }
-    }
-}
 
 fn print_help(ver: &str) {
     println!(
@@ -184,55 +151,7 @@ async fn main() -> ExitCode {
     if let Some(cmd) = no_clap.cmds.first() {
         match cmd.cmd.as_str() {
             "update" => {
-                println!("Checking for updates...");
-                println!("Current version: {}", ver);
-
-                let octocrab = octocrab::Octocrab::builder()
-                    .base_uri("https://ghapi.ggcmd.io/")
-                    .unwrap()
-                    .build()
-                    .expect("Failed to create GitHub API client");
-
-                match octocrab.repos("eirikb", "gg").releases().get_latest().await {
-                    Ok(release) => {
-                        let latest_version = release.tag_name.trim_start_matches('v');
-
-                        if latest_version == ver {
-                            println!("Already up to date (version {}).", ver);
-                            return ExitCode::from(0);
-                        }
-
-                        println!("Updating to version {}...", latest_version);
-                        update_download().await;
-
-                        println!("Preparing updated version for faster subsequent updates...");
-                        let current_exe = env::current_exe().unwrap_or_else(|_| "gg.cmd".into());
-                        let output = std::process::Command::new(&current_exe)
-                            .arg("--version")
-                            .output();
-
-                        match output {
-                            Ok(_) => println!("Update preparation completed!"),
-                            Err(_) => println!("Update completed! (preparation step failed, but this won't affect functionality)"),
-                        }
-                    }
-                    Err(_) => {
-                        println!("Failed to check for updates. Proceeding with download...");
-                        update_download().await;
-
-                        println!("Preparing updated version for faster subsequent updates...");
-                        let current_exe = env::current_exe().unwrap_or_else(|_| "gg.cmd".into());
-                        let output = std::process::Command::new(&current_exe)
-                            .arg("--version")
-                            .output();
-
-                        match output {
-                            Ok(_) => println!("Update preparation completed!"),
-                            Err(_) => println!("Update completed! (preparation step failed, but this won't affect functionality)"),
-                        }
-                    }
-                }
-
+                updater::perform_update(ver).await;
                 return ExitCode::from(0);
             }
             "help" => {
