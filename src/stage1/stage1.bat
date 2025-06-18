@@ -1,6 +1,7 @@
 : <<BATCH
     @echo off
     : VERSION: VERVER
+    set GG_CMD_PATH=%~f0
     if not defined GG_CACHE_DIR (
         if "%1"=="-l" (
             set GG_CACHE_DIR=.cache\gg
