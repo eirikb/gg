@@ -1,6 +1,9 @@
 use std::env;
 use std::fs;
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 use log::info;
 
 use crate::barus::create_barus;
@@ -17,6 +20,25 @@ async fn download_to_temp(temp_path: &str) -> Result<(), String> {
 
     // Just in case (FS stuff)
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    // Ok so we need to make temp file executable (Unix only)
+    // Good thing we have a temp file, because we can set permissions on it without affecting the original file :D
+    #[cfg(unix)]
+    {
+        if let Ok(mut perms) = fs::metadata(temp_path).and_then(|m| Ok(m.permissions())) {
+            perms.set_mode(0o755);
+            if let Err(e) = fs::set_permissions(temp_path, perms) {
+                return Err(format!("Failed to make temp file executable: {}", e));
+            }
+            info!("Made temp file executable: {}", temp_path);
+        } else {
+            return Err("Failed to get temp file permissions".to_string());
+        }
+    }
+
+    #[cfg(windows)]
+    info!("Windows: File should be executable by default");
+
     Ok(())
 }
 
