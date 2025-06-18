@@ -7,15 +7,15 @@ use crate::bloody_indiana_jones::BloodyIndianaJones;
 async fn update_download() {
     let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
     let pb = create_barus();
-    let file_path = "gg.cmd";
+    let file_path = env::var("GG_CMD_PATH").unwrap_or_else(|_| "gg.cmd".to_string());
     let bloody_indiana_jones =
-        BloodyIndianaJones::new_with_file_name(url.to_string(), file_path.to_string(), pb.clone());
+        BloodyIndianaJones::new_with_file_name(url.to_string(), file_path.clone(), pb.clone());
     bloody_indiana_jones.download().await;
 
     // Just in case
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-    match fs::read(file_path) {
+    match fs::read(&file_path) {
         Ok(bytes) => {
             // Gotta read it special since it is partially binary
             let content = String::from_utf8_lossy(&bytes);
