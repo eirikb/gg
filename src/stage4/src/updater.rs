@@ -66,11 +66,12 @@ pub async fn perform_update(ver: &str) {
 
     update_download().await;
 
+    // Just in case :D (wait for FS)
     tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
 
     println!("Preparing updated version for faster subsequent updates...");
-    let current_exe = env::current_exe().unwrap_or_else(|_| "gg.cmd".into());
-    let child = std::process::Command::new(&current_exe)
+    let gg_cmd_path = env::var("GG_CMD_PATH").unwrap_or_else(|_| "gg.cmd".to_string());
+    let child = std::process::Command::new(&gg_cmd_path)
         .arg("--version")
         .spawn();
 

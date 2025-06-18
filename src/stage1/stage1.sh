@@ -1,3 +1,5 @@
+export GG_CMD_PATH="$(realpath "$0")"
+
 if [ -z "$GG_CACHE_DIR" ]; then
   if [ "$1" = "-l" ]; then
     export GG_CACHE_DIR=".cache/gg"
