@@ -467,6 +467,7 @@ pub async fn prep(
         return Err("Post download failed".to_string());
     }
     bloody_indiana_jones.unpack_and_all_that_stuff().await;
+    bloody_indiana_jones.cleanup_download();
 
     if let Some(download) = url {
         let download = download;

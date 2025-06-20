@@ -1,5 +1,5 @@
 use std::cmp::min;
-use std::fs::{create_dir_all, read_dir, remove_dir, rename, File};
+use std::fs::{create_dir_all, read_dir, remove_dir, remove_file, rename, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -234,5 +234,16 @@ impl BloodyIndianaJones {
         .await
         .expect("Unable to move files");
         self.pb.finish_with_message("Done");
+    }
+
+    pub fn cleanup_download(&self) {
+        if Path::new(&self.file_path).exists() {
+            info!("Cleaning up downloaded file: {}", &self.file_path);
+            if let Err(e) = remove_file(&self.file_path) {
+                debug!("Failed to remove download file {}: {}", &self.file_path, e);
+            } else {
+                info!("Successfully removed download file: {}", &self.file_path);
+            }
+        }
     }
 }
