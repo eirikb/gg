@@ -23,8 +23,14 @@ if (Test-Path $stage4)
 {
     if ((Get-Item $stage4).Length -gt 0)
     {
-        $allArgs = $quotedArgs
-        $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $allArgs
+        if ($quotedArgs.Count -gt 0)
+        {
+            $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $quotedArgs
+        }
+        else
+        {
+            $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue
+        }
         if (-not $proc.HasExited)
         {
             Wait-Process -InputObject $proc
@@ -85,8 +91,14 @@ if ($hash)
 
     if (Test-Path $stage4)
     {
-        $allArgs = $args
-        $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $allArgs
+        if ($args.Count -gt 0)
+        {
+            $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue -ArgumentList $args
+        }
+        else
+        {
+            $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue
+        }
         if (-not $proc.HasExited)
         {
             Wait-Process -InputObject $proc
