@@ -107,6 +107,7 @@ Supported tools:
     caddy
     just
     fortio
+    flutter (dart will also work)
     run (any arbitrary command)
     gh/<owner>/<repo> (GitHub releases)
 
@@ -115,6 +116,7 @@ Available tags by tools:
     node: +lts
     go: +beta (excluded by default)
     openapi: +beta (excluded by default)
+    flutter: +beta (excluded by default)
 ```
 
 ## Node
@@ -147,6 +149,12 @@ Version from:
 
 * `jdkVersion` in `gradle/wrapper/gradle-wrapper.properties`
 * `jdkVersion` in `gradle.properties`
+
+## Flutter
+
+Version from:
+
+* `environment.flutter` in `pubspec.yaml`
 
 ## Examples
 
