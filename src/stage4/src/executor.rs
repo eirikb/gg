@@ -460,8 +460,12 @@ pub async fn prep(
 
     let cache_base_dir = std::env::var("GG_CACHE_DIR").unwrap_or_else(|_| ".cache/gg".to_string());
     let cache_path = format!("{cache_base_dir}/{path}");
-    let bloody_indiana_jones =
-        BloodyIndianaJones::new_with_cache_dir(url_string.to_string(), cache_path.clone(), &cache_base_dir, pb.clone());
+    let bloody_indiana_jones = BloodyIndianaJones::new_with_cache_dir(
+        url_string.to_string(),
+        cache_path.clone(),
+        &cache_base_dir,
+        pb.clone(),
+    );
     bloody_indiana_jones.download().await;
     if !executor.post_download(bloody_indiana_jones.file_path.clone()) {
         return Err("Post download failed".to_string());
@@ -486,7 +490,7 @@ pub async fn prep(
 
     executor.post_prep(cache_path.as_str());
 
-    get_executor_app_path(executor, input, path).ok_or("Binary not found".to_string())
+    get_executor_app_path(executor, input, path).ok_or(format!("Error: Unable to locate {} binary after download. The downloaded package may not contain the expected executable.", executor.get_name()))
 }
 
 fn get_url_matches(
@@ -614,7 +618,7 @@ fn get_app_path(path: &str, _input: &AppInput) -> Result<AppPath, String> {
     if path.exists() {
         Ok(AppPath { install_dir: path })
     } else {
-        Err("Binary not found".to_string())
+        Err("Error: Tool not found in cache. Try running the command again to download and install it.".to_string())
     }
 }
 
@@ -697,5 +701,5 @@ pub async fn try_run(
             return Ok(res);
         }
     }
-    Err("Binary not found".to_string())
+    Err(format!("Error: Unable to find executable for {}. The tool may not be properly installed or the binary name doesn't match expected patterns.", executor.get_name()))
 }
