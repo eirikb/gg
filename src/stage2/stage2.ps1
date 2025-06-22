@@ -113,6 +113,6 @@ if ($hash)
 }
 else
 {
-    Write-Host "Hash not found :("
+    Write-Host "Your system is not supported. Please check out https://github.com/eirikb/gg"
     exit 1
 }
