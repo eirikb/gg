@@ -91,6 +91,7 @@ Supported tools:
     caddy
     just
     fortio
+    flutter (dart will also work)
     run (any arbitrary command)
     gh/<owner>/<repo> (GitHub releases)
 
