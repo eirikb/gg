@@ -23,7 +23,6 @@ mod no_clap;
 mod target;
 mod updater;
 
-
 fn print_help(ver: &str) {
     println!(
         r"
@@ -39,6 +38,7 @@ Options:
     -vv             Debug output
     -vvv            Trace output
     -w              Even more output
+    -h, --help      Print help
     -V, --version   Print version
     --os <OS>       Override target OS (windows, linux, mac)
     --arch <ARCH>   Override target architecture (x86_64, arm64, armv7)
@@ -143,6 +143,11 @@ async fn main() -> ExitCode {
 
     if no_clap.version {
         println!("{}", ver);
+        return ExitCode::from(0);
+    }
+
+    if no_clap.help {
+        print_help(ver);
         return ExitCode::from(0);
     }
 
@@ -298,8 +303,7 @@ async fn main() -> ExitCode {
             ExitCode::from(1)
         }
     } else {
-        println!("Missing command. Try help");
         print_help(ver);
-        ExitCode::from(1)
+        ExitCode::from(0)
     }
 }

@@ -20,6 +20,7 @@ pub struct NoClap {
     pub log_external: bool,
     pub cmds: Vec<NoClapCmd>,
     pub version: bool,
+    pub help: bool,
     pub override_os: Option<String>,
     pub override_arch: Option<String>,
 }
@@ -55,6 +56,8 @@ impl NoClap {
 
         let version =
             gg_args.contains(&"-V".to_string()) || gg_args.contains(&"--version".to_string());
+
+        let help = gg_args.contains(&"-h".to_string()) || gg_args.contains(&"--help".to_string());
         let log_external = gg_args.contains(&"-w".to_string());
 
         let override_os = Self::extract_flag_value(&gg_args, "--os");
@@ -175,6 +178,7 @@ impl NoClap {
             log_external,
             cmds,
             version,
+            help,
             override_os,
             override_arch,
         }
