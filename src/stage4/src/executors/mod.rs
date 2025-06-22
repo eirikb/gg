@@ -1,5 +1,6 @@
 pub mod bld;
 pub mod custom_command;
+pub mod flutter;
 pub mod github;
 pub mod go;
 pub mod gradle;
