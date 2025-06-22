@@ -299,7 +299,9 @@ async fn main() -> ExitCode {
                 ExitCode::from(1)
             }
         } else {
-            println!("No executor found!");
+            println!(
+                "Error: Command not supported. Run './gg.cmd help' to see available commands."
+            );
             ExitCode::from(1)
         }
     } else {
