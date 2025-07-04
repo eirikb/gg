@@ -1,7 +1,7 @@
 use std::env;
 use std::fs;
 
-use log::info;
+use log::{info, warn};
 
 use crate::barus::create_barus;
 use crate::bloody_indiana_jones::BloodyIndianaJones;
@@ -101,6 +101,32 @@ fn move_temp_to_final(temp_path: &str, final_path: &str) -> Result<(), String> {
     }
 
     info!("Atomic move completed successfully");
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        info!("Setting executable permissions on Unix system");
+
+        match fs::metadata(final_path) {
+            Ok(metadata) => {
+                let mut permissions = metadata.permissions();
+                permissions.set_mode(0o755);
+
+                if let Err(e) = fs::set_permissions(final_path, permissions) {
+                    warn!("Failed to set executable permissions: {}", e);
+                } else {
+                    info!("Successfully set executable permissions");
+                }
+            }
+            Err(e) => {
+                warn!(
+                    "Failed to read file metadata for setting permissions: {}",
+                    e
+                );
+            }
+        }
+    }
+
     Ok(())
 }
 
