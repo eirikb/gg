@@ -170,6 +170,10 @@ impl Executor for Bld {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Mutex;
+
+    static TEST_MUTEX: Mutex<()> = Mutex::new(());
+
     #[test]
     fn test_parse_bld_version() {
         let content = "bld.version=2.2.1";
@@ -242,12 +246,16 @@ mod tests {
 
     #[test]
     fn test_bld_args_structure_with_class() {
+        let _lock = TEST_MUTEX.lock().unwrap();
+
         use crate::executor::{AppInput, AppPath, Executor, ExecutorCmd};
         use crate::no_clap::NoClap;
         use crate::target::Target;
         use std::collections::HashSet;
         use std::fs;
         use std::path::PathBuf;
+
+        let _ = fs::remove_file("bld");
 
         let temp_bld_content =
             "java -jar lib/bld-wrapper.jar dummy --build com.example.TestBuild \"$@\"";
@@ -287,6 +295,8 @@ mod tests {
 
     #[test]
     fn test_bld_args_structure_without_class() {
+        let _lock = TEST_MUTEX.lock().unwrap();
+
         use crate::executor::{AppInput, AppPath, Executor, ExecutorCmd};
         use crate::no_clap::NoClap;
         use crate::target::Target;
@@ -322,5 +332,7 @@ mod tests {
         assert_eq!(args[2], "dummy");
         assert!(!args.contains(&"--build".to_string()));
         assert!(args.contains(&"compile".to_string()));
+
+        let _ = std::fs::remove_file("bld");
     }
 }
