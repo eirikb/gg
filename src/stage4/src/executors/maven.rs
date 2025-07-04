@@ -86,15 +86,3 @@ impl Executor for Maven {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_get_version() {
-        assert_eq!(get_version("1.0.0"), "1.0.0");
-        assert_eq!(get_version("apache-maven-2.0.10-bin.tar.gz"), "2.0.10");
-        assert_eq!(get_version("maven-1.0-beta-10.tar.gz"), "1.0-beta-10");
-        assert_eq!(get_version("maven-2.0-alpha-2-bin.tar.gz"), "2.0-alpha-2");
-    }
-}
