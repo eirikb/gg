@@ -156,13 +156,11 @@ impl Executor for Bld {
                 .unwrap_or("")
                 .to_string(),
             "dummy".to_string(),
-            "--build".to_string(),
         ];
 
         if let Some(class_name) = Self::find_bld_class() {
+            args.push("--build".to_string());
             args.push(class_name);
-        } else {
-            args.push("Build".to_string());
         }
 
         args.extend(input.no_clap.app_args.clone());
@@ -243,12 +241,17 @@ mod tests {
     }
 
     #[test]
-    fn test_bld_args_structure() {
+    fn test_bld_args_structure_with_class() {
         use crate::executor::{AppInput, AppPath, Executor, ExecutorCmd};
         use crate::no_clap::NoClap;
         use crate::target::Target;
         use std::collections::HashSet;
+        use std::fs;
         use std::path::PathBuf;
+
+        let temp_bld_content =
+            "java -jar lib/bld-wrapper.jar dummy --build com.example.TestBuild \"$@\"";
+        let _ = fs::write("bld", temp_bld_content);
 
         let bld = super::Bld::new(ExecutorCmd {
             cmd: "bld".to_string(),
@@ -276,6 +279,48 @@ mod tests {
         assert!(args[1].contains("lib/bld-wrapper.jar"));
         assert_eq!(args[2], "dummy");
         assert_eq!(args[3], "--build");
+        assert_eq!(args[4], "com.example.TestBuild");
+        assert!(args.contains(&"compile".to_string()));
+
+        let _ = fs::remove_file("bld");
+    }
+
+    #[test]
+    fn test_bld_args_structure_without_class() {
+        use crate::executor::{AppInput, AppPath, Executor, ExecutorCmd};
+        use crate::no_clap::NoClap;
+        use crate::target::Target;
+        use std::collections::HashSet;
+        use std::path::PathBuf;
+
+        let _ = std::fs::remove_file("bld");
+
+        let bld = super::Bld::new(ExecutorCmd {
+            cmd: "bld".to_string(),
+            version: None,
+            distribution: None,
+            include_tags: HashSet::new(),
+            exclude_tags: HashSet::new(),
+        });
+
+        let mut no_clap = NoClap::new();
+        no_clap.app_args = vec!["compile".to_string()];
+
+        let app_input = AppInput {
+            target: Target::parse_with_overrides("", None, None),
+            no_clap,
+        };
+
+        let app_path = AppPath {
+            install_dir: PathBuf::from("/test/cache/path"),
+        };
+
+        let args = bld.customize_args(&app_input, &app_path);
+
+        assert_eq!(args[0], "-jar");
+        assert!(args[1].contains("lib/bld-wrapper.jar"));
+        assert_eq!(args[2], "dummy");
+        assert!(!args.contains(&"--build".to_string()));
         assert!(args.contains(&"compile".to_string()));
     }
 }
