@@ -296,6 +296,13 @@ impl dyn Executor {
                 Some(vec![]),
                 Some(vec!["bin/fortio".to_string(), "fortio.exe".to_string()]),
             )),
+            "git" => Some(create_github_executor(
+                executor_cmd,
+                "eirikb",
+                "portable-git",
+                Some(vec![]),
+                Some(vec!["git".to_string(), "git.exe".to_string()]),
+            )),
             _ => None,
         }
     }
