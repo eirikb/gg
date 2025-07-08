@@ -446,6 +446,13 @@ pub async fn prep(
 
     let urls_match = get_url_matches(&urls, input, executor);
 
+    debug!(
+        "Found {} matching URLs for target OS: {:?}, Arch: {:?}",
+        urls_match.len(),
+        input.target.os,
+        input.target.arch
+    );
+
     let url = urls_match.first();
 
     let url_string = if let Some(url) = url {
@@ -455,7 +462,10 @@ pub async fn prep(
         ));
         &url.download_url
     } else {
-        ""
+        return Err(format!(
+            "No matching download found for OS: {:?}, Arch: {:?}",
+            input.target.os, input.target.arch
+        ));
     };
 
     debug!("{:?}", url_string);
@@ -521,9 +531,14 @@ fn get_url_matches(
 
             if let Some(os) = u.os {
                 if os != Os::Any && os != input.target.os {
+                    debug!(
+                        "Filtering out {:?} - OS mismatch: {:?} != {:?}",
+                        u.download_url, os, input.target.os
+                    );
                     return false;
                 }
             } else {
+                debug!("Filtering out {:?} - No OS specified", u.download_url);
                 return false;
             }
             if let Some(arch) = u.arch {
@@ -563,6 +578,10 @@ fn get_url_matches(
                 }
                 return false;
             }
+            debug!(
+                "Keeping download: {:?} (OS: {:?}, Arch: {:?}) for target (OS: {:?}, Arch: {:?})",
+                u.download_url, u.os, u.arch, input.target.os, input.target.arch
+            );
             return true;
         })
         .collect::<Vec<_>>();
