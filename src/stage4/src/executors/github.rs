@@ -7,6 +7,7 @@ use crate::executor::{
 };
 use crate::target::Os::Windows;
 use crate::target::{Arch, Os, Variant};
+use log::debug;
 
 pub struct GitHub {
     pub executor_cmd: ExecutorCmd,
@@ -118,6 +119,19 @@ impl GitHub {
                 return true;
             }
         }
+
+        if (name_lower.contains("linux")
+            || name_lower.contains("darwin")
+            || name_lower.contains("macos")
+            || name_lower.contains("windows"))
+            && (name_lower.contains("x64")
+                || name_lower.contains("x86")
+                || name_lower.contains("arm64")
+                || name_lower.contains("aarch64"))
+        {
+            return true;
+        }
+
         false
     }
 }
@@ -164,10 +178,16 @@ impl Executor for GitHub {
                             let os = Self::detect_os_from_name(&asset.name);
                             let arch = Self::detect_arch_from_name(&asset.name);
 
+                            debug!("Asset: {} -> OS: {:?}, Arch: {:?}", asset.name, os, arch);
+
                             if (os.is_some() && arch.is_some())
                                 || (os.is_none() && arch.is_none()
                                     || (os == Some(Os::Windows) && arch.is_none()))
                             {
+                                debug!(
+                                    "Adding download: {} with OS: {:?}, Arch: {:?}",
+                                    asset.browser_download_url, os, arch
+                                );
                                 downloads.push(Download {
                                     download_url: asset.browser_download_url.to_string(),
                                     version: GgVersion::new(release.tag_name.as_str()),
@@ -188,6 +208,7 @@ impl Executor for GitHub {
                     break;
                 }
             }
+            debug!("Total downloads found: {}", downloads.len());
             downloads
         })
     }
