@@ -220,6 +220,21 @@ async fn main() -> ExitCode {
                         .iter()
                         .any(|e| &e.get_name().to_string() == &dep.name)
                     {
+                        if dep.optional {
+                            if let Ok(_) = which::which(&dep.name) {
+                                info!(
+                                    "Optional dependency '{}' found in PATH, using system version",
+                                    dep.name
+                                );
+                                continue;
+                            } else {
+                                info!(
+                                    "Optional dependency '{}' not found in PATH, falling back to managed version",
+                                    dep.name
+                                );
+                            }
+                        }
+
                         if let Some(e) = <dyn Executor>::new(ExecutorCmd {
                             cmd: dep.name.clone(),
                             version: dep.version.as_ref().and_then(|v| GgVersionReq::new(v)),

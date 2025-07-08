@@ -204,6 +204,25 @@ pub struct ExecutorCmd {
 pub struct ExecutorDep {
     pub name: String,
     pub version: Option<String>,
+    pub optional: bool,
+}
+
+impl ExecutorDep {
+    pub fn new(name: String, version: Option<String>) -> Self {
+        Self {
+            name,
+            version,
+            optional: false,
+        }
+    }
+
+    pub fn optional(name: String, version: Option<String>) -> Self {
+        Self {
+            name,
+            version,
+            optional: true,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -223,7 +242,7 @@ fn create_github_executor(
     executor_cmd: ExecutorCmd,
     owner: &str,
     repo: &str,
-    deps: Option<Vec<String>>,
+    deps: Option<Vec<ExecutorDep>>,
     bins: Option<Vec<String>>,
 ) -> Box<dyn Executor> {
     Box::new(GitHub::new_with_config(
@@ -279,7 +298,7 @@ impl dyn Executor {
                 executor_cmd,
                 "cli",
                 "cli",
-                Some(vec![]),
+                Some(vec![ExecutorDep::optional("git".to_string(), None)]),
                 Some(vec!["gh".to_string(), "gh.exe".to_string()]),
             )),
             "just" => Some(create_github_executor(
@@ -363,12 +382,7 @@ pub trait Executor {
 }
 
 pub fn java_deps<'a>() -> Pin<Box<dyn Future<Output = Vec<ExecutorDep>> + 'a>> {
-    Box::pin(async move {
-        vec![ExecutorDep {
-            name: "java".to_string(),
-            version: None,
-        }]
-    })
+    Box::pin(async move { vec![ExecutorDep::new("java".to_string(), None)] })
 }
 
 fn get_executor_app_path(

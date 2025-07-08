@@ -13,7 +13,7 @@ pub struct GitHub {
     pub executor_cmd: ExecutorCmd,
     pub owner: String,
     pub repo: String,
-    pub predefined_deps: Option<Vec<String>>,
+    pub predefined_deps: Option<Vec<ExecutorDep>>,
     pub predefined_bins: Option<Vec<String>>,
 }
 
@@ -32,7 +32,7 @@ impl GitHub {
         executor_cmd: ExecutorCmd,
         owner: String,
         repo: String,
-        predefined_deps: Option<Vec<String>>,
+        predefined_deps: Option<Vec<ExecutorDep>>,
         predefined_bins: Option<Vec<String>>,
     ) -> Self {
         Self {
@@ -55,14 +55,10 @@ impl GitHub {
             if let Some(language) = repo_info.language {
                 let language_str = language.as_str().unwrap_or("").to_lowercase();
                 return match language_str.as_str() {
-                    "java" | "kotlin" | "scala" | "clojure" => vec![ExecutorDep {
-                        name: "java".to_string(),
-                        version: None,
-                    }],
-                    "javascript" | "typescript" => vec![ExecutorDep {
-                        name: "node".to_string(),
-                        version: None,
-                    }],
+                    "java" | "kotlin" | "scala" | "clojure" => {
+                        vec![ExecutorDep::new("java".to_string(), None)]
+                    }
+                    "javascript" | "typescript" => vec![ExecutorDep::new("node".to_string(), None)],
                     "go" => vec![],
                     "rust" => vec![],
                     "c" | "c++" | "cpp" => vec![],
@@ -258,13 +254,7 @@ impl Executor for GitHub {
     ) -> Pin<Box<dyn Future<Output = Vec<ExecutorDep>> + 'a>> {
         Box::pin(async move {
             if let Some(predefined_deps) = &self.predefined_deps {
-                return predefined_deps
-                    .iter()
-                    .map(|s| ExecutorDep {
-                        name: s.clone(),
-                        version: None,
-                    })
-                    .collect();
+                return predefined_deps.clone();
             }
             self.detect_language_and_deps().await
         })
