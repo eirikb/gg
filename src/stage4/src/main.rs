@@ -92,6 +92,7 @@ Supported tools:
     just
     fortio
     flutter (dart will also work)
+    git
     run (any arbitrary command)
     gh/<owner>/<repo> (GitHub releases)
 
