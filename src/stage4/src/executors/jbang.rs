@@ -59,10 +59,7 @@ impl Executor for JBangExecutor {
                 None
             };
 
-            vec![ExecutorDep {
-                name: "java".to_string(),
-                version: java_version,
-            }]
+            vec![ExecutorDep::new("java".to_string(), java_version)]
         })
     }
 }

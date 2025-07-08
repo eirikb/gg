@@ -138,12 +138,7 @@ impl Executor for Bld {
         &'a self,
         _input: &'a AppInput,
     ) -> Pin<Box<dyn Future<Output = Vec<ExecutorDep>> + 'a>> {
-        Box::pin(async move {
-            vec![ExecutorDep {
-                name: "java".to_string(),
-                version: None,
-            }]
-        })
+        Box::pin(async move { vec![ExecutorDep::new("java".to_string(), None)] })
     }
 
     fn customize_args(&self, input: &AppInput, app_path: &AppPath) -> Vec<String> {
