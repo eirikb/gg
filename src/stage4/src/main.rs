@@ -210,6 +210,7 @@ async fn main() -> ExitCode {
             .collect::<Vec<Box<dyn Executor>>>();
 
         let mut look_for_deps = true;
+        let mut processed_deps = std::collections::HashSet::new();
         while look_for_deps {
             look_for_deps = false;
             let mut to_add = Vec::new();
@@ -222,6 +223,7 @@ async fn main() -> ExitCode {
                         && !to_add
                             .iter()
                             .any(|e: &Box<dyn Executor>| &e.get_name().to_string() == &dep.name)
+                        && !processed_deps.contains(&dep.name)
                     {
                         if dep.optional {
                             if let Ok(_) = which::which(&dep.name) {
@@ -229,6 +231,7 @@ async fn main() -> ExitCode {
                                     "Optional dependency '{}' found in PATH, using system version",
                                     dep.name
                                 );
+                                processed_deps.insert(dep.name.clone());
                                 continue;
                             } else {
                                 info!(
@@ -246,6 +249,7 @@ async fn main() -> ExitCode {
                             exclude_tags: Default::default(),
                         }) {
                             look_for_deps = true;
+                            processed_deps.insert(dep.name.clone());
                             to_add.push(e);
                         }
                     }
