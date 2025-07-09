@@ -219,6 +219,9 @@ async fn main() -> ExitCode {
                     if !executors
                         .iter()
                         .any(|e| &e.get_name().to_string() == &dep.name)
+                        && !to_add
+                            .iter()
+                            .any(|e: &Box<dyn Executor>| &e.get_name().to_string() == &dep.name)
                     {
                         if dep.optional {
                             if let Ok(_) = which::which(&dep.name) {
