@@ -232,6 +232,7 @@ impl BloodyIndianaJones {
                 .unwrap();
                 self.pb.set_position(1);
                 self.pb.finish_with_message("Done");
+                println!();
                 return;
             }
         }
@@ -291,6 +292,7 @@ impl BloodyIndianaJones {
         .await
         .expect("Unable to move files");
         self.pb.finish_with_message("Done");
+        println!();
     }
 
     pub fn cleanup_download(&self) {
