@@ -260,19 +260,13 @@ impl BloodyIndianaJones {
                 self.pb.set_length(tar_file_size);
                 self.pb.set_position(0);
 
-                let temp_extract_dir = self.temp_dir.join("extracted");
-                create_dir_all(&temp_extract_dir).expect("Unable to create temp extract dir");
+                create_dir_all(&self.path).expect("Unable to create final dir");
 
                 let mut archive =
                     tar::Archive::new(std::io::BufReader::new(File::open(file_name).unwrap()));
-                archive
-                    .unpack(&temp_extract_dir)
-                    .expect("Unable to extract");
+                archive.unpack(&self.path).expect("Unable to extract");
 
                 self.pb.set_position(tar_file_size);
-
-                create_dir_all(&self.path).expect("Unable to create final dir");
-                self.move_temp_contents_to_final(&temp_extract_dir, Path::new(&self.path));
             }
         }
 
@@ -313,29 +307,6 @@ impl BloodyIndianaJones {
         .expect("Unable to move files");
         self.pb.finish_with_message("Done");
         println!();
-    }
-
-    fn move_temp_contents_to_final(&self, temp_dir: &Path, final_dir: &Path) {
-        if let Ok(entries) = read_dir(temp_dir) {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    let temp_path = entry.path();
-                    let file_name = temp_path.file_name().unwrap();
-                    let final_path = final_dir.join(file_name);
-
-                    if let Err(e) = rename(&temp_path, &final_path) {
-                        debug!(
-                            "Failed to move {} to {}: {}",
-                            temp_path.display(),
-                            final_path.display(),
-                            e
-                        );
-                    } else {
-                        info!("Moved {} to {}", temp_path.display(), final_path.display());
-                    }
-                }
-            }
-        }
     }
 
     pub fn cleanup_download(&self) {
