@@ -1,5 +1,5 @@
 use std::cmp::min;
-use std::collections::HashSet;
+use std::env::temp_dir;
 use std::fs::{create_dir_all, read_dir, remove_dir, remove_file, rename, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -63,7 +63,7 @@ pub struct BloodyIndianaJones {
     file_name: String,
     pub file_path: String,
     pb: ProgressBar,
-    initial_downloads_snapshot: Option<HashSet<PathBuf>>,
+    temp_dir: PathBuf,
 }
 
 impl BloodyIndianaJones {
@@ -75,27 +75,30 @@ impl BloodyIndianaJones {
     ) -> Self {
         let file_name = get_file_name(&url);
         let file_path = format!("{cache_base_dir}/downloads/{file_name}");
+        let temp_dir = temp_dir().join(format!("gg_process_{}", std::process::id()));
         info!("BloodyIndianaJones downloads path: {}", file_path);
+        info!("BloodyIndianaJones temp directory: {}", temp_dir.display());
         Self {
             url,
             path,
             file_name,
             file_path,
             pb,
-            initial_downloads_snapshot: None,
+            temp_dir,
         }
     }
 
     pub fn new_with_file_name(url: String, path: String, pb: ProgressBar) -> Self {
         let file_name = get_file_name(&url);
         let file_path = path.clone();
+        let temp_dir = temp_dir().join(format!("gg_process_{}", std::process::id()));
         Self {
             url,
             path,
             file_name,
             file_path,
             pb,
-            initial_downloads_snapshot: None,
+            temp_dir,
         }
     }
 
@@ -147,9 +150,6 @@ impl BloodyIndianaJones {
     }
 
     pub async fn unpack_and_all_that_stuff(&mut self) {
-        // Take snapshot before extraction
-        self.initial_downloads_snapshot = Some(self.snapshot_downloads_dir());
-
         self.pb.reset();
         self.pb.set_message("Extracting");
 
@@ -163,14 +163,19 @@ impl BloodyIndianaJones {
         let file = tokio::fs::File::open(&self.file_path).await.unwrap();
         let progress_reader = ProgressReader::new(file, self.pb.clone());
         let file_buf_reader = tokio::io::BufReader::new(progress_reader);
+        create_dir_all(&self.temp_dir).expect("Unable to create temp directory");
+
+        let original_file_name = Path::new(&self.file_path).file_name().unwrap();
         let file_path_decomp = if ext == Some("tgz") {
-            Path::new(&self.file_path)
+            self.temp_dir
+                .join(original_file_name)
                 .with_extension("tar")
                 .to_str()
                 .unwrap()
                 .to_string()
         } else {
-            Path::new(&self.file_path)
+            self.temp_dir
+                .join(original_file_name)
                 .with_extension("")
                 .to_str()
                 .unwrap()
@@ -255,11 +260,19 @@ impl BloodyIndianaJones {
                 self.pb.set_length(tar_file_size);
                 self.pb.set_position(0);
 
+                let temp_extract_dir = self.temp_dir.join("extracted");
+                create_dir_all(&temp_extract_dir).expect("Unable to create temp extract dir");
+
                 let mut archive =
                     tar::Archive::new(std::io::BufReader::new(File::open(file_name).unwrap()));
-                archive.unpack(&self.path).expect("Unable to extract");
+                archive
+                    .unpack(&temp_extract_dir)
+                    .expect("Unable to extract");
 
                 self.pb.set_position(tar_file_size);
+
+                create_dir_all(&self.path).expect("Unable to create final dir");
+                self.move_temp_contents_to_final(&temp_extract_dir, Path::new(&self.path));
             }
         }
 
@@ -302,48 +315,23 @@ impl BloodyIndianaJones {
         println!();
     }
 
-    fn snapshot_downloads_dir(&self) -> HashSet<PathBuf> {
-        let mut snapshot = HashSet::new();
+    fn move_temp_contents_to_final(&self, temp_dir: &Path, final_dir: &Path) {
+        if let Ok(entries) = read_dir(temp_dir) {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let temp_path = entry.path();
+                    let file_name = temp_path.file_name().unwrap();
+                    let final_path = final_dir.join(file_name);
 
-        if let Some(downloads_dir) = Path::new(&self.file_path).parent() {
-            let pattern = format!("{}/**/*", downloads_dir.display());
-            if let Ok(paths) = glob::glob(&pattern) {
-                for path in paths.flatten() {
-                    snapshot.insert(path);
-                }
-            }
-        }
-
-        info!(
-            "Snapshot captured {} files/directories in downloads",
-            snapshot.len()
-        );
-        snapshot
-    }
-
-    fn cleanup_new_files_since_snapshot(&self) {
-        if let Some(ref original_snapshot) = self.initial_downloads_snapshot {
-            if let Some(downloads_dir) = Path::new(&self.file_path).parent() {
-                let pattern = format!("{}/**/*", downloads_dir.display());
-                if let Ok(paths) = glob::glob(&pattern) {
-                    let mut to_remove: Vec<PathBuf> = paths
-                        .flatten()
-                        .filter(|path| !original_snapshot.contains(path))
-                        .collect();
-                    to_remove.reverse();
-
-                    for path in to_remove {
-                        if path.is_dir() {
-                            info!("Removing new directory: {}", path.display());
-                            if let Err(e) = std::fs::remove_dir_all(&path) {
-                                debug!("Failed to remove directory {}: {}", path.display(), e);
-                            }
-                        } else {
-                            info!("Removing new file: {}", path.display());
-                            if let Err(e) = remove_file(&path) {
-                                debug!("Failed to remove file {}: {}", path.display(), e);
-                            }
-                        }
+                    if let Err(e) = rename(&temp_path, &final_path) {
+                        debug!(
+                            "Failed to move {} to {}: {}",
+                            temp_path.display(),
+                            final_path.display(),
+                            e
+                        );
+                    } else {
+                        info!("Moved {} to {}", temp_path.display(), final_path.display());
                     }
                 }
             }
@@ -360,6 +348,20 @@ impl BloodyIndianaJones {
             }
         }
 
-        self.cleanup_new_files_since_snapshot();
+        if self.temp_dir.exists() {
+            info!("Cleaning up temp directory: {}", self.temp_dir.display());
+            if let Err(e) = std::fs::remove_dir_all(&self.temp_dir) {
+                debug!(
+                    "Failed to remove temp directory {}: {}",
+                    self.temp_dir.display(),
+                    e
+                );
+            } else {
+                info!(
+                    "Successfully removed temp directory: {}",
+                    self.temp_dir.display()
+                );
+            }
+        }
     }
 }
