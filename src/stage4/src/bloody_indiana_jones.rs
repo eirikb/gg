@@ -1,4 +1,5 @@
 use std::cmp::min;
+use std::collections::HashSet;
 use std::fs::{create_dir_all, read_dir, remove_dir, remove_file, rename, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -62,6 +63,7 @@ pub struct BloodyIndianaJones {
     file_name: String,
     pub file_path: String,
     pb: ProgressBar,
+    initial_downloads_snapshot: Option<HashSet<PathBuf>>,
 }
 
 impl BloodyIndianaJones {
@@ -80,6 +82,7 @@ impl BloodyIndianaJones {
             file_name,
             file_path,
             pb,
+            initial_downloads_snapshot: None,
         }
     }
 
@@ -92,6 +95,7 @@ impl BloodyIndianaJones {
             file_name,
             file_path,
             pb,
+            initial_downloads_snapshot: None,
         }
     }
 
@@ -142,7 +146,10 @@ impl BloodyIndianaJones {
         info!("Downloaded {} to {}", &self.url, &self.file_path);
     }
 
-    pub async fn unpack_and_all_that_stuff(&self) {
+    pub async fn unpack_and_all_that_stuff(&mut self) {
+        // Take snapshot before extraction
+        self.initial_downloads_snapshot = Some(self.snapshot_downloads_dir());
+
         self.pb.reset();
         self.pb.set_message("Extracting");
 
@@ -295,6 +302,54 @@ impl BloodyIndianaJones {
         println!();
     }
 
+    fn snapshot_downloads_dir(&self) -> HashSet<PathBuf> {
+        let mut snapshot = HashSet::new();
+
+        if let Some(downloads_dir) = Path::new(&self.file_path).parent() {
+            let pattern = format!("{}/**/*", downloads_dir.display());
+            if let Ok(paths) = glob::glob(&pattern) {
+                for path in paths.flatten() {
+                    snapshot.insert(path);
+                }
+            }
+        }
+
+        info!(
+            "Snapshot captured {} files/directories in downloads",
+            snapshot.len()
+        );
+        snapshot
+    }
+
+    fn cleanup_new_files_since_snapshot(&self) {
+        if let Some(ref original_snapshot) = self.initial_downloads_snapshot {
+            if let Some(downloads_dir) = Path::new(&self.file_path).parent() {
+                let pattern = format!("{}/**/*", downloads_dir.display());
+                if let Ok(paths) = glob::glob(&pattern) {
+                    let mut to_remove: Vec<PathBuf> = paths
+                        .flatten()
+                        .filter(|path| !original_snapshot.contains(path))
+                        .collect();
+                    to_remove.reverse();
+
+                    for path in to_remove {
+                        if path.is_dir() {
+                            info!("Removing new directory: {}", path.display());
+                            if let Err(e) = std::fs::remove_dir_all(&path) {
+                                debug!("Failed to remove directory {}: {}", path.display(), e);
+                            }
+                        } else {
+                            info!("Removing new file: {}", path.display());
+                            if let Err(e) = remove_file(&path) {
+                                debug!("Failed to remove file {}: {}", path.display(), e);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     pub fn cleanup_download(&self) {
         if Path::new(&self.file_path).exists() {
             info!("Cleaning up downloaded file: {}", &self.file_path);
@@ -304,5 +359,7 @@ impl BloodyIndianaJones {
                 info!("Successfully removed download file: {}", &self.file_path);
             }
         }
+
+        self.cleanup_new_files_since_snapshot();
     }
 }

@@ -493,7 +493,7 @@ pub async fn prep(
 
     let cache_base_dir = std::env::var("GG_CACHE_DIR").unwrap_or_else(|_| ".cache/gg".to_string());
     let cache_path = format!("{cache_base_dir}/{path}");
-    let bloody_indiana_jones = BloodyIndianaJones::new_with_cache_dir(
+    let mut bloody_indiana_jones = BloodyIndianaJones::new_with_cache_dir(
         url_string.to_string(),
         cache_path.clone(),
         &cache_base_dir,
