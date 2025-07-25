@@ -47,52 +47,71 @@ impl Executor for Flutter {
         Box::pin(async move {
             let mut downloads = Vec::new();
 
-            let url =
-                "https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json";
+            let urls = vec![
+                ("https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json", Os::Linux),
+                ("https://storage.googleapis.com/flutter_infra_release/releases/releases_macos.json", Os::Mac),
+                ("https://storage.googleapis.com/flutter_infra_release/releases/releases_windows.json", Os::Windows),
+            ];
 
-            match reqwest::get(url).await {
-                Ok(response) => {
-                    if let Ok(text) = response.text().await {
-                        if let Ok(releases) = serde_json::from_str::<serde_json::Value>(&text) {
-                            if let Some(releases_array) = releases["releases"].as_array() {
-                                for release in releases_array {
-                                    if let (Some(version), Some(archive_url)) =
-                                        (release["version"].as_str(), release["archive"].as_str())
-                                    {
-                                        let mut tags = HashSet::new();
+            for (url, os) in urls {
+                match reqwest::get(url).await {
+                    Ok(response) => {
+                        if let Ok(text) = response.text().await {
+                            if let Ok(releases) = serde_json::from_str::<serde_json::Value>(&text) {
+                                if let Some(releases_array) = releases["releases"].as_array() {
+                                    for release in releases_array {
+                                        if let (Some(version), Some(archive_url)) = (
+                                            release["version"].as_str(),
+                                            release["archive"].as_str(),
+                                        ) {
+                                            let mut tags = HashSet::new();
 
-                                        if version.contains("beta") || version.contains("alpha") {
-                                            tags.insert("beta".to_string());
-                                        }
-
-                                        if let Some(channel) = release["channel"].as_str() {
-                                            if channel != "stable" {
+                                            if version.contains("beta") || version.contains("alpha")
+                                            {
                                                 tags.insert("beta".to_string());
                                             }
+
+                                            if let Some(channel) = release["channel"].as_str() {
+                                                if channel != "stable" {
+                                                    tags.insert("beta".to_string());
+                                                }
+                                            }
+
+                                            let absolute_url = if archive_url.starts_with("http") {
+                                                archive_url.to_string()
+                                            } else {
+                                                format!("https://storage.googleapis.com/flutter_infra_release/releases/{}", archive_url)
+                                            };
+
+                                            let arch = if let Some(dart_sdk_arch) =
+                                                release["dart_sdk_arch"].as_str()
+                                            {
+                                                match dart_sdk_arch {
+                                                    "arm64" => Arch::Arm64,
+                                                    "x64" => Arch::X86_64,
+                                                    _ => Arch::X86_64,
+                                                }
+                                            } else {
+                                                Arch::X86_64
+                                            };
+
+                                            downloads.push(Download {
+                                                version: GgVersion::new(version),
+                                                tags,
+                                                download_url: absolute_url,
+                                                os: Some(os),
+                                                arch: Some(arch),
+                                                variant: None,
+                                            });
                                         }
-
-                                        let absolute_url = if archive_url.starts_with("http") {
-                                            archive_url.to_string()
-                                        } else {
-                                            format!("https://storage.googleapis.com/flutter_infra_release/releases/{}", archive_url)
-                                        };
-
-                                        downloads.push(Download {
-                                            version: GgVersion::new(version),
-                                            tags,
-                                            download_url: absolute_url,
-                                            os: Some(Os::Linux),
-                                            arch: Some(Arch::X86_64),
-                                            variant: None,
-                                        });
                                     }
                                 }
                             }
                         }
                     }
-                }
-                Err(_) => {
-                    // Eh not sure
+                    Err(_) => {
+                        // Eh not sure
+                    }
                 }
             }
 
