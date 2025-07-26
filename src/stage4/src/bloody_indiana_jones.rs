@@ -1,5 +1,4 @@
 use std::cmp::min;
-use std::env::temp_dir;
 use std::fs::{create_dir_all, read_dir, remove_dir, rename, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -7,6 +6,7 @@ use std::path::{Path, PathBuf};
 use futures_util::StreamExt;
 use indicatif::ProgressBar;
 use log::{debug, info};
+use tempfile::tempdir;
 use tokio::task;
 
 fn get_file_name(url: &str) -> String {
@@ -25,7 +25,7 @@ pub struct BloodyIndianaJones {
     file_name: String,
     pub file_path: String,
     pb: ProgressBar,
-    temp_dir: PathBuf,
+    temp_dir: tempfile::TempDir,
 }
 
 impl BloodyIndianaJones {
@@ -36,9 +36,16 @@ impl BloodyIndianaJones {
         pb: ProgressBar,
     ) -> Self {
         let file_name = get_file_name(&url);
-        let temp_dir = temp_dir().join(format!("gg_process_{}", std::process::id()));
-        let file_path = temp_dir.join(&file_name).to_string_lossy().to_string();
-        info!("BloodyIndianaJones temp directory: {}", temp_dir.display());
+        let temp_dir = tempdir().expect("Failed to create temp directory");
+        let file_path = temp_dir
+            .path()
+            .join(&file_name)
+            .to_string_lossy()
+            .to_string();
+        info!(
+            "BloodyIndianaJones temp directory: {}",
+            temp_dir.path().display()
+        );
         Self {
             url,
             path,
@@ -51,8 +58,12 @@ impl BloodyIndianaJones {
 
     pub fn new_with_file_name(url: String, path: String, pb: ProgressBar) -> Self {
         let file_name = get_file_name(&url);
-        let temp_dir = temp_dir().join(format!("gg_process_{}", std::process::id()));
-        let file_path = temp_dir.join(&file_name).to_string_lossy().to_string();
+        let temp_dir = tempdir().expect("Failed to create temp directory");
+        let file_path = temp_dir
+            .path()
+            .join(&file_name)
+            .to_string_lossy()
+            .to_string();
         Self {
             url,
             path,
@@ -67,8 +78,6 @@ impl BloodyIndianaJones {
         info!("Downloading {}", &self.url);
         self.pb.reset();
         self.pb.set_message("Preparing");
-
-        create_dir_all(&self.temp_dir).expect("Unable to create temp directory");
 
         self.pb.set_message("Downloading");
         let client = reqwest::Client::builder()
@@ -118,6 +127,7 @@ impl BloodyIndianaJones {
             tokio::io::BufReader::new(tokio::fs::File::open(&self.file_path).await.unwrap());
         let file_path_decomp = if ext == Some("tgz") {
             self.temp_dir
+                .path()
                 .join(&self.file_name)
                 .with_extension("tar")
                 .to_str()
@@ -125,6 +135,7 @@ impl BloodyIndianaJones {
                 .to_string()
         } else {
             self.temp_dir
+                .path()
                 .join(&self.file_name)
                 .with_extension("")
                 .to_str()
@@ -242,15 +253,9 @@ impl BloodyIndianaJones {
     }
 
     pub fn cleanup_download(&self) {
-        if self.temp_dir.exists() {
-            info!("Cleaning up temp directory: {}", self.temp_dir.display());
-            if let Err(e) = std::fs::remove_dir_all(&self.temp_dir) {
-                debug!(
-                    "Failed to remove temp directory {}: {}",
-                    self.temp_dir.display(),
-                    e
-                );
-            }
-        }
+        info!(
+            "Cleaning up temp directory: {}",
+            self.temp_dir.path().display()
+        );
     }
 }
