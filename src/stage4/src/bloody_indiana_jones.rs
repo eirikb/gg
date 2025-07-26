@@ -1,15 +1,12 @@
 use std::cmp::min;
 use std::env::temp_dir;
-use std::fs::{create_dir_all, read_dir, remove_dir, remove_file, rename, File};
+use std::fs::{create_dir_all, read_dir, remove_dir, rename, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::pin::Pin;
-use std::task::{Context, Poll};
 
 use futures_util::StreamExt;
 use indicatif::ProgressBar;
 use log::{debug, info};
-use tokio::io::{AsyncRead, ReadBuf};
 use tokio::task;
 
 fn get_file_name(url: &str) -> String {
@@ -20,41 +17,6 @@ fn get_file_name(url: &str) -> String {
         .last()
         .unwrap()
         .to_string()
-}
-
-struct ProgressReader<R> {
-    inner: R,
-    progress_bar: ProgressBar,
-    bytes_read: u64,
-}
-
-impl<R> ProgressReader<R> {
-    fn new(inner: R, progress_bar: ProgressBar) -> Self {
-        Self {
-            inner,
-            progress_bar,
-            bytes_read: 0,
-        }
-    }
-}
-
-impl<R: AsyncRead + Unpin> AsyncRead for ProgressReader<R> {
-    fn poll_read(
-        mut self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-        buf: &mut ReadBuf<'_>,
-    ) -> Poll<std::io::Result<()>> {
-        let before = buf.filled().len();
-        let result = Pin::new(&mut self.inner).poll_read(cx, buf);
-
-        if let Poll::Ready(Ok(())) = result {
-            let bytes_read = buf.filled().len() - before;
-            self.bytes_read += bytes_read as u64;
-            self.progress_bar.set_position(self.bytes_read);
-        }
-
-        result
-    }
 }
 
 pub struct BloodyIndianaJones {
@@ -70,13 +32,12 @@ impl BloodyIndianaJones {
     pub fn new_with_cache_dir(
         url: String,
         path: String,
-        cache_base_dir: &str,
+        _cache_base_dir: &str,
         pb: ProgressBar,
     ) -> Self {
         let file_name = get_file_name(&url);
-        let file_path = format!("{cache_base_dir}/downloads/{file_name}");
         let temp_dir = temp_dir().join(format!("gg_process_{}", std::process::id()));
-        info!("BloodyIndianaJones downloads path: {}", file_path);
+        let file_path = temp_dir.join(&file_name).to_string_lossy().to_string();
         info!("BloodyIndianaJones temp directory: {}", temp_dir.display());
         Self {
             url,
@@ -90,8 +51,8 @@ impl BloodyIndianaJones {
 
     pub fn new_with_file_name(url: String, path: String, pb: ProgressBar) -> Self {
         let file_name = get_file_name(&url);
-        let file_path = path.clone();
         let temp_dir = temp_dir().join(format!("gg_process_{}", std::process::id()));
+        let file_path = temp_dir.join(&file_name).to_string_lossy().to_string();
         Self {
             url,
             path,
@@ -107,9 +68,7 @@ impl BloodyIndianaJones {
         self.pb.reset();
         self.pb.set_message("Preparing");
 
-        if let Some(parent) = Path::new(&self.file_path).parent() {
-            create_dir_all(parent).expect("Unable to create download dir");
-        }
+        create_dir_all(&self.temp_dir).expect("Unable to create temp directory");
 
         self.pb.set_message("Downloading");
         let client = reqwest::Client::builder()
@@ -139,7 +98,7 @@ impl BloodyIndianaJones {
         let mut stream = res.bytes_stream();
 
         while let Some(item) = stream.next().await {
-            let chunk = item.expect("Error while downloading file".to_string().as_str());
+            let chunk = item.expect("Error while downloading file");
             file.write_all(&chunk).expect("Error while writing to file");
             let new = min(downloaded + (chunk.len() as u64), total_size);
             downloaded = new;
@@ -155,27 +114,18 @@ impl BloodyIndianaJones {
 
         info!("Extracting {}", self.file_name);
         let ext = Path::new(&self.file_name).extension().unwrap().to_str();
-
-        let file_size = std::fs::metadata(&self.file_path).unwrap().len();
-        self.pb.set_length(file_size);
-        self.pb.set_position(0);
-
-        let file = tokio::fs::File::open(&self.file_path).await.unwrap();
-        let progress_reader = ProgressReader::new(file, self.pb.clone());
-        let file_buf_reader = tokio::io::BufReader::new(progress_reader);
-        create_dir_all(&self.temp_dir).expect("Unable to create temp directory");
-
-        let original_file_name = Path::new(&self.file_path).file_name().unwrap();
+        let file_buf_reader =
+            tokio::io::BufReader::new(tokio::fs::File::open(&self.file_path).await.unwrap());
         let file_path_decomp = if ext == Some("tgz") {
             self.temp_dir
-                .join(original_file_name)
+                .join(&self.file_name)
                 .with_extension("tar")
                 .to_str()
                 .unwrap()
                 .to_string()
         } else {
             self.temp_dir
-                .join(original_file_name)
+                .join(&self.file_name)
                 .with_extension("")
                 .to_str()
                 .unwrap()
@@ -220,29 +170,21 @@ impl BloodyIndianaJones {
                 self.pb.set_message("Unzip");
                 let file_path_string = self.file_path.clone();
                 let path_string = self.path.clone();
-                let pb_clone = self.pb.clone();
                 task::spawn_blocking(move || {
                     create_dir_all(&path_string).expect("Unable to create download dir");
                     let target_dir = PathBuf::from(&path_string);
                     zip_extract::extract(File::open(file_path_string).unwrap(), &target_dir, true)
                         .unwrap();
-                    pb_clone.set_position(pb_clone.length().unwrap_or(0));
                 })
                 .await
                 .expect("Unable to unzip");
             }
             Some("tar") => (),
             _ => {
-                self.pb.set_message("Move");
-                self.pb.set_length(1);
-                self.pb.set_position(0);
+                self.pb.set_message("Copy");
                 create_dir_all(&self.path).expect("Unable to create download dir");
-                rename(
-                    &self.file_path,
-                    self.path.to_string() + "/" + self.file_name.as_str(),
-                )
-                .unwrap();
-                self.pb.set_position(1);
+                std::fs::copy(&self.file_path, Path::new(&self.path).join(&self.file_name))
+                    .unwrap();
                 self.pb.finish_with_message("Done");
                 println!();
                 return;
@@ -255,24 +197,14 @@ impl BloodyIndianaJones {
             if extension == "tar" {
                 info!("Untar {file_name}");
                 self.pb.set_message("Untar");
-
-                let tar_file_size = std::fs::metadata(file_name).unwrap().len();
-                self.pb.set_length(tar_file_size);
-                self.pb.set_position(0);
-
-                create_dir_all(&self.path).expect("Unable to create final dir");
-
                 let mut archive =
                     tar::Archive::new(std::io::BufReader::new(File::open(file_name).unwrap()));
                 archive.unpack(&self.path).expect("Unable to extract");
-
-                self.pb.set_position(tar_file_size);
             }
         }
 
         let path_string = self.path.clone();
         self.pb.set_message("Move");
-        self.pb.set_length(0);
         task::spawn_blocking(move || {
             let parent_path = Path::new(&path_string);
             let entries = read_dir(&path_string);
@@ -310,15 +242,6 @@ impl BloodyIndianaJones {
     }
 
     pub fn cleanup_download(&self) {
-        if Path::new(&self.file_path).exists() {
-            info!("Cleaning up downloaded file: {}", &self.file_path);
-            if let Err(e) = remove_file(&self.file_path) {
-                debug!("Failed to remove download file {}: {}", &self.file_path, e);
-            } else {
-                info!("Successfully removed download file: {}", &self.file_path);
-            }
-        }
-
         if self.temp_dir.exists() {
             info!("Cleaning up temp directory: {}", self.temp_dir.display());
             if let Err(e) = std::fs::remove_dir_all(&self.temp_dir) {
@@ -326,11 +249,6 @@ impl BloodyIndianaJones {
                     "Failed to remove temp directory {}: {}",
                     self.temp_dir.display(),
                     e
-                );
-            } else {
-                info!(
-                    "Successfully removed temp directory: {}",
-                    self.temp_dir.display()
                 );
             }
         }
