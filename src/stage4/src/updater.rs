@@ -130,6 +130,33 @@ fn move_temp_to_final(temp_path: &str, final_path: &str) -> Result<(), String> {
     Ok(())
 }
 
+pub async fn check_gg_update(ver: &str) {
+    println!("Checking for gg updates...");
+    println!("Current version: {}", ver);
+
+    let octocrab = octocrab::Octocrab::builder()
+        .base_uri("https://ghapi.ggcmd.io/")
+        .unwrap()
+        .build()
+        .expect("Failed to create GitHub API client");
+
+    match octocrab.repos("eirikb", "gg").releases().get_latest().await {
+        Ok(release) => {
+            let latest_version = release.tag_name.trim_start_matches('v');
+
+            if latest_version == ver {
+                println!("gg: Already up to date (version {}).", ver);
+            } else {
+                println!("gg: Current version: {}. Latest version: {}. Update available!", ver, latest_version);
+                println!("Run 'update -u' or 'update gg -u' to update.");
+            }
+        }
+        Err(_) => {
+            println!("Failed to check for gg updates.");
+        }
+    }
+}
+
 pub async fn perform_update(ver: &str) {
     println!("Checking for updates...");
     println!("Current version: {}", ver);
