@@ -389,6 +389,7 @@ jobs:
 
   all-tests-pass:
     needs: [ test-OS1, test-OS2, test-OS3, test-batch, test-container ]
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - run: echo "All tests passed!"
