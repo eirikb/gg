@@ -23,6 +23,8 @@ pub struct NoClap {
     pub help: bool,
     pub override_os: Option<String>,
     pub override_arch: Option<String>,
+    pub update_flag: bool,
+    pub major_flag: bool,
 }
 
 impl NoClap {
@@ -59,6 +61,8 @@ impl NoClap {
 
         let help = gg_args.contains(&"-h".to_string()) || gg_args.contains(&"--help".to_string());
         let log_external = gg_args.contains(&"-w".to_string());
+        let update_flag = gg_args.contains(&"-u".to_string());
+        let major_flag = gg_args.contains(&"--major".to_string());
 
         let override_os = Self::extract_flag_value(&gg_args, "--os");
         let override_arch = Self::extract_flag_value(&gg_args, "--arch");
@@ -181,6 +185,8 @@ impl NoClap {
             help,
             override_os,
             override_arch,
+            update_flag,
+            major_flag,
         }
     }
 

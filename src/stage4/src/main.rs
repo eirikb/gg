@@ -44,11 +44,16 @@ Options:
     --arch <ARCH>   Override target architecture (x86_64, arm64, armv7)
 
 Built in commands:
-    update          Update gg.cmd
+    update          Check for updates for all tools (including gg)
+    update -u       Update all tools that have updates available
+    update <tool>   Check for updates for specific tool (e.g., update flutter, update gg)
+    update <tool> -u Update specific tool (e.g., update flutter -u, update gg -u)
     help            Print help
-    check           Check for updates
-    check-update    Check for updates and update if available
     clean-cache     Clean cache (prompts for confirmation)
+
+Update options:
+    -u              Actually perform the update (vs just checking)
+    --major         Include major version updates (default: skip major versions)
 
 Version syntax:
     @X              Any X.y.z version (e.g. node@14 for any Node.js 14.x.y)
@@ -158,19 +163,36 @@ async fn main() -> ExitCode {
     if let Some(cmd) = no_clap.cmds.first() {
         match cmd.cmd.as_str() {
             "update" => {
-                updater::perform_update(ver).await;
+                let tool_name = no_clap.app_args.first().cloned();
+                let should_update = no_clap.update_flag;
+                let allow_major = no_clap.major_flag;
+
+                match tool_name.as_deref() {
+                    None => {
+                        checker::check_or_update_all_including_gg(
+                            input,
+                            ver,
+                            should_update,
+                            allow_major,
+                        )
+                        .await;
+                    }
+                    Some("gg") | Some("gg.cmd") => {
+                        if should_update {
+                            updater::perform_update(ver).await;
+                        } else {
+                            updater::check_gg_update(ver).await;
+                        }
+                    }
+                    Some(tool) => {
+                        checker::check_or_update_tool(input, tool, should_update, allow_major)
+                            .await;
+                    }
+                }
                 return ExitCode::from(0);
             }
             "help" => {
                 print_help(ver);
-                return ExitCode::from(0);
-            }
-            "check" => {
-                checker::check(input, false).await;
-                return ExitCode::from(0);
-            }
-            "check-update" => {
-                checker::check(input, true).await;
                 return ExitCode::from(0);
             }
             "clean-cache" => {

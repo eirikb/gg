@@ -77,10 +77,6 @@ impl GgVersionReq {
         VersionReq::parse(&self.0).unwrap()
     }
 
-    pub fn to_string(&self) -> String {
-        self.0.clone()
-    }
-
     pub fn new(version_req: &str) -> Option<Self> {
         let version_req_with_prefix = if version_req.matches('.').count() == 2
             && !version_req.starts_with('^')
