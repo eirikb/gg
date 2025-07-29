@@ -387,7 +387,7 @@ jobs:
           echo "Nice, let's try again"
           sh gg.cmd -v ${{ matrix.cmd }}
 
-  # GitHub Actions hate me
+  # GitHub Actions hate me :/
   gatekeeper:
     needs: [ test-OS1, test-OS2, test-OS3, test-batch, test-container ]
     runs-on: ubuntu-latest
