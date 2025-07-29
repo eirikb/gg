@@ -423,7 +423,7 @@ jobs:
 
   release:
     name: Release!
-    needs: [ version, all-tests-pass ]
+    needs: [ version, gatekeeper ]
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
     steps:
