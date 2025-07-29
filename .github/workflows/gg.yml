@@ -387,16 +387,43 @@ jobs:
           echo "Nice, let's try again"
           sh gg.cmd -v ${{ matrix.cmd }}
 
-  all-tests-pass:
+  # GitHub Actions hate me :/
+  gatekeeper:
     needs: [ test-OS1, test-OS2, test-OS3, test-batch, test-container ]
-    if: always()
     runs-on: ubuntu-latest
+    if: always()
     steps:
-      - run: echo "All tests passed!"
+      - name: Fail if any test job failed or was skipped
+        run: |
+          echo "Checking test job results..."
+
+          FAILED=0
+
+          echo "test-OS1: ${{ needs.test-OS1.result }}"
+          if [ "${{ needs.test-OS1.result }}" != "success" ]; then FAILED=1; fi
+
+          echo "test-OS2: ${{ needs.test-OS2.result }}"
+          if [ "${{ needs.test-OS2.result }}" != "success" ]; then FAILED=1; fi
+
+          echo "test-OS3: ${{ needs.test-OS3.result }}"
+          if [ "${{ needs.test-OS3.result }}" != "success" ]; then FAILED=1; fi
+
+          echo "test-batch: ${{ needs.test-batch.result }}"
+          if [ "${{ needs.test-batch.result }}" != "success" ]; then FAILED=1; fi
+
+          echo "test-container: ${{ needs.test-container.result }}"
+          if [ "${{ needs.test-container.result }}" != "success" ]; then FAILED=1; fi
+
+          if [ $FAILED -eq 1 ]; then
+            echo "::error::One or more test jobs failed or were skipped"
+            exit 1
+          fi
+
+          echo "All test jobs passed successfully"
 
   release:
     name: Release!
-    needs: [ version, all-tests-pass ]
+    needs: [ version, gatekeeper ]
     runs-on: ubuntu-latest
     if: github.event.pull_request.merged == true
     steps:

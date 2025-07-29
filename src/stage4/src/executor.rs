@@ -77,6 +77,10 @@ impl GgVersionReq {
         VersionReq::parse(&self.0).unwrap()
     }
 
+    pub fn to_string(&self) -> String {
+        self.0.clone()
+    }
+
     pub fn new(version_req: &str) -> Option<Self> {
         let version_req_with_prefix = if version_req.matches('.').count() == 2
             && !version_req.starts_with('^')
@@ -110,14 +114,7 @@ pub struct GgMeta {
 }
 
 #[cfg(test)]
-impl AppInput {
-    pub fn dummy() -> Self {
-        Self {
-            target: Target::parse_with_overrides("", None, None),
-            no_clap: NoClap::new(),
-        }
-    }
-}
+impl AppInput {}
 
 #[cfg(test)]
 mod tests {
@@ -222,17 +219,7 @@ impl ExecutorDep {
 }
 
 #[cfg(test)]
-impl ExecutorCmd {
-    pub fn dummy() -> Self {
-        Self {
-            cmd: String::new(),
-            version: None,
-            distribution: None,
-            include_tags: HashSet::new(),
-            exclude_tags: HashSet::new(),
-        }
-    }
-}
+impl ExecutorCmd {}
 
 fn create_github_executor(
     executor_cmd: ExecutorCmd,
