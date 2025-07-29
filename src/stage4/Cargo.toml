@@ -29,3 +29,4 @@ octocrab = { version = "0.44.1", features = ["rustls-webpki-tokio"] }
 serde-java-properties = "0.2.0"
 sha256 = "1.2.2"
 tempfile = "3.8"
+ctrlc = "3.4"
