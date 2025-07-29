@@ -5,7 +5,8 @@ use std::future::Future;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::sync::{Arc, Mutex};
 
 use crate::bloody_indiana_jones::BloodyIndianaJones;
 use crate::executors::github::GitHub;
@@ -635,15 +636,41 @@ pub async fn try_run(
         if let Ok(bin_path) = bin_path {
             info!("Executing: {:?}. With args:{:?}", bin_path, args);
             let mut command = Command::new(&bin_path);
-            let res = command
+
+            let child = command
                 .env("PATH", all_paths.clone())
                 .envs(env_vars.clone())
                 .args(args.clone())
+                .stdin(Stdio::inherit())
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
                 .spawn()
-                .map_err(|e| e.to_string())?
-                .wait()
-                .map_err(|_| "eh")?
-                .success();
+                .map_err(|e| e.to_string())?;
+
+            let child_handle = Arc::new(Mutex::new(Some(child)));
+            let child_handle_clone = Arc::clone(&child_handle);
+
+            let _result = ctrlc::set_handler(move || {
+                if let Ok(mut guard) = child_handle_clone.lock() {
+                    if let Some(ref mut child_process) = *guard {
+                        let _ = child_process.kill();
+                    }
+                }
+            });
+
+            let res = if let Ok(mut guard) = child_handle.lock() {
+                if let Some(ref mut child) = *guard {
+                    child
+                        .wait()
+                        .map_err(|_| "Failed to wait for child process")?
+                        .success()
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+
             if !res {
                 info!("Unable to execute {}", bin_path.display());
             }
