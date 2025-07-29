@@ -8,18 +8,7 @@ use std::pin::Pin;
 use std::process::Command;
 
 use crate::bloody_indiana_jones::BloodyIndianaJones;
-use crate::executors::bld::Bld;
-use crate::executors::custom_command::CustomCommand;
-use crate::executors::flutter::Flutter;
 use crate::executors::github::GitHub;
-use crate::executors::go::Go;
-use crate::executors::gradle::Gradle;
-use crate::executors::java::Java;
-use crate::executors::jbang::JBangExecutor;
-use crate::executors::maven::Maven;
-use crate::executors::node::Node;
-use crate::executors::openapigenerator::OpenAPIGenerator;
-use crate::executors::rat::Rat;
 use crate::no_clap::NoClap;
 use crate::target::{Arch, Os, Target, Variant};
 use indicatif::ProgressBar;
@@ -221,21 +210,7 @@ impl ExecutorDep {
 #[cfg(test)]
 impl ExecutorCmd {}
 
-fn create_github_executor(
-    executor_cmd: ExecutorCmd,
-    owner: &str,
-    repo: &str,
-    deps: Option<Vec<ExecutorDep>>,
-    bins: Option<Vec<String>>,
-) -> Box<dyn Executor> {
-    Box::new(GitHub::new_with_config(
-        executor_cmd,
-        owner.to_string(),
-        repo.to_string(),
-        deps,
-        bins,
-    ))
-}
+use crate::tools::get_tool_info;
 
 impl dyn Executor {
     pub fn new(executor_cmd: ExecutorCmd) -> Option<Box<Self>> {
@@ -251,62 +226,11 @@ impl dyn Executor {
             }
         }
 
-        match executor_cmd.cmd.as_str() {
-            "node" | "npm" | "npx" => Some(Box::new(Node { executor_cmd })),
-            "gradle" => Some(Box::new(Gradle::new(executor_cmd))),
-            "java" => Some(Box::new(Java { executor_cmd })),
-            "jbang" => Some(Box::new(JBangExecutor::new(executor_cmd))),
-            "maven" | "mvn" => Some(Box::new(Maven { executor_cmd })),
-            "openapi" => Some(Box::new(OpenAPIGenerator { executor_cmd })),
-            "rat" | "ra" => Some(Box::new(Rat { executor_cmd })),
-            "run" => Some(Box::new(CustomCommand { executor_cmd })),
-            "bld" => Some(Box::new(Bld::new(executor_cmd))),
-            "flutter" | "dart" => Some(Box::new(Flutter { executor_cmd })),
-            "deno" => Some(create_github_executor(
-                executor_cmd,
-                "denoland",
-                "deno",
-                Some(vec![]),
-                Some(vec!["deno".to_string(), "deno.exe".to_string()]),
-            )),
-            "go" => Some(Box::new(Go { executor_cmd })),
-            "caddy" => Some(create_github_executor(
-                executor_cmd,
-                "caddyserver",
-                "caddy",
-                Some(vec![]),
-                Some(vec!["caddy".to_string(), "caddy.exe".to_string()]),
-            )),
-            "gh" => Some(create_github_executor(
-                executor_cmd,
-                "cli",
-                "cli",
-                Some(vec![ExecutorDep::optional("git".to_string(), None)]),
-                Some(vec!["gh".to_string(), "gh.exe".to_string()]),
-            )),
-            "just" => Some(create_github_executor(
-                executor_cmd,
-                "casey",
-                "just",
-                Some(vec![]),
-                Some(vec!["just".to_string(), "just.exe".to_string()]),
-            )),
-            "fortio" => Some(create_github_executor(
-                executor_cmd,
-                "fortio",
-                "fortio",
-                Some(vec![]),
-                Some(vec!["bin/fortio".to_string(), "fortio.exe".to_string()]),
-            )),
-            "git" => Some(create_github_executor(
-                executor_cmd,
-                "eirikb",
-                "portable-git",
-                Some(vec![]),
-                Some(vec!["git".to_string(), "git.exe".to_string()]),
-            )),
-            _ => None,
+        if let Some(tool_info) = get_tool_info(&executor_cmd.cmd) {
+            return (tool_info.factory)(executor_cmd);
         }
+
+        None
     }
 
     pub fn get_url_matches(&self, urls: &Vec<Download>, input: &AppInput) -> Vec<Download> {
