@@ -21,7 +21,10 @@ mod executor;
 mod executors;
 mod no_clap;
 mod target;
+mod tools;
 mod updater;
+
+use crate::tools::{get_all_tools, get_tool_info, ToolCategory};
 
 fn print_help(ver: &str) {
     println!(
@@ -49,6 +52,7 @@ Built in commands:
     update <tool>   Check for updates for specific tool (e.g., update flutter, update gg)
     update <tool> -u Update specific tool (e.g., update flutter -u, update gg -u)
     help            Print help
+    tools           List all available tools
     clean-cache     Clean cache (prompts for confirmation)
 
 Update options:
@@ -82,24 +86,17 @@ Examples:
     ./gg.cmd --os windows --arch x86_64 deno --version    (test Windows Deno on Linux)
     ./gg.cmd --os mac deno --help                         (test macOS Deno from anywhere)
 
-Supported tools:
-    node (npm, npx will also work, version refers to node version)
-    gradle
-    java
-    jbang
-    maven (mvn)
-    bld
-    openapi
-    rat (ra)
-    deno
-    go
-    caddy
-    just
-    fortio
-    flutter (dart will also work)
-    git
-    run (any arbitrary command)
-    gh/<owner>/<repo> (GitHub releases)
+Example tools:
+    node        Node.js JavaScript runtime (npm, npx will also work)
+    java        Java runtime and development kit
+    gradle      Gradle build automation tool
+    go          Go programming language
+    flutter     Flutter SDK (dart will also work)
+
+Run 'gg tools' to see all available tools with descriptions
+
+GitHub repos can be accessed directly:
+    gh/<owner>/<repo>    Any GitHub release (e.g. gh/cli/cli)
 
 Available tags by tools:
     java: +jdk, +jre, +lts, +sts, +mts, +ea, +ga, +headless, +headfull, +fx, +normal, +hotspot (defaults: +jdk, +ga)
@@ -108,6 +105,80 @@ Available tags by tools:
     openapi: +beta (excluded by default)
 "
     );
+}
+
+fn print_tools() {
+    println!("Available tools in gg:\n");
+
+    let tools = get_all_tools();
+
+    let mut languages = Vec::new();
+    let mut build_tools = Vec::new();
+    let mut utilities = Vec::new();
+    let mut github_releases = Vec::new();
+
+    for tool in tools {
+        match tool.category {
+            ToolCategory::Language => languages.push(tool),
+            ToolCategory::BuildTool => build_tools.push(tool),
+            ToolCategory::Utility => utilities.push(tool),
+            ToolCategory::GitHubRelease => github_releases.push(tool),
+        }
+    }
+
+    if !languages.is_empty() {
+        println!("Languages:");
+        for tool in languages {
+            print_tool_info(tool);
+        }
+        println!();
+    }
+
+    if !build_tools.is_empty() {
+        println!("Build Tools:");
+        for tool in build_tools {
+            print_tool_info(tool);
+        }
+        println!();
+    }
+
+    if !utilities.is_empty() {
+        println!("Utilities:");
+        for tool in utilities {
+            print_tool_info(tool);
+        }
+        println!();
+    }
+
+    if !github_releases.is_empty() {
+        println!("GitHub Releases:");
+        for tool in github_releases {
+            print_tool_info(tool);
+        }
+        println!();
+    }
+
+    println!("GitHub repos can be accessed directly:");
+    println!("    gh/<owner>/<repo>    Any GitHub release (e.g. gh/cli/cli)");
+    println!("\nFor more information about a specific tool, use 'gg tools <tool_name>'");
+}
+
+fn print_tool_info(tool: &tools::ToolInfo) {
+    let aliases = if !tool.aliases.is_empty() {
+        format!(" (aliases: {})", tool.aliases.join(", "))
+    } else {
+        String::new()
+    };
+
+    println!("    {:<15} {}{}", tool.name, tool.description, aliases);
+
+    if !tool.tags.is_empty() {
+        println!("                    Tags: {}", tool.tags.join(", "));
+    }
+
+    if let Some(example) = tool.example {
+        println!("                    Example: {}", example);
+    }
 }
 
 #[tokio::main]
@@ -193,6 +264,29 @@ async fn main() -> ExitCode {
             }
             "help" => {
                 print_help(ver);
+                return ExitCode::from(0);
+            }
+            "tools" => {
+                if let Some(tool_name) = no_clap.app_args.first() {
+                    if let Some(tool) = get_tool_info(tool_name) {
+                        println!("Tool: {}", tool.name);
+                        println!("Description: {}", tool.description);
+                        if !tool.aliases.is_empty() {
+                            println!("Aliases: {}", tool.aliases.join(", "));
+                        }
+                        if !tool.tags.is_empty() {
+                            println!("Available tags: {}", tool.tags.join(", "));
+                        }
+                        if let Some(example) = tool.example {
+                            println!("Example: {}", example);
+                        }
+                    } else {
+                        println!("Tool '{}' not found", tool_name);
+                        println!("\nRun 'gg tools' to see all available tools");
+                    }
+                } else {
+                    print_tools();
+                }
                 return ExitCode::from(0);
             }
             "clean-cache" => {
