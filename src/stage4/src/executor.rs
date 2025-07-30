@@ -10,7 +10,6 @@ use std::sync::{Arc, Mutex};
 
 use crate::bloody_indiana_jones::BloodyIndianaJones;
 use crate::executors::github::GitHub;
-use crate::no_clap::NoClap;
 use crate::target::{Arch, Os, Target, Variant};
 use indicatif::ProgressBar;
 use log::{debug, info};
@@ -26,7 +25,7 @@ pub struct AppPath {
 
 pub struct AppInput {
     pub target: Target,
-    pub no_clap: NoClap,
+    pub app_args: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -67,6 +66,7 @@ impl GgVersionReq {
         VersionReq::parse(&self.0).unwrap()
     }
 
+    #[cfg(test)]
     pub fn to_string(&self) -> String {
         self.0.clone()
     }
@@ -277,7 +277,7 @@ pub trait Executor {
     }
 
     fn customize_args(&self, input: &AppInput, _app_path: &AppPath) -> Vec<String> {
-        input.no_clap.app_args.clone()
+        input.app_args.clone()
     }
 
     fn custom_prep(&self, _input: &AppInput) -> Option<AppPath> {

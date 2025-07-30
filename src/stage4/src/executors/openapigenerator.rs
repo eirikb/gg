@@ -50,7 +50,7 @@ impl Executor for OpenAPIGenerator {
             let args = vec!["-jar".to_string(), path.to_string()];
             args.iter()
                 .cloned()
-                .chain(input.no_clap.app_args.iter().cloned())
+                .chain(input.app_args.iter().cloned())
                 .collect()
         } else {
             vec![]

@@ -29,7 +29,7 @@ impl Executor for CustomCommand {
 
     fn get_bins(&self, input: &AppInput) -> Vec<BinPattern> {
         vec![BinPattern::Exact(
-            input.no_clap.app_args[0].as_str().to_string(),
+            input.app_args[0].as_str().to_string(),
         )]
     }
 
@@ -38,7 +38,7 @@ impl Executor for CustomCommand {
     }
 
     fn customize_args(&self, input: &AppInput, _app_path: &AppPath) -> Vec<String> {
-        input.no_clap.app_args.clone().into_iter().skip(1).collect()
+        input.app_args.clone().into_iter().skip(1).collect()
     }
 
     fn custom_prep(&self, _input: &AppInput) -> Option<AppPath> {
