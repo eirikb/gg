@@ -8,18 +8,19 @@ use indicatif::MultiProgress;
 use log::{debug, info, LevelFilter};
 
 use crate::barus::create_barus;
+use crate::cli::Cli;
 use crate::executor::{prep, try_run, AppInput, Executor, ExecutorCmd, GgVersionReq};
-use crate::no_clap::NoClap;
 use crate::target::Target;
+use clap::Parser;
 
 mod barus;
 mod bloody_indiana_jones;
 mod bloody_maven;
 mod checker;
 mod cleaner;
+mod cli;
 mod executor;
 mod executors;
-mod no_clap;
 mod target;
 mod tools;
 mod updater;
@@ -185,13 +186,14 @@ fn print_tool_info(tool: &tools::ToolInfo) {
 async fn main() -> ExitCode {
     let ver = option_env!("VERSION").unwrap_or("dev");
 
-    let no_clap = NoClap::new();
-    let log_level = match no_clap.log_level.as_str() {
+    let cli = Cli::parse();
+    let log_level = match cli.get_log_level().as_str() {
+        "trace" => LevelFilter::Trace,
         "debug" => LevelFilter::Debug,
         "info" => LevelFilter::Info,
         _ => LevelFilter::Warn,
     };
-    if no_clap.log_external {
+    if cli.log_external {
         env_logger::builder().filter_level(log_level).init();
     } else {
         env_logger::builder()
@@ -208,35 +210,34 @@ async fn main() -> ExitCode {
         .unwrap_or(String::from("x86_64-linux"))
         .trim()
         .to_string();
-    let target = Target::parse_with_overrides(
-        &system,
-        no_clap.override_os.clone(),
-        no_clap.override_arch.clone(),
-    );
+    let target =
+        Target::parse_with_overrides(&system, cli.override_os.clone(), cli.override_arch.clone());
+
+    let (cmds, app_args) = cli.parse_args();
 
     let input = &AppInput {
         target,
-        no_clap: no_clap.clone(),
+        app_args: app_args.clone(),
     };
 
-    if no_clap.version {
+    if cli.version {
         println!("{}", ver);
         return ExitCode::from(0);
     }
 
-    if no_clap.help {
+    if cli.help {
         print_help(ver);
         return ExitCode::from(0);
     }
 
-    debug!(target: "main", "{:?}", &no_clap);
+    debug!(target: "main", "{:?}", &cli);
 
-    if let Some(cmd) = no_clap.cmds.first() {
+    if let Some(cmd) = cmds.first() {
         match cmd.cmd.as_str() {
             "update" => {
-                let tool_name = no_clap.app_args.first().cloned();
-                let should_update = no_clap.update_flag;
-                let allow_major = no_clap.major_flag;
+                let tool_name = app_args.first().cloned();
+                let should_update = cli.get_update_flag();
+                let allow_major = cli.get_major_flag();
 
                 match tool_name.as_deref() {
                     None => {
@@ -262,12 +263,8 @@ async fn main() -> ExitCode {
                 }
                 return ExitCode::from(0);
             }
-            "help" => {
-                print_help(ver);
-                return ExitCode::from(0);
-            }
             "tools" => {
-                if let Some(tool_name) = no_clap.app_args.first() {
+                if let Some(tool_name) = app_args.first() {
                     if let Some(tool) = get_tool_info(tool_name) {
                         println!("Tool: {}", tool.name);
                         println!("Description: {}", tool.description);
@@ -300,7 +297,7 @@ async fn main() -> ExitCode {
         };
     }
 
-    let override_info = match (&no_clap.override_os, &no_clap.override_arch) {
+    let override_info = match (&cli.override_os, &cli.override_arch) {
         (Some(os), Some(arch)) => format!(" (overridden: OS={}, Arch={})", os, arch),
         (Some(os), None) => format!(" (overridden: OS={})", os),
         (None, Some(arch)) => format!(" (overridden: Arch={})", arch),
@@ -308,9 +305,8 @@ async fn main() -> ExitCode {
     };
     info!("System is {system}{}. {:?}", override_info, &target);
 
-    if no_clap.cmds.first().is_some() {
-        let mut executors = no_clap
-            .cmds
+    if cmds.first().is_some() {
+        let mut executors = cmds
             .iter()
             .filter_map(|cmd| {
                 <dyn Executor>::new(ExecutorCmd {
@@ -435,7 +431,6 @@ async fn main() -> ExitCode {
             {
                 ExitCode::from(0)
             } else {
-                println!("Unable to execute");
                 ExitCode::from(1)
             }
         } else {

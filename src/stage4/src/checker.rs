@@ -93,7 +93,6 @@ pub async fn check_or_update_all_including_gg(
     should_update: bool,
     allow_major: bool,
 ) {
-    println!("Checking for gg updates...");
     if should_update {
         updater::perform_update(gg_version).await;
     } else {

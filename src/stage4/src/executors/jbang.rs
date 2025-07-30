@@ -53,7 +53,7 @@ impl Executor for JBangExecutor {
         input: &'a AppInput,
     ) -> Pin<Box<dyn Future<Output = Vec<ExecutorDep>> + 'a>> {
         Box::pin(async move {
-            let java_version = if let Some(file_path) = input.no_clap.app_args.first() {
+            let java_version = if let Some(file_path) = input.app_args.first() {
                 get_jbang_java_version_from_file(file_path)
             } else {
                 None

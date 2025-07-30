@@ -158,7 +158,7 @@ impl Executor for Bld {
             args.push(class_name);
         }
 
-        args.extend(input.no_clap.app_args.clone());
+        args.extend(input.app_args.clone());
         args
     }
 }
@@ -244,7 +244,6 @@ mod tests {
         let _lock = TEST_MUTEX.lock().unwrap();
 
         use crate::executor::{AppInput, AppPath, Executor, ExecutorCmd};
-        use crate::no_clap::NoClap;
         use crate::target::Target;
         use std::collections::HashSet;
         use std::fs;
@@ -264,12 +263,9 @@ mod tests {
             exclude_tags: HashSet::new(),
         });
 
-        let mut no_clap = NoClap::new();
-        no_clap.app_args = vec!["compile".to_string()];
-
         let app_input = AppInput {
             target: Target::parse_with_overrides("", None, None),
-            no_clap,
+            app_args: vec!["compile".to_string()],
         };
 
         let app_path = AppPath {
@@ -293,7 +289,6 @@ mod tests {
         let _lock = TEST_MUTEX.lock().unwrap();
 
         use crate::executor::{AppInput, AppPath, Executor, ExecutorCmd};
-        use crate::no_clap::NoClap;
         use crate::target::Target;
         use std::collections::HashSet;
         use std::path::PathBuf;
@@ -308,12 +303,9 @@ mod tests {
             exclude_tags: HashSet::new(),
         });
 
-        let mut no_clap = NoClap::new();
-        no_clap.app_args = vec!["compile".to_string()];
-
         let app_input = AppInput {
             target: Target::parse_with_overrides("", None, None),
-            no_clap,
+            app_args: vec!["compile".to_string()],
         };
 
         let app_path = AppPath {
