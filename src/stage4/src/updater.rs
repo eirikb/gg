@@ -60,10 +60,22 @@ fn execute_version_check(file_path: &str) -> Result<(), String> {
         }
         #[cfg(windows)]
         {
-            // On Windows, execute directly
-            std::process::Command::new(file_path)
-                .arg("--version")
-                .spawn()
+            if env::var("MSYSTEM").is_ok() || env::var("MINGW_PREFIX").is_ok() {
+                std::process::Command::new("sh")
+                    .arg(file_path)
+                    .arg("--version")
+                    .spawn()
+            } else if file_path.ends_with(".cmd") || file_path.ends_with(".bat") {
+                std::process::Command::new(file_path)
+                    .arg("--version")
+                    .spawn()
+            } else {
+                std::process::Command::new("cmd")
+                    .arg("/c")
+                    .arg(file_path)
+                    .arg("--version")
+                    .spawn()
+            }
         }
     };
 
@@ -147,7 +159,10 @@ pub async fn check_gg_update(ver: &str) {
             if latest_version == ver {
                 println!("gg: Already up to date (version {}).", ver);
             } else {
-                println!("gg: Current version: {}. Latest version: {}. Update available!", ver, latest_version);
+                println!(
+                    "gg: Current version: {}. Latest version: {}. Update available!",
+                    ver, latest_version
+                );
                 println!("Run 'update -u' or 'update gg -u' to update.");
             }
         }
@@ -184,7 +199,10 @@ pub async fn perform_update(ver: &str) {
     }
 
     let final_path = env::var("GG_CMD_PATH").unwrap_or_else(|_| "gg.cmd".to_string());
+    let final_path = final_path.replace('\\', "/");
     let temp_path = format!("{}.tmp", final_path);
+
+    println!("Updating: {}", final_path);
 
     if let Err(e) = download_to_temp(&temp_path).await {
         println!("Download failed: {}", e);

@@ -1,8 +1,8 @@
 CACHE_DIR="${GG_CACHE_DIR:-$HOME/.cache/gg}"
 
 if [ "$OSTYPE" = "cygwin" ] || [ "$OSTYPE" = "msys" ]; then
-  which powershell
-  powershell "$CACHE_DIR/gg-VERVER/stage2.ps1" "$@"
+  which powershell >/dev/null 2>&1
+  powershell -executionpolicy bypass "$CACHE_DIR/gg-VERVER/stage2.ps1" "$@"
   exit $?
 fi
 

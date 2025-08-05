@@ -1,4 +1,8 @@
-export GG_CMD_PATH="$(realpath "$0")"
+if command -v realpath >/dev/null 2>&1; then
+  export GG_CMD_PATH="$(realpath -s "$0" 2>/dev/null || readlink -f "$0" 2>/dev/null || echo "$0")"
+else
+  export GG_CMD_PATH="$0"
+fi
 
 if [ -z "$GG_CACHE_DIR" ]; then
   if [ "$1" = "-l" ]; then
