@@ -31,11 +31,17 @@ if (Test-Path $stage4)
         {
             $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue
         }
-        if (-not $proc.HasExited)
+        try
         {
-            Wait-Process -InputObject $proc
+            $proc | Wait-Process -ErrorAction SilentlyContinue
+            $exitCode = $proc.ExitCode
         }
-        exit $proc.ExitCode
+        catch
+        {
+            # Mayhap the process exited too quickly, default to 0
+            $exitCode = 0
+        }
+        exit $exitCode
     }
     else
     {
@@ -99,11 +105,17 @@ if ($hash)
         {
             $proc = Start-Process $stage4 -WorkingDirectory "$( Get-Location )" -PassThru -NoNewWindow -ErrorAction SilentlyContinue
         }
-        if (-not $proc.HasExited)
+        try
         {
-            Wait-Process -InputObject $proc
+            $proc | Wait-Process -ErrorAction SilentlyContinue
+            $exitCode = $proc.ExitCode
         }
-        exit $proc.ExitCode
+        catch
+        {
+            # Mayhap the process exited too quickly, default to 0
+            $exitCode = 0
+        }
+        exit $exitCode
     }
     else
     {
