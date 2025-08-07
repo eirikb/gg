@@ -249,6 +249,7 @@ async fn main() -> ExitCode {
                             ver,
                             should_update,
                             allow_major,
+                            force,
                         )
                         .await;
                     }
@@ -260,7 +261,7 @@ async fn main() -> ExitCode {
                         }
                     }
                     Some(tool) => {
-                        checker::check_or_update_tool(input, tool, should_update, allow_major)
+                        checker::check_or_update_tool(input, tool, should_update, allow_major, force)
                             .await;
                     }
                 }
