@@ -15,8 +15,12 @@ async fn download_to_temp(temp_path: &str) -> Result<(), String> {
         BloodyIndianaJones::new_with_file_name(url.to_string(), temp_path.to_string(), pb.clone());
     bloody_indiana_jones.download().await;
 
-    // Just in case (FS stuff)
-    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+    if std::path::Path::new(&bloody_indiana_jones.file_path).exists() {
+        fs::copy(&bloody_indiana_jones.file_path, temp_path)
+            .map_err(|e| format!("Failed to copy downloaded file: {}", e))?;
+    } else {
+        return Err("Download failed: file was not downloaded".to_string());
+    }
 
     Ok(())
 }
@@ -38,7 +42,7 @@ fn print_version_from_file(file_path: &str) -> Result<String, String> {
                     "unknown".to_string()
                 };
 
-            println!("Successfully updated to version {}!", new_version);
+            println!("Successfully updated gg to version {}", new_version);
             Ok(new_version)
         }
         Err(e) => Err(format!("Failed to read file: {}", e)),
@@ -85,7 +89,6 @@ fn execute_version_check(file_path: &str) -> Result<(), String> {
             match status {
                 Ok(exit_status) => {
                     if exit_status.success() {
-                        println!("Update preparation completed!");
                         Ok(())
                     } else {
                         Err(format!(
@@ -143,9 +146,6 @@ fn move_temp_to_final(temp_path: &str, final_path: &str) -> Result<(), String> {
 }
 
 pub async fn check_gg_update(ver: &str) {
-    println!("Checking for gg updates...");
-    println!("Current version: {}", ver);
-
     let octocrab = octocrab::Octocrab::builder()
         .base_uri("https://ghapi.ggcmd.io/")
         .unwrap()
@@ -157,45 +157,48 @@ pub async fn check_gg_update(ver: &str) {
             let latest_version = release.tag_name.trim_start_matches('v');
 
             if latest_version == ver {
-                println!("gg: Already up to date (version {}).", ver);
-            } else {
                 println!(
-                    "gg: Current version: {}. Latest version: {}. Update available!",
+                    "gg: Current: {}, Latest: {} - Up to date",
                     ver, latest_version
                 );
-                println!("Run 'update -u' or 'update gg -u' to update.");
+            } else {
+                println!(
+                    "gg: Current: {}, Latest: {} - Update available",
+                    ver, latest_version
+                );
             }
         }
         Err(_) => {
-            println!("Failed to check for gg updates.");
+            println!("gg: Unable to check for updates");
         }
     }
 }
 
-pub async fn perform_update(ver: &str) {
-    println!("Checking for updates...");
-    println!("Current version: {}", ver);
-
+pub async fn perform_update(ver: &str, force: bool) {
     let octocrab = octocrab::Octocrab::builder()
         .base_uri("https://ghapi.ggcmd.io/")
         .unwrap()
         .build()
         .expect("Failed to create GitHub API client");
 
-    match octocrab.repos("eirikb", "gg").releases().get_latest().await {
-        Ok(release) => {
-            let latest_version = release.tag_name.trim_start_matches('v');
+    if !force {
+        match octocrab.repos("eirikb", "gg").releases().get_latest().await {
+            Ok(release) => {
+                let latest_version = release.tag_name.trim_start_matches('v');
 
-            if latest_version == ver {
-                println!("Already up to date (version {}).", ver);
-                return;
+                if latest_version == ver {
+                    println!("gg: Already up to date (version {})", ver);
+                    return;
+                }
+
+                println!("Updating gg to version {}...", latest_version);
             }
-
-            println!("Updating to version {}...", latest_version);
+            Err(_) => {
+                println!("Failed to check for updates. Proceeding with download...");
+            }
         }
-        Err(_) => {
-            println!("Failed to check for updates. Proceeding with download...");
-        }
+    } else {
+        println!("Force update requested. Proceeding with download...");
     }
 
     let final_path = env::var("GG_CMD_PATH").unwrap_or_else(|_| "gg.cmd".to_string());
@@ -209,13 +212,14 @@ pub async fn perform_update(ver: &str) {
         return;
     }
 
-    if let Err(e) = print_version_from_file(&temp_path) {
-        println!("Failed to read version: {}", e);
-        let _ = fs::remove_file(&temp_path);
-        return;
+    match print_version_from_file(&temp_path) {
+        Ok(_) => {}
+        Err(e) => {
+            warn!("Could not read version from downloaded file: {}", e);
+            println!("Continuing with update anyway...");
+        }
     }
 
-    println!("Preparing updated version for faster subsequent updates...");
     if let Err(e) = execute_version_check(&temp_path) {
         println!("Execution test failed: {}", e);
         let _ = fs::remove_file(&temp_path);

@@ -2,7 +2,6 @@ use crate::barus::create_barus;
 use crate::executor::{prep, AppInput, GgMeta};
 use crate::updater;
 use crate::Executor;
-use dialoguer::Confirm;
 use futures_util::future::join_all;
 use glob;
 use log::{debug, info};
@@ -94,7 +93,7 @@ pub async fn check_or_update_all_including_gg(
     allow_major: bool,
 ) {
     if should_update {
-        updater::perform_update(gg_version).await;
+        updater::perform_update(gg_version, false).await;
     } else {
         updater::check_gg_update(gg_version).await;
     }
@@ -111,7 +110,16 @@ pub async fn check_or_update_all(input: &AppInput, should_update: bool, allow_ma
         return;
     }
 
-    println!("Checking {} tools for updates...", metas.len());
+    println!(
+        "Checking for updates: {}",
+        metas
+            .iter()
+            .filter_map(
+                |(meta, _)| <dyn Executor>::new(meta.cmd.clone()).map(|e| e.get_name().to_string())
+            )
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
 
     let semaphore = std::sync::Arc::new(Semaphore::new(5));
 
@@ -137,6 +145,8 @@ pub async fn check_or_update_all(input: &AppInput, should_update: bool, allow_ma
         .filter(|info| should_include_update(info, allow_major))
         .collect();
 
+    println!();
+
     for info in &update_infos {
         let current = info.current_version.as_deref().unwrap_or("NA");
         let latest = info.latest_version.as_deref().unwrap_or("NA");
@@ -155,34 +165,34 @@ pub async fn check_or_update_all(input: &AppInput, should_update: bool, allow_ma
     }
 
     if filtered_updates.is_empty() {
-        println!("All tools are up to date!");
+        println!("\nAll tools are up to date!");
         return;
     }
 
-    if should_update {
+    if !should_update {
+        println!(
+            "\nUpdates available for: {}",
+            filtered_updates
+                .iter()
+                .map(|info| info.tool_name.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+        println!("Run 'update -u' to update all tools, or 'update <tool> -u' for a specific tool.");
+        println!("For more options, run 'help'.");
+    } else {
         for info in filtered_updates {
-            if Confirm::new()
-                .with_prompt(&format!(
-                    "Update {} from {} to {}?",
-                    info.tool_name,
-                    info.current_version.as_deref().unwrap_or("NA"),
-                    info.latest_version.as_deref().unwrap_or("NA")
-                ))
-                .interact()
-                .unwrap_or(false)
-            {
-                println!("Updating {}...", info.tool_name);
-                if let Some(parent) = info.path.parent() {
-                    if fs::remove_dir_all(parent).is_ok() {
-                        let pb = create_barus();
-                        let _ = prep(&*info.executor, input, &pb).await;
-                        println!("Successfully updated {}", info.tool_name);
-                    } else {
-                        println!("Unable to update {}", info.tool_name);
-                    }
+            println!("Updating {}...", info.tool_name);
+            if let Some(parent) = info.path.parent() {
+                if fs::remove_dir_all(parent).is_ok() {
+                    let pb = create_barus();
+                    let _ = prep(&*info.executor, input, &pb).await;
+                    println!("Successfully updated {}", info.tool_name);
                 } else {
                     println!("Unable to update {}", info.tool_name);
                 }
+            } else {
+                println!("Unable to update {}", info.tool_name);
             }
         }
     }
@@ -217,32 +227,24 @@ pub async fn check_or_update_tool(
                     tool_name, current, latest
                 );
             } else if should_update {
-                if Confirm::new()
-                    .with_prompt(&format!(
-                        "Update {} from {} to {}?",
-                        tool_name, current, latest
-                    ))
-                    .interact()
-                    .unwrap_or(false)
-                {
-                    println!("Updating {}...", tool_name);
-                    if let Some(parent) = info.path.parent() {
-                        if fs::remove_dir_all(parent).is_ok() {
-                            let pb = create_barus();
-                            let _ = prep(&*info.executor, input, &pb).await;
-                            println!("Successfully updated {}", tool_name);
-                        } else {
-                            println!("Unable to update {}", tool_name);
-                        }
+                println!("Updating {}...", tool_name);
+                if let Some(parent) = info.path.parent() {
+                    if fs::remove_dir_all(parent).is_ok() {
+                        let pb = create_barus();
+                        let _ = prep(&*info.executor, input, &pb).await;
+                        println!("Successfully updated {}", tool_name);
                     } else {
                         println!("Unable to update {}", tool_name);
                     }
+                } else {
+                    println!("Unable to update {}", tool_name);
                 }
             } else {
                 println!(
-                    "{}: Current: {}, Latest: {} - Update available! Run 'update {} -u' to update.",
-                    tool_name, current, latest, tool_name
+                    "{}: Current: {}, Latest: {} - Update available",
+                    tool_name, current, latest
                 );
+                println!("Run 'update {} -u' to update.", tool_name);
             }
         } else {
             println!("Unable to check updates for {}", tool_name);

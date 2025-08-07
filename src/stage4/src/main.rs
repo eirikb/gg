@@ -52,12 +52,14 @@ Built in commands:
     update -u       Update all tools that have updates available
     update <tool>   Check for updates for specific tool (e.g., update flutter, update gg)
     update <tool> -u Update specific tool (e.g., update flutter -u, update gg -u)
+    update <tool> -u -f Force update specific tool even if up to date (e.g., update gg -u -f)
     help            Print help
     tools           List all available tools
     clean-cache     Clean cache (prompts for confirmation)
 
 Update options:
     -u              Actually perform the update (vs just checking)
+    -f              Force re-download even if already up to date (use with -u)
     --major         Include major version updates (default: skip major versions)
 
 Version syntax:
@@ -238,6 +240,7 @@ async fn main() -> ExitCode {
                 let tool_name = app_args.first().cloned();
                 let should_update = cli.get_update_flag();
                 let allow_major = cli.get_major_flag();
+                let force = cli.get_force_flag();
 
                 match tool_name.as_deref() {
                     None => {
@@ -251,7 +254,7 @@ async fn main() -> ExitCode {
                     }
                     Some("gg") | Some("gg.cmd") => {
                         if should_update {
-                            updater::perform_update(ver).await;
+                            updater::perform_update(ver, force).await;
                         } else {
                             updater::check_gg_update(ver).await;
                         }

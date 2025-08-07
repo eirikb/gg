@@ -25,7 +25,6 @@ indicatif = "0.17.5"
 which = { version = "7.0.3", features = ["regex"] }
 serde-xml-rs = "0.8.0"
 glob = "0.3.1"
-dialoguer = "0.11.0"
 octocrab = { version = "0.44.1", features = ["rustls-webpki-tokio"] }
 serde-java-properties = "0.2.0"
 sha256 = "1.2.2"

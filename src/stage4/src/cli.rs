@@ -76,6 +76,12 @@ pub enum Commands {
         update: bool,
         #[arg(long = "major", help = "Include major version updates")]
         major: bool,
+        #[arg(
+            short = 'f',
+            long = "force",
+            help = "Force re-download even if already up to date (requires -u)"
+        )]
+        force: bool,
     },
     #[command(about = "List all available tools")]
     Tools {
@@ -160,6 +166,14 @@ impl Cli {
             *major
         } else {
             self.major_flag
+        }
+    }
+
+    pub fn get_force_flag(&self) -> bool {
+        if let Some(Commands::Update { force, .. }) = &self.command {
+            *force
+        } else {
+            false
         }
     }
 }
