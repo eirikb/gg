@@ -91,18 +91,24 @@ pub async fn check_or_update_all_including_gg(
     gg_version: &str,
     should_update: bool,
     allow_major: bool,
+    force: bool,
 ) {
     if should_update {
-        updater::perform_update(gg_version, false).await;
+        updater::perform_update(gg_version, force).await;
     } else {
         updater::check_gg_update(gg_version).await;
     }
     println!();
 
-    check_or_update_all(input, should_update, allow_major).await;
+    check_or_update_all(input, should_update, allow_major, force).await;
 }
 
-pub async fn check_or_update_all(input: &AppInput, should_update: bool, allow_major: bool) {
+pub async fn check_or_update_all(
+    input: &AppInput,
+    should_update: bool,
+    allow_major: bool,
+    force: bool,
+) {
     let metas = get_all_tool_metas().await;
 
     if metas.is_empty() {
@@ -140,17 +146,23 @@ pub async fn check_or_update_all(input: &AppInput, should_update: bool, allow_ma
         .filter_map(|x| x)
         .collect();
 
-    let filtered_updates: Vec<&UpdateInfo> = update_infos
-        .iter()
-        .filter(|info| should_include_update(info, allow_major))
-        .collect();
+    let filtered_updates: Vec<&UpdateInfo> = if force {
+        update_infos.iter().collect()
+    } else {
+        update_infos
+            .iter()
+            .filter(|info| should_include_update(info, allow_major))
+            .collect()
+    };
 
     println!();
 
     for info in &update_infos {
         let current = info.current_version.as_deref().unwrap_or("NA");
         let latest = info.latest_version.as_deref().unwrap_or("NA");
-        let status = if !info.needs_update {
+        let status = if force {
+            "Will force update"
+        } else if !info.needs_update {
             "Up to date"
         } else if info.is_major_update && !allow_major {
             "Major update available (use --major to include)"
@@ -203,6 +215,7 @@ pub async fn check_or_update_tool(
     tool_name: &str,
     should_update: bool,
     allow_major: bool,
+    force: bool,
 ) {
     let metas = get_all_tool_metas().await;
 
@@ -219,7 +232,20 @@ pub async fn check_or_update_tool(
             let current = info.current_version.as_deref().unwrap_or("NA");
             let latest = info.latest_version.as_deref().unwrap_or("NA");
 
-            if !info.needs_update {
+            if force && should_update {
+                println!("Force updating {}...", tool_name);
+                if let Some(parent) = info.path.parent() {
+                    if fs::remove_dir_all(parent).is_ok() {
+                        let pb = create_barus();
+                        let _ = prep(&*info.executor, input, &pb).await;
+                        println!("Successfully updated {}", tool_name);
+                    } else {
+                        println!("Unable to update {}", tool_name);
+                    }
+                } else {
+                    println!("Unable to update {}", tool_name);
+                }
+            } else if !info.needs_update {
                 println!("{}: Already up to date (version {})", tool_name, current);
             } else if info.is_major_update && !allow_major {
                 println!(
