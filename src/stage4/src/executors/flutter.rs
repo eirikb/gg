@@ -120,10 +120,13 @@ impl Executor for Flutter {
     }
 
     fn get_bins(&self, _input: &AppInput) -> Vec<BinPattern> {
-        vec![
-            BinPattern::Exact("bin/flutter".to_string()),
-            BinPattern::Exact("bin/dart".to_string()),
-        ]
+        vec![BinPattern::Exact(
+            match self.executor_cmd.cmd.as_str() {
+                "dart" => "bin/dart",
+                _ => "bin/flutter",
+            }
+            .to_string(),
+        )]
     }
 
     fn get_name(&self) -> &str {
