@@ -108,6 +108,10 @@ impl GitHub {
     fn is_likely_binary(name: &str) -> bool {
         let name_lower = name.to_lowercase();
 
+        if name_lower.ends_with(".msi") {
+            return false;
+        }
+
         let binary_extensions = [".exe", ".zip", ".tar.gz", ".tgz", ".tar.bz2"];
 
         for ext in &binary_extensions {
