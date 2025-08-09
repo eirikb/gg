@@ -206,7 +206,16 @@ async fn main() -> ExitCode {
             .init();
     }
 
-    let cache_base_dir = env::var("GG_CACHE_DIR").unwrap_or_else(|_| ".cache/gg".to_string());
+    let cache_base_dir = env::var("GG_CACHE_DIR").unwrap_or_else(|_| {
+        if cli.local_cache {
+            ".cache/gg".to_string()
+        } else {
+            let home_dir = env::var("HOME").unwrap_or_else(|_| ".".to_string());
+            format!("{}/.cache/gg", home_dir)
+        }
+    });
+
+    env::set_var("GG_CACHE_DIR", &cache_base_dir);
     info!("Using cache directory: {}", cache_base_dir);
     let system = fs::read_to_string(format!("{}/gg-{ver}/system", cache_base_dir))
         .unwrap_or(String::from("x86_64-linux"))
@@ -261,8 +270,14 @@ async fn main() -> ExitCode {
                         }
                     }
                     Some(tool) => {
-                        checker::check_or_update_tool(input, tool, should_update, allow_major, force)
-                            .await;
+                        checker::check_or_update_tool(
+                            input,
+                            tool,
+                            should_update,
+                            allow_major,
+                            force,
+                        )
+                        .await;
                     }
                 }
                 return ExitCode::from(0);
