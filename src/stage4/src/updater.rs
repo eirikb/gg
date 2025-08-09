@@ -203,7 +203,7 @@ pub async fn perform_update(ver: &str, force: bool) {
 
     let final_path = env::var("GG_CMD_PATH").unwrap_or_else(|_| "gg.cmd".to_string());
     let final_path = final_path.replace('\\', "/");
-    let temp_path = format!("{}.tmp", final_path);
+    let temp_path = format!("{}.tmp.cmd", final_path);
 
     println!("Updating: {}", final_path);
 
