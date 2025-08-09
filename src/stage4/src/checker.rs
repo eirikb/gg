@@ -4,12 +4,15 @@ use crate::updater;
 use crate::Executor;
 use futures_util::future::join_all;
 use glob;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use log::{debug, info};
+use std::collections::HashMap;
 use std::fs;
 use tokio::sync::Semaphore;
 
 struct UpdateInfo {
     tool_name: String,
+    version_selector: String,
     current_version: Option<String>,
     latest_version: Option<String>,
     needs_update: bool,
@@ -23,9 +26,23 @@ async fn check_tool_update(
     path: std::path::PathBuf,
     input: &AppInput,
 ) -> Option<UpdateInfo> {
+    info!(
+        "Checking tool update for cmd: {:?} with version: {:?}",
+        meta.cmd.cmd, meta.cmd.version
+    );
     if let Some(executor) = <dyn Executor>::new(meta.cmd.clone()) {
+        info!(
+            "Created executor for: {} (cmd was: {})",
+            executor.get_name(),
+            meta.cmd.cmd
+        );
         let urls = executor.get_download_urls(input).await;
-        info!("Got {} urls for {}", urls.len(), executor.get_name());
+        info!(
+            "Got {} urls for {} (cmd: {})",
+            urls.len(),
+            executor.get_name(),
+            meta.cmd.cmd
+        );
         let urls_matches = executor.get_url_matches(&urls, input);
         info!(
             "Got {} url matches for {}",
@@ -50,8 +67,11 @@ async fn check_tool_update(
                 false
             };
 
+            let version_selector = meta.cmd.to_version_selector();
+
             return Some(UpdateInfo {
                 tool_name: executor.get_name().to_string(),
+                version_selector,
                 current_version: current_version.map(|v| v.to_string()),
                 latest_version: latest_version.map(|v| v.to_string()),
                 needs_update,
@@ -77,12 +97,22 @@ async fn get_all_tool_metas() -> Vec<(GgMeta, std::path::PathBuf)> {
         for path in paths.flatten() {
             info!("Reading meta from {}", path.display());
             if let Ok(content) = fs::read_to_string(&path) {
-                if let Ok(meta) = serde_json::from_str::<GgMeta>(&content) {
-                    metas.push((meta, path));
+                match serde_json::from_str::<GgMeta>(&content) {
+                    Ok(meta) => {
+                        info!(
+                            "Successfully parsed meta for: {:?} with version: {:?}",
+                            meta.cmd.cmd, meta.cmd.version
+                        );
+                        metas.push((meta, path));
+                    }
+                    Err(e) => {
+                        info!("Failed to parse meta from {}: {}", path.display(), e);
+                    }
                 }
             }
         }
     }
+    info!("Found {} total metas", metas.len());
     metas
 }
 
@@ -116,26 +146,59 @@ pub async fn check_or_update_all(
         return;
     }
 
-    println!(
-        "Checking for updates: {}",
-        metas
-            .iter()
-            .filter_map(
-                |(meta, _)| <dyn Executor>::new(meta.cmd.clone()).map(|e| e.get_name().to_string())
-            )
-            .collect::<Vec<_>>()
-            .join(", ")
-    );
+    println!("Checking for updates...");
+
+    let m = MultiProgress::new();
+    let spinner_style = ProgressStyle::with_template("{prefix:.bold} {spinner:.green} {msg}")
+        .unwrap()
+        .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏", "✓"]);
 
     let semaphore = std::sync::Arc::new(Semaphore::new(5));
+
+    let mut tool_spinners: HashMap<String, ProgressBar> = HashMap::new();
+
+    for (meta, _) in &metas {
+        if let Some(executor) = <dyn Executor>::new(meta.cmd.clone()) {
+            let tool_name = executor.get_name().to_string();
+            let version_selector = meta.cmd.to_version_selector();
+
+            let unique_key = if version_selector.is_empty() {
+                tool_name.clone()
+            } else {
+                format!("{}{}", tool_name, version_selector)
+            };
+
+            let pb = m.add(ProgressBar::new_spinner());
+            pb.set_style(spinner_style.clone());
+            pb.set_prefix(format!("{:<20}", unique_key));
+            pb.set_message("checking...");
+            pb.enable_steady_tick(std::time::Duration::from_millis(80));
+
+            tool_spinners.insert(unique_key, pb);
+        }
+    }
 
     let check_tasks: Vec<_> = metas
         .into_iter()
         .map(|(meta, path)| {
             let semaphore = semaphore.clone();
+            let tool_spinners = tool_spinners.clone();
             async move {
                 let _permit = semaphore.acquire().await.unwrap();
-                check_tool_update(meta, path, input).await
+                let result = check_tool_update(meta, path, input).await;
+
+                if let Some(ref info) = result {
+                    let unique_key = if info.version_selector.is_empty() {
+                        info.tool_name.clone()
+                    } else {
+                        format!("{}{}", info.tool_name, info.version_selector)
+                    };
+                    if let Some(pb) = tool_spinners.get(&unique_key) {
+                        pb.finish_with_message("done");
+                    }
+                }
+
+                result
             }
         })
         .collect();
@@ -145,6 +208,8 @@ pub async fn check_or_update_all(
         .into_iter()
         .filter_map(|x| x)
         .collect();
+
+    m.clear().unwrap();
 
     let filtered_updates: Vec<&UpdateInfo> = if force {
         update_infos.iter().collect()
@@ -157,23 +222,39 @@ pub async fn check_or_update_all(
 
     println!();
 
+    let mut grouped_tools: HashMap<String, Vec<&UpdateInfo>> = HashMap::new();
     for info in &update_infos {
-        let current = info.current_version.as_deref().unwrap_or("NA");
-        let latest = info.latest_version.as_deref().unwrap_or("NA");
-        let status = if force {
-            "Will force update"
-        } else if !info.needs_update {
-            "Up to date"
-        } else if info.is_major_update && !allow_major {
-            "Major update available (use --major to include)"
-        } else {
-            "Update available"
-        };
+        grouped_tools
+            .entry(info.tool_name.clone())
+            .or_insert(Vec::new())
+            .push(info);
+    }
 
-        println!(
-            "{}: Current: {}, Latest: {} - {}",
-            info.tool_name, current, latest, status
-        );
+    for (_tool_name, infos) in grouped_tools {
+        for info in infos {
+            let current = info.current_version.as_deref().unwrap_or("NA");
+            let latest = info.latest_version.as_deref().unwrap_or("NA");
+            let status = if force {
+                "Will force update"
+            } else if !info.needs_update {
+                "Up to date"
+            } else if info.is_major_update && !allow_major {
+                "Major update available (use --major to include)"
+            } else {
+                "Update available"
+            };
+
+            let display_name = if info.version_selector.is_empty() {
+                info.tool_name.clone()
+            } else {
+                format!("{}{}", info.tool_name, info.version_selector)
+            };
+
+            println!(
+                "{}: Current: {}, Latest: {} - {}",
+                display_name, current, latest, status
+            );
+        }
     }
 
     if filtered_updates.is_empty() {
@@ -232,8 +313,16 @@ pub async fn check_or_update_tool(
             let current = info.current_version.as_deref().unwrap_or("NA");
             let latest = info.latest_version.as_deref().unwrap_or("NA");
 
-            if force && should_update {
-                println!("Force updating {}...", tool_name);
+            let should_perform_update = should_update
+                && ((force) || (info.needs_update && (allow_major || !info.is_major_update)));
+
+            if should_perform_update {
+                if force {
+                    println!("Force updating {}...", tool_name);
+                } else {
+                    println!("Updating {}...", tool_name);
+                }
+
                 if let Some(parent) = info.path.parent() {
                     if fs::remove_dir_all(parent).is_ok() {
                         let pb = create_barus();
@@ -252,19 +341,6 @@ pub async fn check_or_update_tool(
                     "{}: Current: {}, Latest: {} - Major update available (use --major to include)",
                     tool_name, current, latest
                 );
-            } else if should_update {
-                println!("Updating {}...", tool_name);
-                if let Some(parent) = info.path.parent() {
-                    if fs::remove_dir_all(parent).is_ok() {
-                        let pb = create_barus();
-                        let _ = prep(&*info.executor, input, &pb).await;
-                        println!("Successfully updated {}", tool_name);
-                    } else {
-                        println!("Unable to update {}", tool_name);
-                    }
-                } else {
-                    println!("Unable to update {}", tool_name);
-                }
             } else {
                 println!(
                     "{}: Current: {}, Latest: {} - Update available",

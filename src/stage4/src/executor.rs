@@ -66,7 +66,6 @@ impl GgVersionReq {
         VersionReq::parse(&self.0).unwrap()
     }
 
-    #[cfg(test)]
     pub fn to_string(&self) -> String {
         self.0.clone()
     }
@@ -208,8 +207,37 @@ impl ExecutorDep {
     }
 }
 
-#[cfg(test)]
-impl ExecutorCmd {}
+impl ExecutorCmd {
+    pub fn to_version_selector(&self) -> String {
+        let mut selector = String::new();
+
+        if let Some(version) = &self.version {
+            selector.push('@');
+            selector.push_str(&version.to_string());
+        }
+
+        if let Some(distribution) = &self.distribution {
+            if !selector.is_empty() {
+                selector.push('-');
+            } else {
+                selector.push_str("@-");
+            }
+            selector.push_str(distribution);
+        }
+
+        for tag in &self.include_tags {
+            selector.push('+');
+            selector.push_str(tag);
+        }
+
+        for tag in &self.exclude_tags {
+            selector.push('-');
+            selector.push_str(tag);
+        }
+
+        selector
+    }
+}
 
 use crate::tools::get_tool_info;
 
