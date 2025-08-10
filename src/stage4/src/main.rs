@@ -9,6 +9,7 @@ use log::{debug, info, LevelFilter};
 
 use crate::barus::create_barus;
 use crate::cli::Cli;
+use crate::config::GgConfig;
 use crate::executor::{prep, try_run, AppInput, Executor, ExecutorCmd, GgVersionReq};
 use crate::target::Target;
 use clap::Parser;
@@ -19,6 +20,7 @@ mod bloody_maven;
 mod checker;
 mod cleaner;
 mod cli;
+mod config;
 mod executor;
 mod executors;
 mod target;
@@ -56,6 +58,8 @@ Built in commands:
     help            Print help
     tools           List all available tools
     clean-cache     Clean cache (prompts for confirmation)
+    config init     Create a new gg.toml configuration file
+    config show     Show current configuration
 
 Update options:
     -u              Actually perform the update (vs just checking)
@@ -224,7 +228,8 @@ async fn main() -> ExitCode {
     let target =
         Target::parse_with_overrides(&system, cli.override_os.clone(), cli.override_arch.clone());
 
-    let (cmds, app_args) = cli.parse_args();
+    let config = GgConfig::load();
+    let (cmds, app_args) = cli.parse_args(&config);
 
     let input = &AppInput {
         target,
@@ -307,6 +312,20 @@ async fn main() -> ExitCode {
             }
             "clean-cache" => {
                 if let Err(e) = cleaner::clean_cache() {
+                    println!("Error: {}", e);
+                    return ExitCode::from(1);
+                }
+                return ExitCode::from(0);
+            }
+            "config-init" => {
+                if let Err(e) = GgConfig::init_config() {
+                    println!("Error: {}", e);
+                    return ExitCode::from(1);
+                }
+                return ExitCode::from(0);
+            }
+            "config-show" => {
+                if let Err(e) = config.show_config() {
                     println!("Error: {}", e);
                     return ExitCode::from(1);
                 }

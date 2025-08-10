@@ -1,3 +1,4 @@
+use crate::config::GgConfig;
 use clap::{ArgAction, Parser, Subcommand};
 use regex::{Match, Regex};
 use std::collections::HashSet;
@@ -90,10 +91,23 @@ pub enum Commands {
     },
     #[command(name = "clean-cache", about = "Clean cache (prompts for confirmation)")]
     CleanCache,
+    #[command(about = "Manage gg configuration")]
+    Config {
+        #[command(subcommand)]
+        action: ConfigAction,
+    },
+}
+
+#[derive(Subcommand, Debug, Clone)]
+pub enum ConfigAction {
+    #[command(about = "Initialize a new gg.toml config file")]
+    Init,
+    #[command(about = "Show current configuration")]
+    Show,
 }
 
 impl Cli {
-    pub fn parse_args(&self) -> (Vec<ClapCmd>, Vec<String>) {
+    pub fn parse_args(&self, config: &GgConfig) -> (Vec<ClapCmd>, Vec<String>) {
         if let Some(command) = &self.command {
             match command {
                 Commands::Update { tool, .. } => {
@@ -132,12 +146,41 @@ impl Cli {
                     }],
                     vec![],
                 ),
+                Commands::Config { action } => {
+                    let cmd = match action {
+                        ConfigAction::Init => "config-init",
+                        ConfigAction::Show => "config-show",
+                    };
+                    (
+                        vec![ClapCmd {
+                            cmd: cmd.to_string(),
+                            version: None,
+                            distribution: None,
+                            include_tags: HashSet::new(),
+                            exclude_tags: HashSet::new(),
+                        }],
+                        vec![],
+                    )
+                }
             }
         } else {
             if let Some(first_arg) = self.args.first() {
-                let cmds = parse_command_string(first_arg);
-                let app_args = self.args[1..].to_vec();
-                (cmds, app_args)
+                if let Some(alias_args) = config.resolve_alias(first_arg) {
+                    let mut expanded_args = alias_args;
+                    expanded_args.extend_from_slice(&self.args[1..]);
+
+                    let cmds = if let Some(cmd_part) = expanded_args.first() {
+                        parse_command_string(cmd_part, config)
+                    } else {
+                        vec![]
+                    };
+                    let app_args = expanded_args[1..].to_vec();
+                    (cmds, app_args)
+                } else {
+                    let cmds = parse_command_string(first_arg, config);
+                    let app_args = self.args[1..].to_vec();
+                    (cmds, app_args)
+                }
             } else {
                 (vec![], vec![])
             }
@@ -178,7 +221,7 @@ impl Cli {
     }
 }
 
-fn parse_command_string(cmd_string: &str) -> Vec<ClapCmd> {
+fn parse_command_string(cmd_string: &str, config: &GgConfig) -> Vec<ClapCmd> {
     cmd_string
         .split(":")
         .filter(|s| !s.is_empty())
@@ -190,9 +233,14 @@ fn parse_command_string(cmd_string: &str) -> Vec<ClapCmd> {
             let mut version = None;
             let mut distribution = None;
 
-            if parts.len() == 2 {
+            let base_cmd = if parts.len() >= 2 {
                 cmd = parts[0].to_string();
+                parts[0].clone()
+            } else {
+                cmd.clone()
+            };
 
+            if parts.len() == 2 {
                 let alles = parts[1].to_string();
                 let mut version_dist_end = alles.len();
                 let mut chars = alles.char_indices().peekable();
@@ -263,6 +311,12 @@ fn parse_command_string(cmd_string: &str) -> Vec<ClapCmd> {
                 }
             }
 
+            if version.is_none() {
+                if let Some(dep_version) = config.dependencies.get(&base_cmd) {
+                    version = Some(dep_version.clone());
+                }
+            }
+
             ClapCmd {
                 cmd,
                 version,
@@ -289,7 +343,8 @@ mod tests {
     #[test]
     fn test_node_with_args() {
         let cli = parse_test_args(vec!["node", "hello", "world"]);
-        let (cmds, app_args) = cli.parse_args();
+        let config = GgConfig::default();
+        let (cmds, app_args) = cli.parse_args(&config);
         assert_eq!(cmds[0].cmd, "node");
         assert_eq!(app_args, vec!["hello", "world"]);
     }
@@ -298,7 +353,8 @@ mod tests {
     fn test_version_flag() {
         let cli = parse_test_args(vec!["-V", "node", "hello", "world"]);
         assert!(cli.version);
-        let (cmds, app_args) = cli.parse_args();
+        let config = GgConfig::default();
+        let (cmds, app_args) = cli.parse_args(&config);
         assert_eq!(cmds[0].cmd, "node");
         assert_eq!(app_args, vec!["hello", "world"]);
     }
@@ -318,14 +374,16 @@ mod tests {
     #[test]
     fn test_update_command() {
         let cli = parse_test_args(vec!["update"]);
-        let (cmds, _) = cli.parse_args();
+        let config = GgConfig::default();
+        let (cmds, _) = cli.parse_args(&config);
         assert_eq!(cmds[0].cmd, "update");
     }
 
     #[test]
     fn test_versioning() {
         let cli = parse_test_args(vec!["node@10:gradle@1.2.3", "hello", "world"]);
-        let (cmds, app_args) = cli.parse_args();
+        let config = GgConfig::default();
+        let (cmds, app_args) = cli.parse_args(&config);
 
         assert_eq!(cmds[0].cmd, "node");
         assert_eq!(cmds[0].version.as_ref().unwrap(), "10");
@@ -349,7 +407,8 @@ mod tests {
         ]);
         assert_eq!(cli.override_os.as_ref().unwrap(), "windows");
         assert_eq!(cli.override_arch.as_ref().unwrap(), "arm64");
-        let (cmds, app_args) = cli.parse_args();
+        let config = GgConfig::default();
+        let (cmds, app_args) = cli.parse_args(&config);
         assert_eq!(cmds[0].cmd, "deno");
         assert_eq!(app_args, vec!["--version"]);
     }
@@ -357,7 +416,8 @@ mod tests {
     #[test]
     fn test_distribution_parsing() {
         let cli = parse_test_args(vec!["java@17-temurin", "hello"]);
-        let (cmds, app_args) = cli.parse_args();
+        let config = GgConfig::default();
+        let (cmds, app_args) = cli.parse_args(&config);
         assert_eq!(cmds[0].cmd, "java");
         assert_eq!(cmds[0].version.as_ref().unwrap(), "17");
         assert_eq!(cmds[0].distribution.as_ref().unwrap(), "temurin");
@@ -367,12 +427,98 @@ mod tests {
     #[test]
     fn test_distribution_with_tags() {
         let cli = parse_test_args(vec!["java@17-temurin+lts-ea", "hello"]);
-        let (cmds, app_args) = cli.parse_args();
+        let config = GgConfig::default();
+        let (cmds, app_args) = cli.parse_args(&config);
         assert_eq!(cmds[0].cmd, "java");
         assert_eq!(cmds[0].version.as_ref().unwrap(), "17");
         assert_eq!(cmds[0].distribution.as_ref().unwrap(), "temurin");
         assert!(cmds[0].include_tags.contains("lts"));
         assert!(cmds[0].exclude_tags.contains("ea"));
         assert_eq!(app_args, vec!["hello"]);
+    }
+
+    #[test]
+    fn test_alias_expansion() {
+        let cli = parse_test_args(vec!["build", "extra", "args"]);
+        let mut config = GgConfig::default();
+        config
+            .aliases
+            .insert("build".to_string(), "gradle clean build".to_string());
+
+        let (cmds, app_args) = cli.parse_args(&config);
+        assert_eq!(cmds[0].cmd, "gradle");
+        assert_eq!(app_args, vec!["clean", "build", "extra", "args"]);
+    }
+
+    #[test]
+    fn test_alias_with_version() {
+        let cli = parse_test_args(vec!["serve", "--port", "8080"]);
+        let mut config = GgConfig::default();
+        config
+            .aliases
+            .insert("serve".to_string(), "node@18 server.js".to_string());
+
+        let (cmds, app_args) = cli.parse_args(&config);
+        assert_eq!(cmds[0].cmd, "node");
+        assert_eq!(cmds[0].version.as_ref().unwrap(), "18");
+        assert_eq!(app_args, vec!["server.js", "--port", "8080"]);
+    }
+
+    #[test]
+    fn test_dependency_version_resolution() {
+        let cli = parse_test_args(vec!["node", "--version"]);
+        let mut config = GgConfig::default();
+        config
+            .dependencies
+            .insert("node".to_string(), "^18.0.0".to_string());
+
+        let (cmds, app_args) = cli.parse_args(&config);
+        assert_eq!(cmds[0].cmd, "node");
+        assert_eq!(cmds[0].version.as_ref().unwrap(), "^18.0.0");
+        assert_eq!(app_args, vec!["--version"]);
+    }
+
+    #[test]
+    fn test_explicit_version_overrides_dependency() {
+        let cli = parse_test_args(vec!["node@20", "--version"]);
+        let mut config = GgConfig::default();
+        config
+            .dependencies
+            .insert("node".to_string(), "^18.0.0".to_string());
+
+        let (cmds, app_args) = cli.parse_args(&config);
+        assert_eq!(cmds[0].cmd, "node");
+        assert_eq!(cmds[0].version.as_ref().unwrap(), "20");
+        assert_eq!(app_args, vec!["--version"]);
+    }
+
+    #[test]
+    fn test_dependency_version_with_multiple_tools() {
+        let cli = parse_test_args(vec!["node:java", "run"]);
+        let mut config = GgConfig::default();
+        config
+            .dependencies
+            .insert("node".to_string(), "^18.0.0".to_string());
+        config
+            .dependencies
+            .insert("java".to_string(), "17".to_string());
+
+        let (cmds, app_args) = cli.parse_args(&config);
+        assert_eq!(cmds[0].cmd, "node");
+        assert_eq!(cmds[0].version.as_ref().unwrap(), "^18.0.0");
+        assert_eq!(cmds[1].cmd, "java");
+        assert_eq!(cmds[1].version.as_ref().unwrap(), "17");
+        assert_eq!(app_args, vec!["run"]);
+    }
+
+    #[test]
+    fn test_no_dependency_no_version() {
+        let cli = parse_test_args(vec!["python", "--version"]);
+        let config = GgConfig::default();
+
+        let (cmds, app_args) = cli.parse_args(&config);
+        assert_eq!(cmds[0].cmd, "python");
+        assert!(cmds[0].version.is_none());
+        assert_eq!(app_args, vec!["--version"]);
     }
 }
