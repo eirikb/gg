@@ -36,6 +36,7 @@ As a result, your colleagues would not have to install anything on their host ma
 ## Features
 
 - **Zero dependencies** - Works on minimal containers (Alpine, Ubuntu) without curl/wget or CA certificates
+- **Configuration system** - Define version requirements and command aliases via `gg.toml` files
 - Simplify the management of other executables in your project
 - Automatically detect and execute the required executable version using project configuration files (such
   as `package.json` for Node.js projects)
@@ -48,6 +49,83 @@ By default, installs tools in a global cache directory (`$HOME/.cache/gg` on Uni
 Windows).
 Use the `-l` flag to use a local cache (`.cache/gg` in current directory) instead.
 Adds every dependency into `PATH` before executing.
+
+## Configuration
+
+`gg.cmd` supports project-specific configuration via a `gg.toml` file. This allows you to define version requirements
+and command aliases for your project.
+
+Note, this is not a full task runner, if you need a full task runner, consider using [just](https://just.systems/),
+
+### Creating a Configuration File
+
+Create a `gg.toml` configuration file in your project root:
+
+```bash
+./gg.cmd config init
+```
+
+This creates a `gg.toml` file with the following structure:
+
+```toml
+# gg configuration file
+# See https://github.com/eirikb/gg for more information
+
+[dependencies]
+# Define version requirements for tools
+# Examples:
+# node = "^18.0.0"
+# java = "17"
+# gradle = "~7.6.0"
+
+[aliases]
+# Define command shortcuts
+# Examples:
+# build = "gradle clean build"
+# serve = "node@18 server.js"
+# test = "npm test"
+```
+
+### Configuration Features
+
+**Version Dependencies**: Ensure team members use compatible tool versions
+
+```toml
+[dependencies]
+node = "^18.0.0"      # Allow 18.x.x versions
+java = "17"           # Require exactly Java 17
+gradle = "~7.6.0"     # Allow 7.6.x versions
+```
+
+**Command Aliases**: Create shortcuts for common commands
+
+```toml
+[aliases]
+build = "gradle clean build"
+serve = "node@18 server.js --port 3000"
+test = "npm test"
+gen = "dart scripts/generate.dart"
+```
+
+### Using Aliases
+
+Once defined, aliases can be used directly:
+
+```bash
+./gg.cmd build           # Expands to: ./gg.cmd gradle clean build
+./gg.cmd serve --dev     # Expands to: ./gg.cmd node@18 server.js --port 3000 --dev  
+./gg.cmd test --coverage # Expands to: ./gg.cmd npm test --coverage
+```
+
+### Viewing Configuration
+
+View your current configuration:
+
+```bash
+./gg.cmd config show
+```
+
+This will display the configuration file location, its contents, and parsed aliases/dependencies.
 
 ## Usage
 
@@ -74,16 +152,27 @@ Options:
     -vv             Debug output
     -vvv            Trace output
     -w              Even more output
+    -h, --help      Print help
     -V, --version   Print version
     --os <OS>       Override target OS (windows, linux, mac)
     --arch <ARCH>   Override target architecture (x86_64, arm64, armv7)
 
 Built in commands:
-    update          Update gg.cmd
+    update          Check for updates for all tools (including gg)
+    update -u       Update all tools that have updates available
+    update <tool>   Check for updates for specific tool (e.g., update flutter, update gg)
+    update <tool> -u Update specific tool (e.g., update flutter -u, update gg -u)
+    update <tool> -u -f Force update specific tool even if up to date (e.g., update gg -u -f)
     help            Print help
-    check           Check for updates
-    check-update    Check for updates and update if available
+    tools           List all available tools
     clean-cache     Clean cache (prompts for confirmation)
+    config init     Create a new gg.toml configuration file
+    config show     Show current configuration
+
+Update options:
+    -u              Actually perform the update (vs just checking)
+    -f              Force re-download even if already up to date (use with -u)
+    --major         Include major version updates (default: skip major versions)
 
 Version syntax:
     @X              Any X.y.z version (e.g. node@14 for any Node.js 14.x.y)
@@ -93,30 +182,42 @@ Version syntax:
     @~X.Y.Z         X.Y.Z or any newer patch version (tilde prefix)
     @=X.Y.Z         Exactly X.Y.Z version (equals prefix, same as X.Y.Z without prefix)
 
-Supported tools:
-    node (npm, npx will also work, version refers to node version)
-    gradle
-    java
-    jbang
-    maven (mvn)
-    bld
-    openapi
-    rat (ra)
-    deno
-    go
-    caddy
-    just
-    fortio
-    flutter (dart will also work)
-    run (any arbitrary command)
-    gh/<owner>/<repo> (GitHub releases)
+Examples:
+    ./gg.cmd node
+    ./gg.cmd -l node                                      (use local cache)
+    ./gg.cmd gradle@6:java@17 clean build
+    ./gg.cmd -l gradle@6:java@17 clean build             (use local cache)
+    ./gg.cmd node@10 -e 'console.log(1)'
+    ./gg.cmd node@14.17.0 -v
+    ./gg.cmd -vv -w npm@14 start
+    ./gg.cmd java@-jdk+jre -version
+    ./gg.cmd jbang hello.java
+    ./gg.cmd bld version
+    ./gg.cmd maven compile
+    ./gg.cmd run:java@17 soapui
+    ./gg.cmd run:java@14 env
+    ./gg.cmd update
+    ./gg.cmd gh/cli/cli --version
+    ./gg.cmd --os windows --arch x86_64 deno --version    (test Windows Deno on Linux)
+    ./gg.cmd --os mac deno --help                         (test macOS Deno from anywhere)
+
+Example tools:
+    node        Node.js JavaScript runtime (npm, npx will also work)
+    java        Java runtime and development kit
+    gradle      Gradle build automation tool
+    go          Go programming language
+    flutter     Flutter SDK (dart will also work)
+
+Run 'gg tools' to see all available tools with descriptions
+
+GitHub repos can be accessed directly:
+    gh/<owner>/<repo>    Any GitHub release (e.g. gh/cli/cli)
 
 Available tags by tools:
     java: +jdk, +jre, +lts, +sts, +mts, +ea, +ga, +headless, +headfull, +fx, +normal, +hotspot (defaults: +jdk, +ga)
     node: +lts
     go: +beta (excluded by default)
     openapi: +beta (excluded by default)
-    flutter: +beta (excluded by default)
 ```
 
 ## Node
@@ -228,6 +329,35 @@ For instance, one can run [GitHub's CLI tool](https://cli.github.com/):
 > sh ./gg.cmd gh/cli/cli --version
 gh version 2.73.0 (2025-05-19)
 https://github.com/cli/cli/releases/tag/v2.73.0
+```
+
+### Using Configuration and Aliases
+
+Create a `gg.toml` configuration file:
+
+```bash
+./gg.cmd config init
+```
+
+Add some aliases and dependencies:
+
+```toml
+[dependencies]
+node = "^18.0.0"
+gradle = "~7.6.0"
+
+[aliases]
+dev = "node@18 server.js --dev"
+build = "gradle clean build"
+test = "npm test --coverage"
+```
+
+Now use the aliases:
+
+```bash
+./gg.cmd dev                # Runs: ./gg.cmd node@18 server.js --dev
+./gg.cmd build --parallel   # Runs: ./gg.cmd gradle clean build --parallel
+./gg.cmd test               # Runs: ./gg.cmd npm test --coverage
 ```
 
 ## Cache Management
