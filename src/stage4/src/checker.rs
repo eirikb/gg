@@ -297,12 +297,28 @@ pub async fn check_or_update_tool(
     should_update: bool,
     allow_major: bool,
     force: bool,
+    config: &crate::config::GgConfig,
 ) {
     let metas = get_all_tool_metas().await;
 
+    let config_version = config.dependencies.get(tool_name);
+
     let matching_meta = metas.into_iter().find(|(meta, _)| {
         if let Some(executor) = <dyn Executor>::new(meta.cmd.clone()) {
-            executor.get_name() == tool_name
+            let name_matches = executor.get_name() == tool_name;
+
+            if let Some(config_ver) = config_version {
+                if let Some(version_req) = crate::executor::GgVersionReq::new(config_ver) {
+                    if let Some(meta_version) = &meta.download.version {
+                        return name_matches
+                            && version_req
+                                .to_version_req()
+                                .matches(&meta_version.to_version());
+                    }
+                }
+            }
+
+            name_matches
         } else {
             false
         }
