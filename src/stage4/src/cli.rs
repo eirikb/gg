@@ -165,6 +165,21 @@ impl Cli {
             }
         } else {
             if let Some(first_arg) = self.args.first() {
+                if let Some(alias_commands) = config.resolve_alias_with_and(first_arg) {
+                    if alias_commands.len() > 1 {
+                        return (
+                            vec![ClapCmd {
+                                cmd: format!("__multi_alias__{}", first_arg),
+                                version: None,
+                                distribution: None,
+                                include_tags: HashSet::new(),
+                                exclude_tags: HashSet::new(),
+                            }],
+                            self.args[1..].to_vec(),
+                        );
+                    }
+                }
+
                 if let Some(alias_args) = config.resolve_alias(first_arg) {
                     let mut expanded_args = alias_args;
                     expanded_args.extend_from_slice(&self.args[1..]);

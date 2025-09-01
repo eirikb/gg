@@ -71,6 +71,16 @@ impl GgConfig {
             .map(|alias_cmd| shlex::split(alias_cmd).unwrap_or_else(|| vec![alias_cmd.clone()]))
     }
 
+    pub fn resolve_alias_with_and(&self, command: &str) -> Option<Vec<Vec<String>>> {
+        self.aliases.get(command).map(|alias_cmd| {
+            alias_cmd
+                .split("&&")
+                .map(|cmd| cmd.trim())
+                .map(|cmd| shlex::split(cmd).unwrap_or_else(|| vec![cmd.to_string()]))
+                .collect()
+        })
+    }
+
     pub fn init_config() -> Result<(), String> {
         let config_path = Path::new("gg.toml");
 
@@ -195,5 +205,20 @@ test = "npm test"
         assert_eq!(quoted_resolved, vec!["echo", "hello world"]);
 
         assert!(config.resolve_alias("nonexistent").is_none());
+    }
+
+    #[test]
+    fn test_alias_with_and_operator() {
+        let mut config = GgConfig::default();
+        config.aliases.insert(
+            "build-and-test".to_string(),
+            "gradle clean build && npm test".to_string(),
+        );
+
+        let resolved = config.resolve_alias_with_and("build-and-test").unwrap();
+        assert_eq!(
+            resolved,
+            vec![vec!["gradle", "clean", "build"], vec!["npm", "test"]]
+        );
     }
 }

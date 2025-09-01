@@ -117,6 +117,13 @@ Once defined, aliases can be used directly:
 ./gg.cmd test --coverage # Expands to: ./gg.cmd npm test --coverage
 ```
 
+Aliases support `&&` for sequential execution:
+
+```toml
+[aliases]
+build-and-test = "gradle clean build && npm test"
+```
+
 ### Viewing Configuration
 
 View your current configuration:

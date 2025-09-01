@@ -249,6 +249,37 @@ async fn main() -> ExitCode {
     debug!(target: "main", "{:?}", &cli);
 
     if let Some(cmd) = cmds.first() {
+        if cmd.cmd.starts_with("__multi_alias__") {
+            let alias_name = cmd.cmd.strip_prefix("__multi_alias__").unwrap();
+            if let Some(alias_commands) = config.resolve_alias_with_and(alias_name) {
+                for command_args in alias_commands {
+                    println!("Executing: {}", command_args.join(" "));
+
+                    let mut gg_args =
+                        vec![env::current_exe().unwrap().to_string_lossy().to_string()];
+                    gg_args.extend(command_args.iter().map(|s| s.to_string()));
+
+                    let status = std::process::Command::new(&gg_args[0])
+                        .args(&gg_args[1..])
+                        .status();
+
+                    match status {
+                        Ok(exit_status) => {
+                            if !exit_status.success() {
+                                println!("Command failed: {}", command_args.join(" "));
+                                return ExitCode::from(exit_status.code().unwrap_or(1) as u8);
+                            }
+                        }
+                        Err(e) => {
+                            println!("Failed to execute command: {}", e);
+                            return ExitCode::from(1);
+                        }
+                    }
+                }
+                return ExitCode::from(0);
+            }
+        }
+
         match cmd.cmd.as_str() {
             "update" => {
                 let tool_name = app_args.first().cloned();
