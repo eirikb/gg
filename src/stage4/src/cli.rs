@@ -314,6 +314,16 @@ fn parse_command_string(cmd_string: &str, config: &GgConfig) -> Vec<ClapCmd> {
             if version.is_none() {
                 if let Some(dep_version) = config.dependencies.get(&base_cmd) {
                     version = Some(dep_version.clone());
+                } else {
+                    // Piggybacking!
+                    let underlying_tool = match base_cmd.as_str() {
+                        "npm" | "npx" => "node",
+                        "dart" => "flutter",
+                        _ => &base_cmd,
+                    };
+                    if let Some(dep_version) = config.dependencies.get(underlying_tool) {
+                        version = Some(dep_version.clone());
+                    }
                 }
             }
 
