@@ -312,6 +312,7 @@ async fn main() -> ExitCode {
                             should_update,
                             allow_major,
                             force,
+                            &config,
                         )
                         .await;
                     }
