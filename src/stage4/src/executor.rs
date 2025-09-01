@@ -361,6 +361,8 @@ pub async fn prep(
                 .as_str()
                 .replace("*", "_star_")
                 .replace("^", "_hat_")
+                .replace("~", "_tilde_")
+                .replace("=", "_eq_")
             + executor_cmd
                 .include_tags
                 .iter()
