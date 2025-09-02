@@ -121,7 +121,8 @@ Aliases support `&&` for sequential execution:
 
 ```toml
 [aliases]
-build-and-test = "gradle clean build && npm test"
+clean-build = "gradle clean build"
+build-and-test = "clean-build && npm test"
 ```
 
 ### Viewing Configuration
