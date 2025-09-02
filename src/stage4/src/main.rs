@@ -259,59 +259,14 @@ async fn main() -> ExitCode {
                         continue;
                     }
 
-                    let execute_as_gg_command = |args: &[String]| {
-                        let mut gg_args = vec![env::args().next().unwrap_or_else(|| {
-                            env::current_exe().unwrap().to_string_lossy().to_string()
-                        })];
-                        gg_args.extend(args.iter().map(|s| s.to_string()));
-                        std::process::Command::new(&gg_args[0])
-                            .args(&gg_args[1..])
-                            .status()
-                    };
+                    let mut gg_args = vec![env::args().next().unwrap_or_else(|| {
+                        env::current_exe().unwrap().to_string_lossy().to_string()
+                    })];
+                    gg_args.extend(command_args.iter().map(|s| s.to_string()));
 
-                    let status = if command_args.len() == 1 {
-                        if let Some(nested_alias_commands) =
-                            config.resolve_alias_with_and(&command_args[0])
-                        {
-                            let mut all_success = true;
-                            for nested_command_args in nested_alias_commands {
-                                if nested_command_args.is_empty() {
-                                    continue;
-                                }
-                                let nested_status =
-                                    std::process::Command::new(&nested_command_args[0])
-                                        .args(&nested_command_args[1..])
-                                        .status();
-                                match nested_status {
-                                    Ok(exit_status) => {
-                                        if !exit_status.success() {
-                                            all_success = false;
-                                            break;
-                                        }
-                                    }
-                                    Err(_) => {
-                                        all_success = false;
-                                        break;
-                                    }
-                                }
-                            }
-                            if all_success {
-                                std::process::Command::new("true").status()
-                            } else {
-                                std::process::Command::new("false").status()
-                            }
-                        } else if let Some(nested_alias_args) =
-                            config.resolve_alias(&command_args[0])
-                        {
-                            execute_as_gg_command(&nested_alias_args)
-                        } else {
-                            execute_as_gg_command(&command_args)
-                        }
-                    } else {
-                        std::process::Command::new(&command_args[0])
-                            .args(&command_args[1..])
-                            .status()
-                    };
+                    let status = std::process::Command::new(&gg_args[0])
+                        .args(&gg_args[1..])
+                        .status();
 
                     match status {
                         Ok(exit_status) => {
