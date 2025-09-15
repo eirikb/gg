@@ -14,6 +14,7 @@ use crate::executors::maven::Maven;
 use crate::executors::node::Node;
 use crate::executors::openapigenerator::OpenAPIGenerator;
 use crate::executors::rat::Rat;
+use crate::executors::ruby::Ruby;
 
 #[derive(Clone, Debug)]
 pub enum ToolCategory {
@@ -84,6 +85,15 @@ pub static TOOL_REGISTRY: LazyLock<HashMap<&'static str, ToolInfo>> = LazyLock::
             tags: vec![],
             example: Some("gg flutter --version"),
             factory: |cmd| Some(Box::new(Flutter { executor_cmd: cmd })),
+        },
+        ToolInfo {
+            name: "ruby",
+            aliases: vec!["gem", "irb", "bundle"],
+            description: "Ruby programming language",
+            category: ToolCategory::Language,
+            tags: vec![],
+            example: Some("gg ruby --version"),
+            factory: |cmd| Some(Box::new(Ruby { executor_cmd: cmd })),
         },
         ToolInfo {
             name: "gradle",
@@ -230,6 +240,23 @@ pub static TOOL_REGISTRY: LazyLock<HashMap<&'static str, ToolInfo>> = LazyLock::
                     "fortio",
                     vec![],
                     vec!["bin/fortio", "fortio.exe"],
+                ))
+            },
+        },
+        ToolInfo {
+            name: "fastlane",
+            aliases: vec![],
+            description: "Fastlane - iOS and Android automation tool",
+            category: ToolCategory::GitHubRelease,
+            tags: vec![],
+            example: Some("gg fastlane --version"),
+            factory: |cmd| {
+                Some(create_github_executor(
+                    cmd,
+                    "fastlane",
+                    "fastlane",
+                    vec![ExecutorDep::new("ruby".to_string(), None)],
+                    vec!["gem_home/bin/fastlane"],
                 ))
             },
         },

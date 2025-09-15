@@ -23,6 +23,8 @@ mod cli;
 mod config;
 mod executor;
 mod executors;
+mod gem_utils;
+mod github_utils;
 mod target;
 mod tools;
 mod updater;

@@ -9,6 +9,8 @@ use log::{debug, info};
 use tempfile::tempdir;
 use tokio::task;
 
+use crate::gem_utils;
+
 fn get_file_name(url: &str) -> String {
     reqwest::Url::parse(url)
         .unwrap()
@@ -190,7 +192,31 @@ impl BloodyIndianaJones {
                 .await
                 .expect("Unable to unzip");
             }
+            Some("7z") => {
+                info!("Decompressing 7z");
+                info!("Path is {}", &self.path);
+                self.pb.set_message("Un7z");
+                let file_path_string = self.file_path.clone();
+                let path_string = self.path.clone();
+                task::spawn_blocking(move || {
+                    create_dir_all(&path_string).expect("Unable to create download dir");
+                    let archive_file = File::open(file_path_string).unwrap();
+                    sevenz_rust::decompress(archive_file, &path_string).unwrap();
+                })
+                .await
+                .expect("Unable to extract 7z");
+            }
             Some("tar") => (),
+            Some("gem") => {
+                info!("Processing gem file");
+                self.pb.set_message("Installing gem");
+                create_dir_all(&self.path).expect("Unable to create download dir");
+
+                let gem_path = Path::new(&self.path).join(&self.file_name);
+                std::fs::copy(&self.file_path, &gem_path).unwrap();
+
+                let _ = gem_utils::install_gem_to_cache(gem_path.to_str().unwrap(), &self.path);
+            }
             _ => {
                 self.pb.set_message("Copy");
                 create_dir_all(&self.path).expect("Unable to create download dir");
