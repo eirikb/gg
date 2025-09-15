@@ -16,7 +16,15 @@ if (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/sha256-512/CMakeLists.txt)
         message(FATAL_ERROR "Failed to clone sha256-512 repository")
     endif ()
 
-    message(STATUS "sha256-512 library cloned and patched successfully")
+    message(STATUS "sha256-512 library cloned successfully")
+endif ()
+
+# Hacking the sha256-512 CMakeLists.txt to ensure compatibility (shrug)
+if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/sha256-512/CMakeLists.txt)
+    file(READ ${CMAKE_CURRENT_SOURCE_DIR}/sha256-512/CMakeLists.txt CMAKELISTS_CONTENT)
+    string(REGEX REPLACE "cmake_minimum_required *\\(VERSION [0-9]+\\.[0-9]+\\)" "cmake_minimum_required(VERSION 3.10)" CMAKELISTS_CONTENT "${CMAKELISTS_CONTENT}")
+    file(WRITE ${CMAKE_CURRENT_SOURCE_DIR}/sha256-512/CMakeLists.txt "${CMAKELISTS_CONTENT}")
+    message(STATUS "sha256-512 CMakeLists.txt patched for compatibility")
 endif ()
 
 add_subdirectory(sha256-512)
