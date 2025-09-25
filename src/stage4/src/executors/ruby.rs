@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::pin::Pin;
 
-use log::debug;
+use log::{debug, info};
 
 use crate::executor::{AppInput, AppPath, BinPattern, Download, Executor, ExecutorCmd, GgVersion};
 use crate::github_utils::{create_github_client, detect_arch_from_name};
@@ -12,11 +12,58 @@ pub struct Ruby {
     pub executor_cmd: ExecutorCmd,
 }
 
-
 fn is_ruby_binary(name: &str) -> bool {
     let name_lower = name.to_lowercase();
     name_lower.contains("rubyinstaller")
         && (name_lower.ends_with(".7z") || name_lower.ends_with(".exe"))
+}
+
+impl Ruby {
+    fn install_gem(&self, gem_name: &str, cache_path: &str) {
+        use std::os::unix::fs;
+        use std::process::Command;
+
+        info!("Installing gem {} for Ruby at {}", gem_name, cache_path);
+
+        let gem_home = std::path::Path::new(cache_path).join("gem_home");
+        std::fs::create_dir_all(&gem_home).ok();
+
+        let ruby_bin_dir = std::path::Path::new(cache_path).join("bin");
+        let gem_bin = ruby_bin_dir.join("gem");
+        let rake_path = ruby_bin_dir.join("rake");
+        let trufflerake_path = ruby_bin_dir.join("trufflerake");
+
+        if rake_path.exists() && !trufflerake_path.exists() {
+            fs::symlink(&rake_path, &trufflerake_path).ok();
+        }
+
+        if gem_bin.exists() {
+            let output = Command::new(&gem_bin)
+                .args(["install", gem_name, "--no-document", "--install-dir"])
+                .arg(&gem_home)
+                .env("GEM_HOME", &gem_home)
+                .env("GEM_PATH", &gem_home)
+                .output();
+
+            match output {
+                Ok(result) => {
+                    if result.status.success() {
+                        info!("Successfully installed gem {}", gem_name);
+                    } else {
+                        debug!(
+                            "Gem install failed: {}",
+                            String::from_utf8_lossy(&result.stderr)
+                        );
+                    }
+                }
+                Err(e) => {
+                    debug!("Failed to run gem install: {}", e);
+                }
+            }
+        } else {
+            debug!("Ruby gem command not found at {:?}", gem_bin);
+        }
+    }
 }
 
 impl Executor for Ruby {
@@ -50,15 +97,25 @@ impl Executor for Ruby {
                 BinPattern::Exact("gem_home/bin/bundle".to_string()),
                 BinPattern::Exact("gem_home/bin/irb".to_string()),
             ],
-            _ => vec![
-                BinPattern::Exact("bin/ruby".to_string()),
-                BinPattern::Exact("bin/gem".to_string()),
-                BinPattern::Exact("bin/bundle".to_string()),
-                BinPattern::Exact("bin/irb".to_string()),
-                BinPattern::Exact("gem_home/bin/gem".to_string()),
-                BinPattern::Exact("gem_home/bin/bundle".to_string()),
-                BinPattern::Exact("gem_home/bin/irb".to_string()),
-            ],
+            _ => {
+                let mut bins = vec![
+                    BinPattern::Exact("bin/ruby".to_string()),
+                    BinPattern::Exact("bin/gem".to_string()),
+                    BinPattern::Exact("bin/bundle".to_string()),
+                    BinPattern::Exact("bin/irb".to_string()),
+                    BinPattern::Exact("gem_home/bin/gem".to_string()),
+                    BinPattern::Exact("gem_home/bin/bundle".to_string()),
+                    BinPattern::Exact("gem_home/bin/irb".to_string()),
+                ];
+
+                if let Some(gems) = &self.executor_cmd.gems {
+                    for gem_name in gems {
+                        bins.push(BinPattern::Exact(format!("gem_home/bin/{}", gem_name)));
+                    }
+                }
+
+                bins
+            }
         }
     }
 
@@ -79,6 +136,12 @@ impl Executor for Ruby {
     }
 
     fn post_prep(&self, cache_path: &str) {
+        if let Some(gems) = &self.executor_cmd.gems {
+            for gem_name in gems {
+                self.install_gem(gem_name, cache_path);
+            }
+        }
+
         let gem_bin_dir = std::path::Path::new(cache_path)
             .join("gem_home")
             .join("bin");

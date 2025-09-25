@@ -247,17 +247,13 @@ pub static TOOL_REGISTRY: LazyLock<HashMap<&'static str, ToolInfo>> = LazyLock::
             name: "fastlane",
             aliases: vec![],
             description: "Fastlane - iOS and Android automation tool",
-            category: ToolCategory::GitHubRelease,
+            category: ToolCategory::Language,
             tags: vec![],
             example: Some("gg fastlane --version"),
             factory: |cmd| {
-                Some(create_github_executor(
-                    cmd,
-                    "fastlane",
-                    "fastlane",
-                    vec![ExecutorDep::new("ruby".to_string(), None)],
-                    vec!["gem_home/bin/fastlane"],
-                ))
+                let mut ruby_cmd = cmd.clone();
+                ruby_cmd.gems = Some(vec!["fastlane".to_string()]);
+                Some(Box::new(Ruby { executor_cmd: ruby_cmd }))
             },
         },
         ToolInfo {

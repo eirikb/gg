@@ -180,6 +180,7 @@ pub struct ExecutorCmd {
     pub distribution: Option<String>,
     pub include_tags: HashSet<String>,
     pub exclude_tags: HashSet<String>,
+    pub gems: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone)]

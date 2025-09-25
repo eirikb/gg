@@ -394,6 +394,7 @@ async fn main() -> ExitCode {
                     distribution: cmd.distribution.clone(),
                     include_tags: cmd.include_tags.clone(),
                     exclude_tags: cmd.exclude_tags.clone(),
+                    gems: cmd.gems.clone(),
                 })
             })
             .collect::<Vec<Box<dyn Executor>>>();
@@ -436,6 +437,7 @@ async fn main() -> ExitCode {
                             distribution: None,
                             include_tags: Default::default(),
                             exclude_tags: Default::default(),
+                            gems: None,
                         }) {
                             look_for_deps = true;
                             processed_deps.insert(dep.name.clone());
