@@ -20,7 +20,6 @@ fn is_ruby_binary(name: &str) -> bool {
 
 impl Ruby {
     fn install_gem(&self, gem_name: &str, cache_path: &str) {
-        use std::os::unix::fs;
         use std::process::Command;
 
         info!("Installing gem {} for Ruby at {}", gem_name, cache_path);
@@ -30,19 +29,22 @@ impl Ruby {
 
         let ruby_bin_dir = std::path::Path::new(cache_path).join("bin");
         let gem_bin = ruby_bin_dir.join("gem");
-        let rake_path = ruby_bin_dir.join("rake");
-        let trufflerake_path = ruby_bin_dir.join("trufflerake");
-
-        if rake_path.exists() && !trufflerake_path.exists() {
-            fs::symlink(&rake_path, &trufflerake_path).ok();
-        }
 
         if gem_bin.exists() {
+            let current_path = std::env::var("PATH").unwrap_or_default();
+            let ruby_bin_path = ruby_bin_dir.to_string_lossy();
+            let new_path = if current_path.is_empty() {
+                ruby_bin_path.to_string()
+            } else {
+                format!("{}:{}", ruby_bin_path, current_path)
+            };
+
             let output = Command::new(&gem_bin)
                 .args(["install", gem_name, "--no-document", "--install-dir"])
                 .arg(&gem_home)
                 .env("GEM_HOME", &gem_home)
                 .env("GEM_PATH", &gem_home)
+                .env("PATH", &new_path)
                 .output();
 
             match output {
@@ -136,6 +138,17 @@ impl Executor for Ruby {
     }
 
     fn post_prep(&self, cache_path: &str) {
+        #[cfg(unix)]
+        {
+            let ruby_bin_dir = std::path::Path::new(cache_path).join("bin");
+            let rake_path = ruby_bin_dir.join("rake");
+            let trufflerake_path = ruby_bin_dir.join("trufflerake");
+
+            if rake_path.exists() && !trufflerake_path.exists() {
+                std::os::unix::fs::symlink(&rake_path, &trufflerake_path).ok();
+            }
+        }
+
         if let Some(gems) = &self.executor_cmd.gems {
             for gem_name in gems {
                 self.install_gem(gem_name, cache_path);
