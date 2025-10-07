@@ -31,15 +31,20 @@ impl Ruby {
         std::fs::create_dir_all(&gem_bin_dir).ok();
 
         let ruby_bin_dir = std::path::Path::new(cache_path).join("bin");
-        let gem_bin = ruby_bin_dir.join("gem");
+        let gem_bin = if cfg!(windows) {
+            ruby_bin_dir.join("gem.cmd")
+        } else {
+            ruby_bin_dir.join("gem")
+        };
 
         if gem_bin.exists() {
             let current_path = std::env::var("PATH").unwrap_or_default();
             let ruby_bin_path = ruby_bin_dir.to_string_lossy();
+            let path_separator = if cfg!(windows) { ";" } else { ":" };
             let new_path = if current_path.is_empty() {
                 ruby_bin_path.to_string()
             } else {
-                format!("{}:{}", ruby_bin_path, current_path)
+                format!("{}{}{}", ruby_bin_path, path_separator, current_path)
             };
 
             let output = Command::new(&gem_bin)
