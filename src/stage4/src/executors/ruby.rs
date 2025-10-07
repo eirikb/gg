@@ -318,13 +318,6 @@ async fn get_windows_ruby_urls() -> Vec<Download> {
     downloads
 }
 
-fn extract_truffleruby_version(filename: &str) -> Option<String> {
-    if let Some(start) = filename.find("truffleruby-") {
-        let after_prefix = &filename[start + 12..];
-        if let Some(end) = after_prefix.find('-') {
-            let version = &after_prefix[..end];
-            return Some(version.to_string());
-        }
-    }
-    None
+fn extract_truffleruby_version(tag_name: &str) -> Option<String> {
+    tag_name.strip_prefix("truffleruby-").map(|s| s.to_string())
 }
