@@ -99,6 +99,7 @@ impl Executor for Ruby {
 
                 if let Some(gems) = &self.executor_cmd.gems {
                     for gem_name in gems {
+                        bins.push(BinPattern::Exact(format!("gem_home/bin/{}.bat", gem_name)));
                         bins.push(BinPattern::Exact(format!("gem_home/bin/{}", gem_name)));
                     }
                 }
@@ -142,7 +143,7 @@ impl Executor for Ruby {
     }
 
     fn get_name(&self) -> &str {
-        "ruby"
+        &self.executor_cmd.cmd
     }
 
     fn get_env(&self, app_path: &AppPath) -> HashMap<String, String> {
@@ -155,6 +156,10 @@ impl Executor for Ruby {
         env.insert("GEM_PATH".to_string(), gem_home_str);
 
         env
+    }
+
+    fn get_bin_dirs(&self) -> Vec<String> {
+        vec![".".to_string(), "bin".to_string()]
     }
 
     fn post_prep(&self, cache_path: &str) {
