@@ -45,6 +45,7 @@ impl Ruby {
                 .env("GEM_HOME", &gem_home)
                 .env("GEM_PATH", &gem_home)
                 .env("PATH", &new_path)
+                .env("LANG", "en_US.UTF-8")
                 .output();
 
             match output {
@@ -88,19 +89,39 @@ impl Executor for Ruby {
 
     fn get_bins(&self, input: &AppInput) -> Vec<BinPattern> {
         match &input.target.os {
-            Os::Windows => vec![
-                BinPattern::Exact("bin/ruby.exe".to_string()),
-                BinPattern::Exact("bin/gem".to_string()),
-                BinPattern::Exact("bin/gem.cmd".to_string()),
-                BinPattern::Exact("bin/bundle".to_string()),
-                BinPattern::Exact("bin/irb".to_string()),
-                BinPattern::Exact("ruby.exe".to_string()),
-                BinPattern::Exact("gem_home/bin/gem".to_string()),
-                BinPattern::Exact("gem_home/bin/bundle".to_string()),
-                BinPattern::Exact("gem_home/bin/irb".to_string()),
-            ],
+            Os::Windows => {
+                let mut bins = vec![];
+
+                if let Some(gems) = &self.executor_cmd.gems {
+                    for gem_name in gems {
+                        bins.push(BinPattern::Exact(format!("gem_home/bin/{}", gem_name)));
+                    }
+                }
+
+                bins.extend(vec![
+                    BinPattern::Exact("bin/ruby.exe".to_string()),
+                    BinPattern::Exact("bin/gem".to_string()),
+                    BinPattern::Exact("bin/gem.cmd".to_string()),
+                    BinPattern::Exact("bin/bundle".to_string()),
+                    BinPattern::Exact("bin/irb".to_string()),
+                    BinPattern::Exact("ruby.exe".to_string()),
+                    BinPattern::Exact("gem_home/bin/gem".to_string()),
+                    BinPattern::Exact("gem_home/bin/bundle".to_string()),
+                    BinPattern::Exact("gem_home/bin/irb".to_string()),
+                ]);
+
+                bins
+            }
             _ => {
-                let mut bins = vec![
+                let mut bins = vec![];
+
+                if let Some(gems) = &self.executor_cmd.gems {
+                    for gem_name in gems {
+                        bins.push(BinPattern::Exact(format!("gem_home/bin/{}", gem_name)));
+                    }
+                }
+
+                bins.extend(vec![
                     BinPattern::Exact("bin/ruby".to_string()),
                     BinPattern::Exact("bin/gem".to_string()),
                     BinPattern::Exact("bin/bundle".to_string()),
@@ -108,13 +129,7 @@ impl Executor for Ruby {
                     BinPattern::Exact("gem_home/bin/gem".to_string()),
                     BinPattern::Exact("gem_home/bin/bundle".to_string()),
                     BinPattern::Exact("gem_home/bin/irb".to_string()),
-                ];
-
-                if let Some(gems) = &self.executor_cmd.gems {
-                    for gem_name in gems {
-                        bins.push(BinPattern::Exact(format!("gem_home/bin/{}", gem_name)));
-                    }
-                }
+                ]);
 
                 bins
             }
@@ -200,7 +215,7 @@ async fn get_truffleruby_urls(os: &Os) -> Vec<Download> {
 
                 let matches_os = match os {
                     Os::Linux => name_lower.contains("ubuntu"),
-                    Os::Mac => name_lower.contains("macos"),
+                    Os::Mac => name_lower.contains("darwin"),
                     Os::Windows => name_lower.contains("windows"),
                     _ => false,
                 };
@@ -209,11 +224,7 @@ async fn get_truffleruby_urls(os: &Os) -> Vec<Download> {
                     continue;
                 }
 
-                if !name_lower.starts_with("truffleruby-") {
-                    continue;
-                }
-
-                let arch = if name_lower.contains("x86_64") {
+                let arch = if name_lower.contains("x86_64") || name_lower.contains("x64") {
                     Some(Arch::X86_64)
                 } else if name_lower.contains("arm64") || name_lower.contains("aarch64") {
                     Some(Arch::Arm64)
@@ -226,7 +237,14 @@ async fn get_truffleruby_urls(os: &Os) -> Vec<Download> {
                     asset.name, os, arch
                 );
 
-                if let Some(version) = extract_truffleruby_version(&asset.name) {
+                if let Some(version) = extract_truffleruby_version(&release.tag_name) {
+                    if version.contains("preview")
+                        || version.contains("rc")
+                        || version.contains("beta")
+                    {
+                        continue;
+                    }
+
                     downloads.push(Download {
                         download_url: asset.browser_download_url.to_string(),
                         version: GgVersion::new(&version),
