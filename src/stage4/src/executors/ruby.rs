@@ -27,6 +27,9 @@ impl Ruby {
         let gem_home = std::path::Path::new(cache_path).join("gem_home");
         std::fs::create_dir_all(&gem_home).ok();
 
+        let gem_bin_dir = gem_home.join("bin");
+        std::fs::create_dir_all(&gem_bin_dir).ok();
+
         let ruby_bin_dir = std::path::Path::new(cache_path).join("bin");
         let gem_bin = ruby_bin_dir.join("gem");
 
@@ -42,6 +45,8 @@ impl Ruby {
             let output = Command::new(&gem_bin)
                 .args(["install", gem_name, "--no-document", "--install-dir"])
                 .arg(&gem_home)
+                .args(["--bindir"])
+                .arg(&gem_bin_dir)
                 .env("GEM_HOME", &gem_home)
                 .env("GEM_PATH", &gem_home)
                 .env("PATH", &new_path)
