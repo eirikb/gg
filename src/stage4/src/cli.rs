@@ -10,6 +10,7 @@ pub struct ClapCmd {
     pub distribution: Option<String>,
     pub include_tags: HashSet<String>,
     pub exclude_tags: HashSet<String>,
+    pub gems: Option<Vec<String>>,
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -119,6 +120,7 @@ impl Cli {
                             distribution: None,
                             include_tags: HashSet::new(),
                             exclude_tags: HashSet::new(),
+                            gems: None,
                         }],
                         app_args,
                     )
@@ -132,6 +134,7 @@ impl Cli {
                             distribution: None,
                             include_tags: HashSet::new(),
                             exclude_tags: HashSet::new(),
+                            gems: None,
                         }],
                         app_args,
                     )
@@ -143,6 +146,7 @@ impl Cli {
                         distribution: None,
                         include_tags: HashSet::new(),
                         exclude_tags: HashSet::new(),
+                        gems: None,
                     }],
                     vec![],
                 ),
@@ -158,6 +162,7 @@ impl Cli {
                             distribution: None,
                             include_tags: HashSet::new(),
                             exclude_tags: HashSet::new(),
+                            gems: None,
                         }],
                         vec![],
                     )
@@ -174,6 +179,7 @@ impl Cli {
                                 distribution: None,
                                 include_tags: HashSet::new(),
                                 exclude_tags: HashSet::new(),
+                                gems: None,
                             }],
                             self.args[1..].to_vec(),
                         );
@@ -348,6 +354,7 @@ fn parse_command_string(cmd_string: &str, config: &GgConfig) -> Vec<ClapCmd> {
                 distribution,
                 include_tags,
                 exclude_tags,
+                gems: None,
             }
         })
         .collect()

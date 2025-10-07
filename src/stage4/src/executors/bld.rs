@@ -261,6 +261,7 @@ mod tests {
             distribution: None,
             include_tags: HashSet::new(),
             exclude_tags: HashSet::new(),
+            gems: None,
         });
 
         let app_input = AppInput {
@@ -301,6 +302,7 @@ mod tests {
             distribution: None,
             include_tags: HashSet::new(),
             exclude_tags: HashSet::new(),
+            gems: None,
         });
 
         let app_input = AppInput {

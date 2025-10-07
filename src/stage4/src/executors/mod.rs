@@ -12,3 +12,4 @@ pub mod maven;
 pub mod node;
 pub mod openapigenerator;
 pub mod rat;
+pub mod ruby;

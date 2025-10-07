@@ -1,10 +1,11 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::pin::Pin;
 
 use crate::executor::{
-    AppInput, BinPattern, Download, Executor, ExecutorCmd, ExecutorDep, GgVersion,
+    AppInput, AppPath, BinPattern, Download, Executor, ExecutorCmd, ExecutorDep, GgVersion,
 };
+use crate::github_utils::{create_github_client, detect_arch_from_name, detect_os_from_name};
 use crate::target::Os::Windows;
 use crate::target::{Arch, Os, Variant};
 use log::debug;
@@ -45,11 +46,7 @@ impl GitHub {
     }
 
     async fn detect_language_and_deps(&self) -> Vec<ExecutorDep> {
-        let octocrab = octocrab::Octocrab::builder()
-            .base_uri("https://ghapi.ggcmd.io/")
-            .unwrap()
-            .build()
-            .unwrap();
+        let octocrab = create_github_client().unwrap();
 
         if let Ok(repo_info) = octocrab.repos(&self.owner, &self.repo).get().await {
             if let Some(language) = repo_info.language {
@@ -70,41 +67,6 @@ impl GitHub {
         vec![]
     }
 
-    fn detect_os_from_name(name: &str) -> Option<Os> {
-        let name_lower = name.to_lowercase();
-        if name_lower.contains("darwin")
-            || name_lower.contains("macos")
-            || name_lower.contains("apple")
-        {
-            Some(Os::Mac)
-        } else if name_lower.contains("windows")
-            || name_lower.contains("win")
-            || name_lower.contains(".exe")
-        {
-            Some(Windows)
-        } else if name_lower.contains("linux") {
-            Some(Os::Linux)
-        } else {
-            None
-        }
-    }
-
-    fn detect_arch_from_name(name: &str) -> Option<Arch> {
-        let name_lower = name.to_lowercase();
-        if name_lower.contains("x86_64")
-            || name_lower.contains("amd64")
-            || name_lower.contains("x64")
-        {
-            Some(Arch::X86_64)
-        } else if name_lower.contains("arm64") || name_lower.contains("aarch64") {
-            Some(Arch::Arm64)
-        } else if name_lower.contains("armv7") || name_lower.contains("arm") {
-            Some(Arch::Armv7)
-        } else {
-            None
-        }
-    }
-
     fn is_likely_binary(name: &str) -> bool {
         let name_lower = name.to_lowercase();
 
@@ -112,7 +74,7 @@ impl GitHub {
             return false;
         }
 
-        let binary_extensions = [".exe", ".zip", ".tar.gz", ".tgz", ".tar.bz2"];
+        let binary_extensions = [".exe", ".zip", ".tar.gz", ".tgz", ".tar.bz2", ".7z", ".gem"];
 
         for ext in &binary_extensions {
             if name_lower.contains(ext) {
@@ -151,11 +113,7 @@ impl Executor for GitHub {
         Box::pin(async move {
             let mut downloads: Vec<Download> = vec![];
             // Shh don't tell anyone
-            let octocrab = octocrab::Octocrab::builder()
-                .base_uri("https://ghapi.ggcmd.io/")
-                .unwrap()
-                .build()
-                .expect("Failed to create GitHub API client");
+            let octocrab = create_github_client().expect("Failed to create GitHub API client");
 
             let mut page: u32 = 1;
             loop {
@@ -175,8 +133,8 @@ impl Executor for GitHub {
                                 continue;
                             }
 
-                            let os = Self::detect_os_from_name(&asset.name);
-                            let arch = Self::detect_arch_from_name(&asset.name);
+                            let os = detect_os_from_name(&asset.name);
+                            let arch = detect_arch_from_name(&asset.name);
 
                             debug!("Asset: {} -> OS: {:?}, Arch: {:?}", asset.name, os, arch);
 
@@ -262,5 +220,19 @@ impl Executor for GitHub {
             }
             self.detect_language_and_deps().await
         })
+    }
+
+    fn get_env(&self, app_path: &AppPath) -> HashMap<String, String> {
+        let mut env = HashMap::new();
+
+        // Ok, so, if this tool uses gems (has .gem files), set gem environment
+        let gem_home = app_path.install_dir.join("gem_home");
+        if gem_home.exists() {
+            let gem_home_str = gem_home.to_string_lossy().to_string();
+            env.insert("GEM_HOME".to_string(), gem_home_str.clone());
+            env.insert("GEM_PATH".to_string(), gem_home_str);
+        }
+
+        env
     }
 }
