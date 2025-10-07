@@ -54,7 +54,7 @@ impl Executor for JBangExecutor {
     ) -> Pin<Box<dyn Future<Output = Vec<ExecutorDep>> + 'a>> {
         Box::pin(async move {
             let java_version = if let Some(file_path) = input.app_args.first() {
-                get_jbang_java_version_from_file(file_path)
+                get_jbang_java_version_from_file(file_path).await
             } else {
                 None
             };
@@ -64,10 +64,28 @@ impl Executor for JBangExecutor {
     }
 }
 
-pub fn get_jbang_java_version_from_file(file_path: &str) -> Option<String> {
+pub async fn get_jbang_java_version_from_file(file_path: &str) -> Option<String> {
     if let Ok(content) = fs::read_to_string(file_path) {
         return parse_jbang_java_version(&content);
     }
+
+    if file_path.starts_with("http://") || file_path.starts_with("https://") {
+        // Gotta rewrite URLS to raw.githubusercontent.com to get the content - I believe jbang does the same internally
+        let url = if file_path.contains("github.com") && file_path.contains("/blob/") {
+            file_path
+                .replace("/blob/", "/")
+                .replace("github.com", "raw.githubusercontent.com")
+        } else {
+            file_path.to_string()
+        };
+
+        if let Ok(response) = reqwest::get(&url).await {
+            if let Ok(content) = response.text().await {
+                return parse_jbang_java_version(&content);
+            }
+        }
+    }
+
     None
 }
 
