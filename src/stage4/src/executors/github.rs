@@ -3,7 +3,8 @@ use std::future::Future;
 use std::pin::Pin;
 
 use crate::executor::{
-    AppInput, AppPath, BinPattern, Download, Executor, ExecutorCmd, ExecutorDep, GgVersion,
+    find_jar_file, AppInput, AppPath, BinPattern, Download, Executor, ExecutorCmd, ExecutorDep,
+    GgVersion,
 };
 use crate::github_utils::{create_github_client, detect_arch_from_name, detect_os_from_name};
 use crate::target::Os::Windows;
@@ -74,7 +75,9 @@ impl GitHub {
             return false;
         }
 
-        let binary_extensions = [".exe", ".zip", ".tar.gz", ".tgz", ".tar.bz2", ".7z", ".gem"];
+        let binary_extensions = [
+            ".exe", ".zip", ".tar.gz", ".tgz", ".tar.bz2", ".7z", ".gem", ".jar",
+        ];
 
         for ext in &binary_extensions {
             if name_lower.contains(ext) {
@@ -201,6 +204,7 @@ impl Executor for GitHub {
             _ => {}
         }
 
+        patterns.push(BinPattern::Exact("java".to_string()));
         patterns.push(BinPattern::Regex(r"^[^.]*$".to_string()));
 
         patterns
@@ -208,6 +212,17 @@ impl Executor for GitHub {
 
     fn get_name(&self) -> &str {
         &self.repo
+    }
+
+    fn customize_args(&self, input: &AppInput, app_path: &AppPath) -> Vec<String> {
+        if let Some(jar_name) = find_jar_file(app_path) {
+            if let Some(jar_path) = app_path.install_dir.join(&jar_name).to_str() {
+                let mut args = vec!["-jar".to_string(), jar_path.to_string()];
+                args.extend_from_slice(&input.app_args);
+                return args;
+            }
+        }
+        input.app_args.clone()
     }
 
     fn get_deps<'a>(
