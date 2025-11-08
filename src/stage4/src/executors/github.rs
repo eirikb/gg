@@ -204,8 +204,8 @@ impl Executor for GitHub {
             _ => {}
         }
 
-        patterns.push(BinPattern::Exact("java".to_string()));
         patterns.push(BinPattern::Regex(r"^[^.]*$".to_string()));
+        patterns.push(BinPattern::Exact("java".to_string()));
 
         patterns
     }
