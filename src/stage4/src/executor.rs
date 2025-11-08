@@ -322,6 +322,19 @@ pub fn java_deps<'a>() -> Pin<Box<dyn Future<Output = Vec<ExecutorDep>> + 'a>> {
     Box::pin(async move { vec![ExecutorDep::new("java".to_string(), None)] })
 }
 
+pub fn find_jar_file(app_path: &AppPath) -> Option<String> {
+    if let Ok(entries) = std::fs::read_dir(&app_path.install_dir) {
+        for entry in entries.flatten() {
+            if let Some(name) = entry.file_name().to_str() {
+                if name.ends_with(".jar") {
+                    return Some(name.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
 fn get_executor_app_path(
     _executor: &dyn Executor,
     input: &AppInput,
