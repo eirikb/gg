@@ -1,0 +1,87 @@
+name: 'Setup gg.cmd'
+description: 'Setup gg.cmd CLI for managing development tools (Node.js, Java, Gradle, Go, Flutter, etc.)'
+author: 'eirikb'
+branding:
+  icon: 'package'
+  color: 'blue'
+
+inputs:
+  version:
+    description: 'Version of gg.cmd to install. Use "latest" for the latest release.'
+    required: false
+    default: 'latest'
+
+  cache:
+    description: 'Enable caching of downloaded tools. Set to "false" to disable.'
+    required: false
+    default: 'true'
+
+  cache-key-prefix:
+    description: 'Prefix for the cache key. Useful for cache invalidation.'
+    required: false
+    default: 'gg'
+
+outputs:
+  gg-version:
+    description: 'The installed gg.cmd version'
+    value: ${{ steps.install-gg.outputs.version }}
+  cache-hit:
+    description: 'Whether the cache was hit'
+    value: ${{ steps.cache-gg.outputs.cache-hit }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Determine cache directory
+      id: cache-dir
+      shell: bash
+      run: echo "dir=$HOME/.cache/gg" >> $GITHUB_OUTPUT
+
+    - name: Cache gg tools
+      id: cache-gg
+      if: inputs.cache == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.cache-dir.outputs.dir }}
+        key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/gg.toml') }}
+        restore-keys: |
+          ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Download and install gg.cmd
+      id: install-gg
+      shell: bash
+      env:
+        GG_CACHE_DIR: ${{ steps.cache-dir.outputs.dir }}
+      run: |
+        set -e
+
+        VERSION="${{ inputs.version }}"
+
+        if [ "$VERSION" == "latest" ]; then
+          DOWNLOAD_URL="https://github.com/eirikb/gg/releases/latest/download/gg.cmd"
+        else
+          DOWNLOAD_URL="https://github.com/eirikb/gg/releases/download/${VERSION}/gg.cmd"
+        fi
+
+        mkdir -p "$HOME/.local/bin"
+
+        echo "Downloading gg.cmd from $DOWNLOAD_URL"
+        if command -v curl &> /dev/null; then
+          curl -fsSL "$DOWNLOAD_URL" -o "$HOME/.local/bin/gg.cmd"
+        elif command -v wget &> /dev/null; then
+          wget -q "$DOWNLOAD_URL" -O "$HOME/.local/bin/gg.cmd"
+        else
+          echo "::error::Neither curl nor wget is available"
+          exit 1
+        fi
+
+        chmod +x "$HOME/.local/bin/gg.cmd"
+
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+        echo "GG_CACHE_DIR=$GG_CACHE_DIR" >> $GITHUB_ENV
+
+        GG_VERSION=$(sh "$HOME/.local/bin/gg.cmd" -V 2>/dev/null | head -1 || echo "unknown")
+        echo "version=$GG_VERSION" >> $GITHUB_OUTPUT
+        echo "Installed gg.cmd version: $GG_VERSION"
+        echo "Cache directory: $GG_CACHE_DIR"
