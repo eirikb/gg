@@ -28,6 +28,13 @@ or
 
 [Download the latest release](https://github.com/eirikb/gg/releases/latest/download/gg.cmd)
 
+## GitHub Action
+
+```yaml
+- uses: eirikb/gg/action@main
+- run: gg.cmd gradle build
+```
+
 **Install?**  
 The concept involves placing a copy of `gg.cmd` in the root directory of your project.  
 This is similar to what you would do with `gradlew` or `mvnw`, except this method is applicable to multiple tools.  
