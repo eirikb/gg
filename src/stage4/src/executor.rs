@@ -558,7 +558,21 @@ fn get_url_matches(
         let a_score = score_filename_match(&a_filename, &tool_name, &version_re);
         let b_score = score_filename_match(&b_filename, &tool_name, &version_re);
 
-        match a_score.cmp(&b_score) {
+        let a_score_bucket = if a_score <= 1 { 0 } else { a_score };
+        let b_score_bucket = if b_score <= 1 { 0 } else { b_score };
+
+        match a_score_bucket.cmp(&b_score_bucket) {
+            std::cmp::Ordering::Equal => {}
+            other => return other,
+        }
+
+        let version_cmp = b
+            .version
+            .clone()
+            .map(|v| v.to_version())
+            .cmp(&a.version.clone().map(|v| v.to_version()));
+
+        match version_cmp {
             std::cmp::Ordering::Equal => {}
             other => return other,
         }
@@ -569,11 +583,7 @@ fn get_url_matches(
         match (a_specific, b_specific) {
             (true, false) => std::cmp::Ordering::Less,
             (false, true) => std::cmp::Ordering::Greater,
-            _ => b
-                .version
-                .clone()
-                .map(|v| v.to_version())
-                .cmp(&a.version.clone().map(|v| v.to_version())),
+            _ => a_score.cmp(&b_score),
         }
     });
 
@@ -844,7 +854,21 @@ mod tests {
             let a_score = score_filename_match(&a_filename, &tool_name, &version_re);
             let b_score = score_filename_match(&b_filename, &tool_name, &version_re);
 
-            match a_score.cmp(&b_score) {
+            let a_score_bucket = if a_score <= 1 { 0 } else { a_score };
+            let b_score_bucket = if b_score <= 1 { 0 } else { b_score };
+
+            match a_score_bucket.cmp(&b_score_bucket) {
+                std::cmp::Ordering::Equal => {}
+                other => return other,
+            }
+
+            let version_cmp = b
+                .version
+                .clone()
+                .map(|v| v.to_version())
+                .cmp(&a.version.clone().map(|v| v.to_version()));
+
+            match version_cmp {
                 std::cmp::Ordering::Equal => {}
                 other => return other,
             }
@@ -855,11 +879,7 @@ mod tests {
             match (a_specific, b_specific) {
                 (true, false) => std::cmp::Ordering::Less,
                 (false, true) => std::cmp::Ordering::Greater,
-                _ => b
-                    .version
-                    .clone()
-                    .map(|v| v.to_version())
-                    .cmp(&a.version.clone().map(|v| v.to_version())),
+                _ => a_score.cmp(&b_score),
             }
         });
 
@@ -1050,6 +1070,22 @@ mod tests {
         assert_eq!(
             select_best_download(&downloads, "fortio", Os::Windows, Arch::Any),
             Some("fortio_win_1.73.0.zip".to_string())
+        );
+    }
+
+    #[test]
+    fn test_fortio_prefers_newer_version_over_better_filename_match() {
+        let release_text = r#"
+            fortio_0_3_7_linux_x64.gz
+            fortio-linux_amd64-1.73.0.tgz
+        "#;
+
+        let filenames = parse_release_assets(release_text);
+        let downloads = create_downloads(&filenames);
+
+        assert_eq!(
+            select_best_download(&downloads, "fortio", Os::Linux, Arch::X86_64),
+            Some("fortio-linux_amd64-1.73.0.tgz".to_string())
         );
     }
 
