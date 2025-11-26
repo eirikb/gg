@@ -8,12 +8,6 @@ use serde_xml_rs::from_str;
 use crate::executor::{Download, GgVersion};
 use crate::target::{Arch, Os, Variant};
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
-struct Item {
-    name: String,
-    source: String,
-}
-
 #[derive(Serialize, Deserialize)]
 pub struct Metadata {
     #[serde(rename = "groupId")]

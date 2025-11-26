@@ -14,12 +14,60 @@ pub struct Maven {
     pub executor_cmd: ExecutorCmd,
 }
 
-fn get_version(link: &str) -> String {
-    link.replace("apache-maven-", "")
-        .replace("maven-", "")
-        .replace("-bin.tar.gz", "")
-        .replace(".tar.gz", "")
-        .to_string()
+fn get_tags(version: &str) -> HashSet<String> {
+    let mut tags = HashSet::new();
+    if version.contains("alpha") {
+        tags.insert("alpha".to_string());
+    }
+    if version.contains("beta") {
+        tags.insert("beta".to_string());
+    }
+    if version.contains("-rc-") {
+        tags.insert("rc".to_string());
+    }
+    tags
+}
+
+async fn fetch_versions_from_directory(base_url: &str) -> Vec<Download> {
+    let body = match reqwest::get(base_url).await {
+        Ok(response) => match response.text().await {
+            Ok(text) => text,
+            Err(_) => return vec![],
+        },
+        Err(_) => return vec![],
+    };
+
+    let document = Html::parse_document(&body);
+    let selector = Selector::parse("a").unwrap();
+
+    document
+        .select(&selector)
+        .filter_map(|a| {
+            let href = a.value().attr("href")?;
+            if !href.ends_with('/') || href == "../" {
+                return None;
+            }
+            let version = href.trim_end_matches('/');
+            if !version.chars().next()?.is_ascii_digit() {
+                return None;
+            }
+            Some(version.to_string())
+        })
+        .map(|version| {
+            let download_url = format!(
+                "{}{}/binaries/apache-maven-{}-bin.tar.gz",
+                base_url, version, version
+            );
+            Download {
+                download_url,
+                version: GgVersion::new(&version),
+                os: Some(Os::Any),
+                arch: Some(Arch::Any),
+                variant: Some(Variant::Any),
+                tags: get_tags(&version),
+            }
+        })
+        .collect()
 }
 
 impl Executor for Maven {
@@ -32,37 +80,29 @@ impl Executor for Maven {
         _input: &'a AppInput,
     ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
         Box::pin(async move {
-            let url = "https://archive.apache.org/dist/maven/binaries/";
-            let body = reqwest::get(url)
-                .await
-                .expect("Unable to connect to archive.apache.org")
-                .text()
-                .await
-                .expect("Unable to download maven list of versions");
+            let mut downloads = Vec::new();
 
-            let document = Html::parse_document(body.as_str());
-            document
-                .select(&Selector::parse("a").unwrap())
-                .map(|a| a.text().next().unwrap_or("").trim())
-                .filter(|link| link.contains("maven") && link.ends_with("tar.gz"))
-                .map(|link| {
-                    let mut tags = HashSet::new();
-                    if link.contains("alpha") {
-                        tags.insert("alpha".to_string());
-                    }
-                    if link.contains("beta") {
-                        tags.insert("beta".to_string());
-                    }
-                    Download {
-                        download_url: format!("{url}{link}"),
-                        version: GgVersion::new(get_version(link).as_str()),
-                        os: Some(Os::Any),
-                        arch: Some(Arch::Any),
-                        variant: Some(Variant::Any),
-                        tags,
-                    }
-                })
-                .collect()
+            let maven1_versions =
+                fetch_versions_from_directory("https://archive.apache.org/dist/maven/maven-1/")
+                    .await;
+            downloads.extend(maven1_versions);
+
+            let maven2_versions =
+                fetch_versions_from_directory("https://archive.apache.org/dist/maven/maven-2/")
+                    .await;
+            downloads.extend(maven2_versions);
+
+            let maven3_versions =
+                fetch_versions_from_directory("https://archive.apache.org/dist/maven/maven-3/")
+                    .await;
+            downloads.extend(maven3_versions);
+
+            let maven4_versions =
+                fetch_versions_from_directory("https://archive.apache.org/dist/maven/maven-4/")
+                    .await;
+            downloads.extend(maven4_versions);
+
+            downloads
         })
     }
 
@@ -84,5 +124,10 @@ impl Executor for Maven {
     ) -> Pin<Box<dyn Future<Output = Vec<ExecutorDep>> + 'a>> {
         java_deps()
     }
-}
 
+    fn get_default_exclude_tags(&self) -> HashSet<String> {
+        vec!["alpha".to_string(), "beta".to_string(), "rc".to_string()]
+            .into_iter()
+            .collect()
+    }
+}
