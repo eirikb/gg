@@ -102,54 +102,6 @@ pub struct GgMeta {
     pub cmd: ExecutorCmd,
 }
 
-#[cfg(test)]
-impl AppInput {}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_version_req_full_semver_exact() {
-        let version_req = GgVersionReq::new("22.11.0").unwrap();
-        assert_eq!("=22.11.0", version_req.to_string());
-
-        let v1 = GgVersion::new("22.11.0").unwrap();
-        assert!(version_req.to_version_req().matches(&v1.to_version()));
-
-        let v2 = GgVersion::new("22.11.1").unwrap();
-        assert!(!version_req.to_version_req().matches(&v2.to_version()));
-
-        let v3 = GgVersion::new("22.15.0").unwrap();
-        assert!(!version_req.to_version_req().matches(&v3.to_version()));
-    }
-
-    #[test]
-    fn test_version_req_partial_semver_compatibility() {
-        let version_req = GgVersionReq::new("22.11").unwrap();
-
-        let v1 = GgVersion::new("22.11.0").unwrap();
-        let v2 = GgVersion::new("22.11.5").unwrap();
-        assert!(version_req.to_version_req().matches(&v1.to_version()));
-        assert!(version_req.to_version_req().matches(&v2.to_version()));
-
-        let v3 = GgVersion::new("22.12.0").unwrap();
-        assert!(!version_req.to_version_req().matches(&v3.to_version()));
-    }
-
-    #[test]
-    fn test_version_req_with_prefix() {
-        let version_req_caret = GgVersionReq::new("^22.11.0").unwrap();
-        assert_eq!("^22.11.0", version_req_caret.to_string());
-
-        let version_req_tilde = GgVersionReq::new("~22.11.0").unwrap();
-        assert_eq!("~22.11.0", version_req_tilde.to_string());
-
-        let version_req_eq = GgVersionReq::new("=22.11.0").unwrap();
-        assert_eq!("=22.11.0", version_req_eq.to_string());
-    }
-}
-
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct Download {
     pub version: Option<GgVersion>,
@@ -478,6 +430,31 @@ pub async fn prep(
     get_executor_app_path(executor, input, path).ok_or(format!("Error: Unable to locate {} binary after download. The downloaded package may not contain the expected executable.", executor.get_name()))
 }
 
+fn score_filename_match(filename: &str, tool_name: &str, version_re: &Regex) -> u8 {
+    if let Some(version_match) = version_re.find(filename) {
+        let prefix = &filename[..version_match.start()];
+        return if prefix == tool_name {
+            0
+        } else if prefix.contains(tool_name) || tool_name.contains(prefix) {
+            1
+        } else {
+            2
+        };
+    }
+
+    if filename.starts_with(&format!("{}-", tool_name))
+        || filename.starts_with(&format!("{}.", tool_name))
+        || filename.starts_with(&format!("{}_", tool_name))
+        || filename == tool_name
+    {
+        0
+    } else if filename.contains(tool_name) {
+        1
+    } else {
+        2
+    }
+}
+
 fn get_url_matches(
     urls: &Vec<Download>,
     input: &AppInput,
@@ -559,6 +536,8 @@ fn get_url_matches(
         })
         .collect::<Vec<_>>();
 
+    let version_re = Regex::new(r"[-_]v?\d+\.\d+").unwrap();
+
     urls_match.sort_by(|a, b| {
         let tool_name = executor.get_name().to_lowercase();
 
@@ -576,22 +555,8 @@ fn get_url_matches(
             .unwrap_or("")
             .to_lowercase();
 
-        let score_match = |filename: &str| -> u8 {
-            if filename.starts_with(&format!("{}-", tool_name))
-                || filename.starts_with(&format!("{}.", tool_name))
-                || filename.starts_with(&format!("{}_", tool_name))
-                || filename == tool_name
-            {
-                0
-            } else if filename.contains(&tool_name) {
-                1
-            } else {
-                2
-            }
-        };
-
-        let a_score = score_match(&a_filename);
-        let b_score = score_match(&b_filename);
+        let a_score = score_filename_match(&a_filename, &tool_name, &version_re);
+        let b_score = score_filename_match(&b_filename, &tool_name, &version_re);
 
         match a_score.cmp(&b_score) {
             std::cmp::Ordering::Equal => {}
@@ -735,4 +700,400 @@ pub async fn try_run(
         }
     }
     Err(format!("Error: Unable to find executable for {}. The tool may not be properly installed or the binary name doesn't match expected patterns.", executor.get_name()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::github_utils::{detect_arch_from_name, detect_os_from_name};
+
+    #[test]
+    fn test_version_req_full_semver_exact() {
+        let version_req = GgVersionReq::new("22.11.0").unwrap();
+        assert_eq!("=22.11.0", version_req.to_string());
+
+        let v1 = GgVersion::new("22.11.0").unwrap();
+        assert!(version_req.to_version_req().matches(&v1.to_version()));
+
+        let v2 = GgVersion::new("22.11.1").unwrap();
+        assert!(!version_req.to_version_req().matches(&v2.to_version()));
+
+        let v3 = GgVersion::new("22.15.0").unwrap();
+        assert!(!version_req.to_version_req().matches(&v3.to_version()));
+    }
+
+    #[test]
+    fn test_version_req_partial_semver_compatibility() {
+        let version_req = GgVersionReq::new("22.11").unwrap();
+
+        let v1 = GgVersion::new("22.11.0").unwrap();
+        let v2 = GgVersion::new("22.11.5").unwrap();
+        assert!(version_req.to_version_req().matches(&v1.to_version()));
+        assert!(version_req.to_version_req().matches(&v2.to_version()));
+
+        let v3 = GgVersion::new("22.12.0").unwrap();
+        assert!(!version_req.to_version_req().matches(&v3.to_version()));
+    }
+
+    #[test]
+    fn test_version_req_with_prefix() {
+        let version_req_caret = GgVersionReq::new("^22.11.0").unwrap();
+        assert_eq!("^22.11.0", version_req_caret.to_string());
+
+        let version_req_tilde = GgVersionReq::new("~22.11.0").unwrap();
+        assert_eq!("~22.11.0", version_req_tilde.to_string());
+
+        let version_req_eq = GgVersionReq::new("=22.11.0").unwrap();
+        assert_eq!("=22.11.0", version_req_eq.to_string());
+    }
+
+    fn parse_release_assets(text: &str) -> Vec<String> {
+        text.lines()
+            .map(|line| line.trim())
+            .filter(|line| {
+                !line.is_empty()
+                    && !line.starts_with("sha256:")
+                    && !line.contains(" MB ")
+                    && !line.contains(" KB ")
+                    && !line.contains(" Bytes ")
+            })
+            .map(|s| s.to_string())
+            .collect()
+    }
+
+    fn extract_version(filename: &str) -> Option<String> {
+        let version_re = Regex::new(r"[-_]v?(\d+\.\d+\.\d+)").ok()?;
+        version_re
+            .captures(filename)
+            .and_then(|c| c.get(1))
+            .map(|m| m.as_str().to_string())
+    }
+
+    fn create_downloads(filenames: &[String]) -> Vec<Download> {
+        filenames
+            .iter()
+            .filter_map(|filename| {
+                let os = detect_os_from_name(filename);
+                let arch = detect_arch_from_name(filename);
+
+                let include = (os.is_some() && arch.is_some())
+                    || (os.is_none() && arch.is_none())
+                    || (os == Some(Os::Windows) && arch.is_none());
+
+                if !include {
+                    return None;
+                }
+
+                let version = extract_version(filename);
+
+                Some(Download {
+                    download_url: format!("https://example.com/releases/{}", filename),
+                    version: version.and_then(|v| GgVersion::new(&v)),
+                    os: os.or(Some(Os::Any)),
+                    arch: arch.or(Some(Arch::Any)),
+                    variant: Some(Variant::Any),
+                    tags: HashSet::new(),
+                })
+            })
+            .collect()
+    }
+
+    fn select_best_download(
+        downloads: &[Download],
+        tool_name: &str,
+        target_os: Os,
+        target_arch: Arch,
+    ) -> Option<String> {
+        let version_re = Regex::new(r"[-_]v?\d+\.\d+").unwrap();
+        let tool_name = tool_name.to_lowercase();
+
+        let mut matches: Vec<_> = downloads
+            .iter()
+            .filter(|d| {
+                let os_match = d.os == Some(Os::Any) || d.os == Some(target_os);
+                let arch_match = d.arch == Some(Arch::Any) || d.arch == Some(target_arch);
+                os_match && arch_match
+            })
+            .collect();
+
+        matches.sort_by(|a, b| {
+            let a_filename = a
+                .download_url
+                .split('/')
+                .last()
+                .unwrap_or("")
+                .to_lowercase();
+            let b_filename = b
+                .download_url
+                .split('/')
+                .last()
+                .unwrap_or("")
+                .to_lowercase();
+
+            let a_score = score_filename_match(&a_filename, &tool_name, &version_re);
+            let b_score = score_filename_match(&b_filename, &tool_name, &version_re);
+
+            match a_score.cmp(&b_score) {
+                std::cmp::Ordering::Equal => {}
+                other => return other,
+            }
+
+            let a_specific = a.os != Some(Os::Any) || a.arch != Some(Arch::Any);
+            let b_specific = b.os != Some(Os::Any) || b.arch != Some(Arch::Any);
+
+            match (a_specific, b_specific) {
+                (true, false) => std::cmp::Ordering::Less,
+                (false, true) => std::cmp::Ordering::Greater,
+                _ => b
+                    .version
+                    .clone()
+                    .map(|v| v.to_version())
+                    .cmp(&a.version.clone().map(|v| v.to_version())),
+            }
+        });
+
+        matches
+            .first()
+            .and_then(|d| d.download_url.split('/').last())
+            .map(|s| s.to_string())
+    }
+
+    #[test]
+    fn test_sccache_selects_sccache_not_dist() {
+        let release_text = r#"
+            sccache-dist-v0.12.0-x86_64-unknown-linux-musl.tar.gz
+            sha256:4c6f890434cee3521206c2f1f5a772587e5b8f02635a85fe0ade3e83d9b2ec58
+            5.08 MB Oct 21
+            sccache-v0.12.0-aarch64-apple-darwin.tar.gz
+            sha256:4d5281f8760963347b29b9ca4ab1dbde99712c17329619fc9cecba1577ccc8d2
+            6.22 MB Oct 21
+            sccache-v0.12.0-aarch64-unknown-linux-musl.tar.gz
+            sha256:111ddd28fb108cb3e17edb69ab62cefe1dcc97b02e5006ff9c1330f4f2e78368
+            8.5 MB Oct 21
+            sccache-v0.12.0-x86_64-apple-darwin.tar.gz
+            sha256:abc123
+            6.5 MB Oct 21
+            sccache-v0.12.0-x86_64-unknown-linux-musl.tar.gz
+            sha256:def456
+            8.5 MB Oct 21
+        "#;
+
+        let filenames = parse_release_assets(release_text);
+        let downloads = create_downloads(&filenames);
+
+        assert_eq!(
+            select_best_download(&downloads, "sccache", Os::Linux, Arch::X86_64),
+            Some("sccache-v0.12.0-x86_64-unknown-linux-musl.tar.gz".to_string())
+        );
+        assert_eq!(
+            select_best_download(&downloads, "sccache", Os::Mac, Arch::Arm64),
+            Some("sccache-v0.12.0-aarch64-apple-darwin.tar.gz".to_string())
+        );
+        assert_eq!(
+            select_best_download(&downloads, "sccache", Os::Linux, Arch::Arm64),
+            Some("sccache-v0.12.0-aarch64-unknown-linux-musl.tar.gz".to_string())
+        );
+    }
+
+    #[test]
+    fn test_deno_selection() {
+        let release_text = r#"
+            deno-aarch64-apple-darwin.zip
+            deno-aarch64-unknown-linux-gnu.zip
+            deno-x86_64-apple-darwin.zip
+            deno-x86_64-pc-windows-msvc.zip
+            deno-x86_64-unknown-linux-gnu.zip
+            denort-aarch64-apple-darwin.zip
+            denort-aarch64-unknown-linux-gnu.zip
+            denort-x86_64-apple-darwin.zip
+            denort-x86_64-pc-windows-msvc.zip
+            denort-x86_64-unknown-linux-gnu.zip
+            deno_src.tar.gz
+            lib.deno.d.ts
+        "#;
+
+        let filenames = parse_release_assets(release_text);
+        let downloads = create_downloads(&filenames);
+
+        assert_eq!(
+            select_best_download(&downloads, "deno", Os::Linux, Arch::X86_64),
+            Some("deno-x86_64-unknown-linux-gnu.zip".to_string())
+        );
+        assert_eq!(
+            select_best_download(&downloads, "deno", Os::Mac, Arch::Arm64),
+            Some("deno-aarch64-apple-darwin.zip".to_string())
+        );
+        assert_eq!(
+            select_best_download(&downloads, "deno", Os::Windows, Arch::X86_64),
+            Some("deno-x86_64-pc-windows-msvc.zip".to_string())
+        );
+    }
+
+    #[test]
+    fn test_caddy_selection() {
+        let release_text = r#"
+            caddy_2.10.2_linux_amd64.tar.gz
+            caddy_2.10.2_linux_arm64.tar.gz
+            caddy_2.10.2_linux_armv7.tar.gz
+            caddy_2.10.2_mac_amd64.tar.gz
+            caddy_2.10.2_mac_arm64.tar.gz
+            caddy_2.10.2_windows_amd64.zip
+            caddy_2.10.2_windows_arm64.zip
+        "#;
+
+        let filenames = parse_release_assets(release_text);
+        let downloads = create_downloads(&filenames);
+
+        assert_eq!(
+            select_best_download(&downloads, "caddy", Os::Linux, Arch::X86_64),
+            Some("caddy_2.10.2_linux_amd64.tar.gz".to_string())
+        );
+        assert_eq!(
+            select_best_download(&downloads, "caddy", Os::Linux, Arch::Arm64),
+            Some("caddy_2.10.2_linux_arm64.tar.gz".to_string())
+        );
+        assert_eq!(
+            select_best_download(&downloads, "caddy", Os::Windows, Arch::X86_64),
+            Some("caddy_2.10.2_windows_amd64.zip".to_string())
+        );
+    }
+
+    #[test]
+    fn test_gh_cli_selection() {
+        let release_text = r#"
+            gh_2.83.1_linux_amd64.tar.gz
+            gh_2.83.1_linux_arm64.tar.gz
+            gh_2.83.1_macOS_amd64.zip
+            gh_2.83.1_macOS_arm64.zip
+            gh_2.83.1_windows_amd64.zip
+            gh_2.83.1_windows_arm64.zip
+        "#;
+
+        let filenames = parse_release_assets(release_text);
+        let downloads = create_downloads(&filenames);
+
+        assert_eq!(
+            select_best_download(&downloads, "cli", Os::Linux, Arch::X86_64),
+            Some("gh_2.83.1_linux_amd64.tar.gz".to_string())
+        );
+        assert_eq!(
+            select_best_download(&downloads, "cli", Os::Mac, Arch::Arm64),
+            Some("gh_2.83.1_macOS_arm64.zip".to_string())
+        );
+        assert_eq!(
+            select_best_download(&downloads, "cli", Os::Windows, Arch::X86_64),
+            Some("gh_2.83.1_windows_amd64.zip".to_string())
+        );
+    }
+
+    #[test]
+    fn test_just_selection() {
+        let release_text = r#"
+            just-1.43.1-aarch64-apple-darwin.tar.gz
+            just-1.43.1-aarch64-pc-windows-msvc.zip
+            just-1.43.1-aarch64-unknown-linux-musl.tar.gz
+            just-1.43.1-arm-unknown-linux-musleabihf.tar.gz
+            just-1.43.1-armv7-unknown-linux-musleabihf.tar.gz
+            just-1.43.1-x86_64-apple-darwin.tar.gz
+            just-1.43.1-x86_64-pc-windows-msvc.zip
+            just-1.43.1-x86_64-unknown-linux-musl.tar.gz
+        "#;
+
+        let filenames = parse_release_assets(release_text);
+        let downloads = create_downloads(&filenames);
+
+        assert_eq!(
+            select_best_download(&downloads, "just", Os::Linux, Arch::X86_64),
+            Some("just-1.43.1-x86_64-unknown-linux-musl.tar.gz".to_string())
+        );
+        assert_eq!(
+            select_best_download(&downloads, "just", Os::Mac, Arch::Arm64),
+            Some("just-1.43.1-aarch64-apple-darwin.tar.gz".to_string())
+        );
+        assert_eq!(
+            select_best_download(&downloads, "just", Os::Windows, Arch::X86_64),
+            Some("just-1.43.1-x86_64-pc-windows-msvc.zip".to_string())
+        );
+    }
+
+    #[test]
+    fn test_fortio_selection() {
+        let release_text = r#"
+            fortio-linux_amd64-1.73.0.tgz
+            fortio-linux_arm64-1.73.0.tgz
+            fortio_win_1.73.0.zip
+        "#;
+
+        let filenames = parse_release_assets(release_text);
+        let downloads = create_downloads(&filenames);
+
+        assert_eq!(
+            select_best_download(&downloads, "fortio", Os::Linux, Arch::X86_64),
+            Some("fortio-linux_amd64-1.73.0.tgz".to_string())
+        );
+        assert_eq!(
+            select_best_download(&downloads, "fortio", Os::Linux, Arch::Arm64),
+            Some("fortio-linux_arm64-1.73.0.tgz".to_string())
+        );
+        assert_eq!(
+            select_best_download(&downloads, "fortio", Os::Windows, Arch::Any),
+            Some("fortio_win_1.73.0.zip".to_string())
+        );
+    }
+
+    #[test]
+    fn test_portable_git_selection() {
+        let release_text = r#"
+            checksums.txt
+            portable-git-linux-x64-v0.6.1.tar.gz
+            portable-git-macos-arm64-v0.6.1.tar.gz
+            portable-git-macos-x64-v0.6.1.tar.gz
+            portable-git-windows-x64-v0.6.1.zip
+        "#;
+
+        let filenames = parse_release_assets(release_text);
+        let downloads = create_downloads(&filenames);
+
+        assert_eq!(
+            select_best_download(&downloads, "portable-git", Os::Linux, Arch::X86_64),
+            Some("portable-git-linux-x64-v0.6.1.tar.gz".to_string())
+        );
+        assert_eq!(
+            select_best_download(&downloads, "portable-git", Os::Mac, Arch::Arm64),
+            Some("portable-git-macos-arm64-v0.6.1.tar.gz".to_string())
+        );
+        assert_eq!(
+            select_best_download(&downloads, "portable-git", Os::Windows, Arch::X86_64),
+            Some("portable-git-windows-x64-v0.6.1.zip".to_string())
+        );
+    }
+
+    #[test]
+    fn test_score_filename_match_unit() {
+        let version_re = Regex::new(r"[-_]v?\d+\.\d+").unwrap();
+
+        assert_eq!(
+            score_filename_match("sccache-v0.12.0-linux.tar.gz", "sccache", &version_re),
+            0
+        );
+
+        assert_eq!(
+            score_filename_match("sccache-dist-v0.12.0-linux.tar.gz", "sccache", &version_re),
+            1
+        );
+
+        assert_eq!(
+            score_filename_match("ripgrep-v1.0.0.tar.gz", "sccache", &version_re),
+            2
+        );
+
+        assert_eq!(
+            score_filename_match("mytool-linux.tar.gz", "mytool", &version_re),
+            0
+        );
+        assert_eq!(
+            score_filename_match("othertool-linux.tar.gz", "mytool", &version_re),
+            2
+        );
+    }
 }
