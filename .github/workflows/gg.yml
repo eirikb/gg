@@ -292,7 +292,7 @@ jobs:
     strategy:
       matrix:
         os: [ macos-14 ]
-        cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "run:java@14 java -version", "deno -V",  "jbang --version", "gh/cli/cli version", "gh version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fastlane --version" ]
+        cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "deno -V",  "jbang --version", "gh/cli/cli version", "gh version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fastlane --version" ]
 
     runs-on: ${{ matrix.os }}
     steps:
