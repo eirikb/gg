@@ -75,6 +75,15 @@ impl GitHub {
             return false;
         }
 
+        if name_lower.contains(".orig.tar")
+            || name_lower.contains("-src.")
+            || name_lower.contains("_src.")
+            || name_lower.contains("-source.")
+            || name_lower.contains("_source.")
+        {
+            return false;
+        }
+
         let binary_extensions = [
             ".exe", ".zip", ".tar.gz", ".tgz", ".tar.bz2", ".7z", ".gem", ".jar",
         ];
@@ -249,5 +258,47 @@ impl Executor for GitHub {
         }
 
         env
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_likely_binary_accepts_binaries() {
+        assert!(GitHub::is_likely_binary("tool-linux-amd64.tar.gz"));
+        assert!(GitHub::is_likely_binary("tool-windows-x64.zip"));
+        assert!(GitHub::is_likely_binary("tool.exe"));
+        assert!(GitHub::is_likely_binary("tool-darwin-arm64.tgz"));
+        assert!(GitHub::is_likely_binary("tool-v1.0.0-linux-x86_64.tar.bz2"));
+        assert!(GitHub::is_likely_binary("tool.jar"));
+        assert!(GitHub::is_likely_binary("tool.gem"));
+        assert!(GitHub::is_likely_binary("fortio_win_1.73.0.zip"));
+    }
+
+    #[test]
+    fn test_is_likely_binary_rejects_source_tarballs() {
+        assert!(!GitHub::is_likely_binary("fortio_1.73.0.orig.tar.gz"));
+        assert!(!GitHub::is_likely_binary("package_1.0.0.orig.tar.xz"));
+
+        assert!(!GitHub::is_likely_binary("tool-1.0.0-src.tar.gz"));
+        assert!(!GitHub::is_likely_binary("tool_1.0.0_src.zip"));
+        assert!(!GitHub::is_likely_binary("tool-source.tar.gz"));
+        assert!(!GitHub::is_likely_binary("tool_source.zip"));
+    }
+
+    #[test]
+    fn test_is_likely_binary_rejects_msi() {
+        assert!(!GitHub::is_likely_binary("tool-setup.msi"));
+        assert!(!GitHub::is_likely_binary("Tool-1.0.0-x64.msi"));
+    }
+
+    #[test]
+    fn test_is_likely_binary_rejects_non_binaries() {
+        assert!(!GitHub::is_likely_binary("checksums.txt"));
+        assert!(!GitHub::is_likely_binary("SHA256SUMS"));
+        assert!(!GitHub::is_likely_binary("tool.asc"));
+        assert!(!GitHub::is_likely_binary("CHANGELOG.md"));
     }
 }

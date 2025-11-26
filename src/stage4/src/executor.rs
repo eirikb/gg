@@ -773,6 +773,17 @@ mod tests {
         filenames
             .iter()
             .filter_map(|filename| {
+                let name_lower = filename.to_lowercase();
+
+                if name_lower.contains(".orig.tar")
+                    || name_lower.contains("-src.")
+                    || name_lower.contains("_src.")
+                    || name_lower.contains("-source.")
+                    || name_lower.contains("_source.")
+                {
+                    return None;
+                }
+
                 let os = detect_os_from_name(filename);
                 let arch = detect_arch_from_name(filename);
 
@@ -1021,6 +1032,7 @@ mod tests {
         let release_text = r#"
             fortio-linux_amd64-1.73.0.tgz
             fortio-linux_arm64-1.73.0.tgz
+            fortio_1.73.0.orig.tar.gz
             fortio_win_1.73.0.zip
         "#;
 
