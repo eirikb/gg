@@ -576,13 +576,26 @@ fn get_url_matches(
             .unwrap_or("")
             .to_lowercase();
 
-        let a_contains_tool = a_filename.contains(&tool_name);
-        let b_contains_tool = b_filename.contains(&tool_name);
+        let score_match = |filename: &str| -> u8 {
+            if filename.starts_with(&format!("{}-", tool_name))
+                || filename.starts_with(&format!("{}.", tool_name))
+                || filename.starts_with(&format!("{}_", tool_name))
+                || filename == tool_name
+            {
+                0
+            } else if filename.contains(&tool_name) {
+                1
+            } else {
+                2
+            }
+        };
 
-        match (a_contains_tool, b_contains_tool) {
-            (true, false) => return std::cmp::Ordering::Less,
-            (false, true) => return std::cmp::Ordering::Greater,
-            _ => {}
+        let a_score = score_match(&a_filename);
+        let b_score = score_match(&b_filename);
+
+        match a_score.cmp(&b_score) {
+            std::cmp::Ordering::Equal => {}
+            other => return other,
         }
 
         let a_specific = a.os != Some(Os::Any) || a.arch != Some(Arch::Any);
