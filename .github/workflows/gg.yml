@@ -39,11 +39,11 @@ jobs:
 
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-          - os: macos-latest
+          - os: macos-14
             target: aarch64-apple-darwin
           - os: ubuntu-22.04-arm
             target: aarch64-unknown-linux-musl
-          - os: macos-14
+          - os: macos-15-intel
             target: x86_64-apple-darwin
 
     runs-on: ${{ matrix.os }}
@@ -150,10 +150,10 @@ jobs:
           - os: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
             stage4: aarch64-unknown-linux-musl
-          - os: macos-latest
+          - os: macos-14
             target: aarch64-apple-darwin
             stage4: aarch64-apple-darwin
-          - os: macos-14
+          - os: macos-15-intel
             target: x86_64-apple-darwin
             stage4: x86_64-apple-darwin
 
@@ -291,7 +291,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        os: [ macos-14 ]
+        os: [ macos-14, macos-15-intel ]
         cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "deno -V",  "jbang --version", "gh/cli/cli version", "gh version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fastlane --version" ]
 
     runs-on: ${{ matrix.os }}
@@ -313,7 +313,7 @@ jobs:
     needs: stage1
     strategy:
       matrix:
-        os: [ ubuntu-22.04-arm, macos-latest ]
+        os: [ ubuntu-22.04-arm, macos-14, macos-15-intel ]
         cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "deno -V", "jbang --version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fastlane --version" ]
 
     runs-on: ${{ matrix.os }}
