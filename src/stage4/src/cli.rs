@@ -1,4 +1,5 @@
 use crate::config::GgConfig;
+use crate::tools::get_tool_info;
 use clap::{ArgAction, Parser, Subcommand};
 use regex::{Match, Regex};
 use std::collections::HashSet;
@@ -200,6 +201,19 @@ impl Cli {
                 } else {
                     let cmds = parse_command_string(first_arg, config);
                     let app_args = self.args[1..].to_vec();
+
+                    if cmds.len() == 1
+                        && cmds[0].cmd == "run"
+                        && app_args.first().map_or(false, |a| {
+                            a.starts_with("gh/") || get_tool_info(a).is_some()
+                        })
+                    {
+                        let tool = &app_args[0];
+                        let new_cmds = parse_command_string(tool, config);
+                        let new_app_args = app_args[1..].to_vec();
+                        return (new_cmds, new_app_args);
+                    }
+
                     (cmds, app_args)
                 }
             } else {
@@ -552,5 +566,39 @@ mod tests {
         assert_eq!(cmds[0].cmd, "python");
         assert!(cmds[0].version.is_none());
         assert_eq!(app_args, vec!["--version"]);
+    }
+
+    #[test]
+    fn test_run_with_gh_tool_is_rewritten() {
+        // "run gh/owner/repo --arg" should become "gh/owner/repo --arg"
+        let cli = parse_test_args(vec!["run", "gh/owner/repo", "--arg"]);
+        let config = GgConfig::default();
+
+        let (cmds, app_args) = cli.parse_args(&config);
+        assert_eq!(cmds.len(), 1);
+        assert_eq!(cmds[0].cmd, "gh/owner/repo");
+        assert_eq!(app_args, vec!["--arg"]);
+    }
+
+    #[test]
+    fn test_run_with_known_tool_is_rewritten() {
+        let cli = parse_test_args(vec!["run", "rat", "--help"]);
+        let config = GgConfig::default();
+
+        let (cmds, app_args) = cli.parse_args(&config);
+        assert_eq!(cmds.len(), 1);
+        assert_eq!(cmds[0].cmd, "rat");
+        assert_eq!(app_args, vec!["--help"]);
+    }
+
+    #[test]
+    fn test_run_with_regular_command_unchanged() {
+        let cli = parse_test_args(vec!["run", "somecommand"]);
+        let config = GgConfig::default();
+
+        let (cmds, app_args) = cli.parse_args(&config);
+        assert_eq!(cmds.len(), 1);
+        assert_eq!(cmds[0].cmd, "run");
+        assert_eq!(app_args, vec!["somecommand"]);
     }
 }
