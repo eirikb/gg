@@ -504,13 +504,13 @@ async fn main() -> ExitCode {
 
             info!("Path vars: {}", &path_vars.join(", "));
 
-            if try_run(input, &**executor, app_path.clone(), path_vars, env_vars)
-                .await
-                .unwrap()
-            {
-                ExitCode::from(0)
-            } else {
-                ExitCode::from(1)
+            match try_run(input, &**executor, app_path.clone(), path_vars, env_vars).await {
+                Ok(true) => ExitCode::from(0),
+                Ok(false) => ExitCode::from(1),
+                Err(e) => {
+                    println!("{}", e);
+                    ExitCode::from(1)
+                }
             }
         } else {
             println!(
