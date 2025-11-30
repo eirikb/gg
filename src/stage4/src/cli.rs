@@ -191,6 +191,21 @@ impl Cli {
                     let mut expanded_args = alias_args;
                     expanded_args.extend_from_slice(&self.args[1..]);
 
+                    let mut depth = 0;
+                    const MAX_DEPTH: usize = 10;
+                    while depth < MAX_DEPTH {
+                        if let Some(first) = expanded_args.first() {
+                            if let Some(nested_alias) = config.resolve_alias(first) {
+                                let rest = expanded_args[1..].to_vec();
+                                expanded_args = nested_alias;
+                                expanded_args.extend(rest);
+                                depth += 1;
+                                continue;
+                            }
+                        }
+                        break;
+                    }
+
                     let cmds = if let Some(cmd_part) = expanded_args.first() {
                         parse_command_string(cmd_part, config)
                     } else {
@@ -600,5 +615,34 @@ mod tests {
         assert_eq!(cmds.len(), 1);
         assert_eq!(cmds[0].cmd, "run");
         assert_eq!(app_args, vec!["somecommand"]);
+    }
+
+    #[test]
+    fn test_nested_alias_resolution() {
+        let cli = parse_test_args(vec!["run-hello-chrome"]);
+        let mut config = GgConfig::default();
+        config.aliases.insert(
+            "run-hello".to_string(),
+            "flutter run -t lib/main.dart --flavor dev".to_string(),
+        );
+        config.aliases.insert(
+            "run-hello-chrome".to_string(),
+            "run-hello -d chrome".to_string(),
+        );
+
+        let (cmds, app_args) = cli.parse_args(&config);
+        assert_eq!(cmds[0].cmd, "flutter");
+        assert_eq!(
+            app_args,
+            vec![
+                "run",
+                "-t",
+                "lib/main.dart",
+                "--flavor",
+                "dev",
+                "-d",
+                "chrome"
+            ]
+        );
     }
 }
