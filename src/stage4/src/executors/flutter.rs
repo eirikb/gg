@@ -143,20 +143,6 @@ impl Executor for Flutter {
             "FLUTTER_ROOT".to_string(),
             app_path.install_dir.to_string_lossy().to_string(),
         );
-
-        let current_path = std::env::var("PATH").unwrap_or_default();
-        let flutter_bin_path = app_path
-            .install_dir
-            .join("bin")
-            .to_string_lossy()
-            .to_string();
-        let new_path = if current_path.is_empty() {
-            flutter_bin_path
-        } else {
-            format!("{}:{}", flutter_bin_path, current_path)
-        };
-        env.insert("PATH".to_string(), new_path);
-
         env
     }
 
