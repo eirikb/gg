@@ -4,6 +4,9 @@ on:
     types: [ opened, synchronize, closed ]
     branches: [ main ]
 
+concurrency:
+  group: "${{ github.workflow }}-${{ github.head_ref || github.ref }}-${{ github.event_name }}"
+  cancel-in-progress: true
 
 name: gg.cmd
 jobs:

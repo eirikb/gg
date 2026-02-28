@@ -40,7 +40,7 @@ runs:
     - name: Cache gg tools
       id: cache-gg
       if: inputs.cache == 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ steps.cache-dir.outputs.dir }}
         key: ${{ inputs.cache-key-prefix }}-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/gg.toml') }}
@@ -53,7 +53,11 @@ runs:
       env:
         GG_CACHE_DIR: ${{ steps.cache-dir.outputs.dir }}
       run: |
-        set -e
+        if [ "${RUNNER_DEBUG:-0}" = "1" ]; then
+          set -euxo pipefail
+        else
+          set -e
+        fi
 
         VERSION="${{ inputs.version }}"
 
@@ -80,8 +84,14 @@ runs:
         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
         echo "GG_CACHE_DIR=$GG_CACHE_DIR" >> $GITHUB_ENV
-
-        GG_VERSION=$(sh "$HOME/.local/bin/gg.cmd" -V 2>/dev/null | head -1 || echo "unknown")
-        echo "version=$GG_VERSION" >> $GITHUB_OUTPUT
-        echo "Installed gg.cmd version: $GG_VERSION"
         echo "Cache directory: $GG_CACHE_DIR"
+
+        GG_VERSION_RAW="$(sh "$HOME/.local/bin/gg.cmd" -V 2>/dev/null || true)"
+
+        # keep only the last non-empty line
+        GG_VERSION="$(printf '%s\n' "$GG_VERSION_RAW" | sed '/^$/d' | tail -n1)"
+
+        [ -n "$GG_VERSION" ] || GG_VERSION="unknown"
+
+        echo "version=$GG_VERSION" >> "$GITHUB_OUTPUT"
+        echo "Installed gg.cmd version: $GG_VERSION"
