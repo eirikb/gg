@@ -129,6 +129,7 @@ jobs:
           path: hashes
 
       - uses: LanceMcCarthy/Action-AzureBlobUpload@v2
+        if: ${{ secrets.ConnectionString != '' }}
         with:
           connection_string: ${{ secrets.ConnectionString }}
           container_name: $web
@@ -265,20 +266,27 @@ jobs:
         with:
           name: gg.cmd
 
-      - name: Debug cache state
+      - name: Download stage4 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: stage4_*
+
+      - name: Pre-populate cache with stage4
         shell: bash
         run: |
-          echo "=== DEBUG: Cache directory contents ==="
-          if [ -d "$HOME/.cache/gg" ]; then
-            find "$HOME/.cache/gg" -type f | head -20
-            echo "=== DEBUG: System files ==="
-            find "$HOME/.cache/gg" -name "system" -exec echo "File: {}" \; -exec cat {} \; -exec echo "" \; || true
+          mkdir -p "$HOME/.cache/gg/gg-dev"
+          ARCH=$(uname -m)
+          case "$ARCH" in aarch64|arm64) ARCH=aarch64 ;; esac
+          case "${{ runner.os }}" in
+            Linux)   TARGET="${ARCH}-unknown-linux-musl" ;;
+            macOS)   TARGET="${ARCH}-apple-darwin" ;;
+            Windows) TARGET="${ARCH}-pc-windows-msvc" ;;
+          esac
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            cp "stage4_${TARGET}/stage4" "$HOME/.cache/gg/gg-dev/stage4.exe"
           else
-            echo "Cache directory $HOME/.cache/gg does not exist"
-          fi
-          if [ -d "$USERPROFILE/.cache/gg" ]; then
-            find "$USERPROFILE/.cache/gg" -type f | head -20 || true
-            find "$USERPROFILE/.cache/gg" -name "system" -exec echo "File: {}" \; -exec cat {} \; -exec echo "" \; || true
+            cp "stage4_${TARGET}/stage4" "$HOME/.cache/gg/gg-dev/stage4"
+            chmod +x "$HOME/.cache/gg/gg-dev/stage4"
           fi
 
       - name: Run!
@@ -304,6 +312,21 @@ jobs:
         with:
           name: gg.cmd
 
+      - name: Download stage4 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: stage4_*
+
+      - name: Pre-populate cache with stage4
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.cache/gg/gg-dev"
+          ARCH=$(uname -m)
+          case "$ARCH" in aarch64|arm64) ARCH=aarch64 ;; esac
+          TARGET="${ARCH}-apple-darwin"
+          cp "stage4_${TARGET}/stage4" "$HOME/.cache/gg/gg-dev/stage4"
+          chmod +x "$HOME/.cache/gg/gg-dev/stage4"
+
       - name: Run!
         shell: bash
         run: |
@@ -326,6 +349,24 @@ jobs:
         with:
           name: gg.cmd
 
+      - name: Download stage4 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: stage4_*
+
+      - name: Pre-populate cache with stage4
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.cache/gg/gg-dev"
+          ARCH=$(uname -m)
+          case "$ARCH" in aarch64|arm64) ARCH=aarch64 ;; esac
+          case "${{ runner.os }}" in
+            Linux) TARGET="${ARCH}-unknown-linux-musl" ;;
+            macOS) TARGET="${ARCH}-apple-darwin" ;;
+          esac
+          cp "stage4_${TARGET}/stage4" "$HOME/.cache/gg/gg-dev/stage4"
+          chmod +x "$HOME/.cache/gg/gg-dev/stage4"
+
       - name: Run!
         shell: bash
         run: |
@@ -347,6 +388,17 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: gg.cmd
+
+      - name: Download stage4 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: stage4_*
+
+      - name: Pre-populate cache with stage4
+        shell: bash
+        run: |
+          mkdir -p "$USERPROFILE/.cache/gg/gg-dev"
+          cp stage4_x86_64-pc-windows-msvc/stage4 "$USERPROFILE/.cache/gg/gg-dev/stage4.exe"
 
       - name: Run!
         shell: cmd
@@ -376,6 +428,17 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: gg.cmd
+
+      - name: Download stage4 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: stage4_*
+
+      - name: Pre-populate cache with stage4
+        run: |
+          mkdir -p "$HOME/.cache/gg/gg-dev"
+          cp stage4_x86_64-unknown-linux-musl/stage4 "$HOME/.cache/gg/gg-dev/stage4"
+          chmod +x "$HOME/.cache/gg/gg-dev/stage4"
 
       - name: Run!
         run: |
