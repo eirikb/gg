@@ -97,7 +97,12 @@ jobs:
   hash:
     needs: [ stage4-OS ]
     runs-on: ubuntu-latest
+    outputs:
+      has_secret: ${{ steps.check.outputs.has_secret }}
     steps:
+      - name: Check for secret
+        id: check
+        run: echo "has_secret=${{ secrets.ConnectionString != '' }}" >> $GITHUB_OUTPUT
       - name: Download stage4 hash
         uses: actions/download-artifact@v4
 
@@ -129,7 +134,7 @@ jobs:
           path: hashes
 
       - uses: LanceMcCarthy/Action-AzureBlobUpload@v2
-        if: github.event.pull_request.head.repo.fork != true
+        if: steps.check.outputs.has_secret == 'true'
         with:
           connection_string: ${{ secrets.ConnectionString }}
           container_name: $web
@@ -253,7 +258,7 @@ jobs:
           path: gg.cmd
 
   test-OS1:
-    needs: stage1
+    needs: [ stage1, hash ]
     strategy:
       matrix:
         os: [ ubuntu-22.04, windows-2022 ]
@@ -272,13 +277,13 @@ jobs:
           name: gg.cmd
 
       - name: Download stage4
-        if: github.event.pull_request.head.repo.fork == true
+        if: needs.hash.outputs.has_secret != 'true'
         uses: actions/download-artifact@v4
         with:
           name: stage4_${{ matrix.stage4_target }}
 
       - name: Pre-populate cache with stage4
-        if: github.event.pull_request.head.repo.fork == true
+        if: needs.hash.outputs.has_secret != 'true'
         shell: bash
         run: |
           mkdir -p "$HOME/.cache/gg/gg-dev"
@@ -299,7 +304,7 @@ jobs:
 
   # Not all tools work on all OSes :/
   test-OS2:
-    needs: stage1
+    needs: [ stage1, hash ]
     strategy:
       matrix:
         os: [ macos-14, macos-15-intel ]
@@ -318,13 +323,13 @@ jobs:
           name: gg.cmd
 
       - name: Download stage4
-        if: github.event.pull_request.head.repo.fork == true
+        if: needs.hash.outputs.has_secret != 'true'
         uses: actions/download-artifact@v4
         with:
           name: stage4_${{ matrix.stage4_target }}
 
       - name: Pre-populate cache with stage4
-        if: github.event.pull_request.head.repo.fork == true
+        if: needs.hash.outputs.has_secret != 'true'
         shell: bash
         run: |
           mkdir -p "$HOME/.cache/gg/gg-dev"
@@ -340,7 +345,7 @@ jobs:
           sh gg.cmd -v ${{ matrix.cmd }}
 
   test-OS3:
-    needs: stage1
+    needs: [ stage1, hash ]
     strategy:
       matrix:
         os: [ ubuntu-22.04-arm, macos-14, macos-15-intel ]
@@ -361,13 +366,13 @@ jobs:
           name: gg.cmd
 
       - name: Download stage4
-        if: github.event.pull_request.head.repo.fork == true
+        if: needs.hash.outputs.has_secret != 'true'
         uses: actions/download-artifact@v4
         with:
           name: stage4_${{ matrix.stage4_target }}
 
       - name: Pre-populate cache with stage4
-        if: github.event.pull_request.head.repo.fork == true
+        if: needs.hash.outputs.has_secret != 'true'
         shell: bash
         run: |
           mkdir -p "$HOME/.cache/gg/gg-dev"
@@ -383,7 +388,7 @@ jobs:
           sh gg.cmd -v ${{ matrix.cmd }}
 
   test-batch:
-    needs: stage1
+    needs: [ stage1, hash ]
     strategy:
       matrix:
         os: [ windows-2022 ]
@@ -397,13 +402,13 @@ jobs:
           name: gg.cmd
 
       - name: Download stage4
-        if: github.event.pull_request.head.repo.fork == true
+        if: needs.hash.outputs.has_secret != 'true'
         uses: actions/download-artifact@v4
         with:
           name: stage4_x86_64-pc-windows-msvc
 
       - name: Pre-populate cache with stage4
-        if: github.event.pull_request.head.repo.fork == true
+        if: needs.hash.outputs.has_secret != 'true'
         shell: bash
         run: |
           mkdir -p "$USERPROFILE/.cache/gg/gg-dev"
@@ -424,7 +429,7 @@ jobs:
   
 
   test-container:
-    needs: stage1
+    needs: [ stage1, hash ]
     strategy:
       matrix:
         container: [ ubuntu, debian, alpine, archlinux ]
@@ -439,13 +444,13 @@ jobs:
           name: gg.cmd
 
       - name: Download stage4
-        if: github.event.pull_request.head.repo.fork == true
+        if: needs.hash.outputs.has_secret != 'true'
         uses: actions/download-artifact@v4
         with:
           name: stage4_x86_64-unknown-linux-musl
 
       - name: Pre-populate cache with stage4
-        if: github.event.pull_request.head.repo.fork == true
+        if: needs.hash.outputs.has_secret != 'true'
         run: |
           mkdir -p "$HOME/.cache/gg/gg-dev"
           cp stage4 "$HOME/.cache/gg/gg-dev/stage4"
