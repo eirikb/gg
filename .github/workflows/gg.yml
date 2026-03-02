@@ -129,7 +129,7 @@ jobs:
           path: hashes
 
       - uses: LanceMcCarthy/Action-AzureBlobUpload@v2
-        if: ${{ secrets.ConnectionString != '' }}
+        if: github.event.pull_request.head.repo.fork != true
         with:
           connection_string: ${{ secrets.ConnectionString }}
           container_name: $web
