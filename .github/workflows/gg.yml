@@ -258,6 +258,11 @@ jobs:
       matrix:
         os: [ ubuntu-22.04, windows-2022 ]
         cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fortio version", "fastlane --version", "gh/mozilla/sccache -V" ]
+        include:
+          - os: ubuntu-22.04
+            stage4_target: x86_64-unknown-linux-musl
+          - os: windows-2022
+            stage4_target: x86_64-pc-windows-msvc
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -266,26 +271,21 @@ jobs:
         with:
           name: gg.cmd
 
-      - name: Download stage4 artifacts
+      - name: Download stage4
+        if: github.event.pull_request.head.repo.fork == true
         uses: actions/download-artifact@v4
         with:
-          pattern: stage4_*
+          name: stage4_${{ matrix.stage4_target }}
 
       - name: Pre-populate cache with stage4
+        if: github.event.pull_request.head.repo.fork == true
         shell: bash
         run: |
           mkdir -p "$HOME/.cache/gg/gg-dev"
-          ARCH=$(uname -m)
-          case "$ARCH" in aarch64|arm64) ARCH=aarch64 ;; esac
-          case "${{ runner.os }}" in
-            Linux)   TARGET="${ARCH}-unknown-linux-musl" ;;
-            macOS)   TARGET="${ARCH}-apple-darwin" ;;
-            Windows) TARGET="${ARCH}-pc-windows-msvc" ;;
-          esac
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            cp "stage4_${TARGET}/stage4" "$HOME/.cache/gg/gg-dev/stage4.exe"
+            cp stage4 "$HOME/.cache/gg/gg-dev/stage4.exe"
           else
-            cp "stage4_${TARGET}/stage4" "$HOME/.cache/gg/gg-dev/stage4"
+            cp stage4 "$HOME/.cache/gg/gg-dev/stage4"
             chmod +x "$HOME/.cache/gg/gg-dev/stage4"
           fi
 
@@ -304,6 +304,11 @@ jobs:
       matrix:
         os: [ macos-14, macos-15-intel ]
         cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "deno -V",  "jbang --version", "gh/cli/cli version", "gh version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fastlane --version" ]
+        include:
+          - os: macos-14
+            stage4_target: aarch64-apple-darwin
+          - os: macos-15-intel
+            stage4_target: x86_64-apple-darwin
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -312,19 +317,18 @@ jobs:
         with:
           name: gg.cmd
 
-      - name: Download stage4 artifacts
+      - name: Download stage4
+        if: github.event.pull_request.head.repo.fork == true
         uses: actions/download-artifact@v4
         with:
-          pattern: stage4_*
+          name: stage4_${{ matrix.stage4_target }}
 
       - name: Pre-populate cache with stage4
+        if: github.event.pull_request.head.repo.fork == true
         shell: bash
         run: |
           mkdir -p "$HOME/.cache/gg/gg-dev"
-          ARCH=$(uname -m)
-          case "$ARCH" in aarch64|arm64) ARCH=aarch64 ;; esac
-          TARGET="${ARCH}-apple-darwin"
-          cp "stage4_${TARGET}/stage4" "$HOME/.cache/gg/gg-dev/stage4"
+          cp stage4 "$HOME/.cache/gg/gg-dev/stage4"
           chmod +x "$HOME/.cache/gg/gg-dev/stage4"
 
       - name: Run!
@@ -341,6 +345,13 @@ jobs:
       matrix:
         os: [ ubuntu-22.04-arm, macos-14, macos-15-intel ]
         cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "deno -V", "jbang --version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fastlane --version" ]
+        include:
+          - os: ubuntu-22.04-arm
+            stage4_target: aarch64-unknown-linux-musl
+          - os: macos-14
+            stage4_target: aarch64-apple-darwin
+          - os: macos-15-intel
+            stage4_target: x86_64-apple-darwin
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -349,22 +360,18 @@ jobs:
         with:
           name: gg.cmd
 
-      - name: Download stage4 artifacts
+      - name: Download stage4
+        if: github.event.pull_request.head.repo.fork == true
         uses: actions/download-artifact@v4
         with:
-          pattern: stage4_*
+          name: stage4_${{ matrix.stage4_target }}
 
       - name: Pre-populate cache with stage4
+        if: github.event.pull_request.head.repo.fork == true
         shell: bash
         run: |
           mkdir -p "$HOME/.cache/gg/gg-dev"
-          ARCH=$(uname -m)
-          case "$ARCH" in aarch64|arm64) ARCH=aarch64 ;; esac
-          case "${{ runner.os }}" in
-            Linux) TARGET="${ARCH}-unknown-linux-musl" ;;
-            macOS) TARGET="${ARCH}-apple-darwin" ;;
-          esac
-          cp "stage4_${TARGET}/stage4" "$HOME/.cache/gg/gg-dev/stage4"
+          cp stage4 "$HOME/.cache/gg/gg-dev/stage4"
           chmod +x "$HOME/.cache/gg/gg-dev/stage4"
 
       - name: Run!
@@ -389,16 +396,18 @@ jobs:
         with:
           name: gg.cmd
 
-      - name: Download stage4 artifacts
+      - name: Download stage4
+        if: github.event.pull_request.head.repo.fork == true
         uses: actions/download-artifact@v4
         with:
-          pattern: stage4_*
+          name: stage4_x86_64-pc-windows-msvc
 
       - name: Pre-populate cache with stage4
+        if: github.event.pull_request.head.repo.fork == true
         shell: bash
         run: |
           mkdir -p "$USERPROFILE/.cache/gg/gg-dev"
-          cp stage4_x86_64-pc-windows-msvc/stage4 "$USERPROFILE/.cache/gg/gg-dev/stage4.exe"
+          cp stage4 "$USERPROFILE/.cache/gg/gg-dev/stage4.exe"
 
       - name: Run!
         shell: cmd
@@ -429,15 +438,17 @@ jobs:
         with:
           name: gg.cmd
 
-      - name: Download stage4 artifacts
+      - name: Download stage4
+        if: github.event.pull_request.head.repo.fork == true
         uses: actions/download-artifact@v4
         with:
-          pattern: stage4_*
+          name: stage4_x86_64-unknown-linux-musl
 
       - name: Pre-populate cache with stage4
+        if: github.event.pull_request.head.repo.fork == true
         run: |
           mkdir -p "$HOME/.cache/gg/gg-dev"
-          cp stage4_x86_64-unknown-linux-musl/stage4 "$HOME/.cache/gg/gg-dev/stage4"
+          cp stage4 "$HOME/.cache/gg/gg-dev/stage4"
           chmod +x "$HOME/.cache/gg/gg-dev/stage4"
 
       - name: Run!
