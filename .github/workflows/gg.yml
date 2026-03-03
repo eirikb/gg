@@ -287,6 +287,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$HOME/.cache/gg/gg-dev"
+          echo "${{ matrix.stage4_target }}" > "$HOME/.cache/gg/gg-dev/system"
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             cp stage4 "$HOME/.cache/gg/gg-dev/stage4.exe"
           else
@@ -333,6 +334,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$HOME/.cache/gg/gg-dev"
+          echo "${{ matrix.stage4_target }}" > "$HOME/.cache/gg/gg-dev/system"
           cp stage4 "$HOME/.cache/gg/gg-dev/stage4"
           chmod +x "$HOME/.cache/gg/gg-dev/stage4"
 
@@ -376,6 +378,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$HOME/.cache/gg/gg-dev"
+          echo "${{ matrix.stage4_target }}" > "$HOME/.cache/gg/gg-dev/system"
           cp stage4 "$HOME/.cache/gg/gg-dev/stage4"
           chmod +x "$HOME/.cache/gg/gg-dev/stage4"
 
@@ -412,6 +415,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$USERPROFILE/.cache/gg/gg-dev"
+          echo "x86_64-pc-windows-msvc" > "$USERPROFILE/.cache/gg/gg-dev/system"
           cp stage4 "$USERPROFILE/.cache/gg/gg-dev/stage4.exe"
 
       - name: Run!
@@ -453,13 +457,14 @@ jobs:
         if: needs.hash.outputs.has_secret != 'true'
         run: |
           mkdir -p "$HOME/.cache/gg/gg-dev"
+          echo "x86_64-unknown-linux-musl" > "$HOME/.cache/gg/gg-dev/system"
           cp stage4 "$HOME/.cache/gg/gg-dev/stage4"
           chmod +x "$HOME/.cache/gg/gg-dev/stage4"
 
       - name: Run!
         run: |
           set -x
-          
+
           # This is required for nodejs to run - not gg.cmd! 
           if [ "${{ matrix.container }}" == "alpine" ]; then
             apk add libstdc++
