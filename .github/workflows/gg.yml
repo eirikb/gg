@@ -52,7 +52,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: version
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
 
       - name: Prepare build
         shell: bash
@@ -168,7 +168,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
 
       - name: Download stage4 hash
         uses: actions/download-artifact@v8
@@ -212,7 +212,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Source
-        uses: actions/checkout@v2.1.0
+        uses: actions/checkout@v6
 
       - name: Download stage3 / stage4
         uses: actions/download-artifact@v8
