@@ -133,7 +133,7 @@ jobs:
           name: hashes
           path: hashes
 
-      - uses: LanceMcCarthy/Action-AzureBlobUpload@v2
+      - uses: LanceMcCarthy/Action-AzureBlobUpload@v3
         if: steps.check.outputs.has_secret == 'true'
         with:
           connection_string: ${{ secrets.ConnectionString }}
@@ -544,7 +544,7 @@ jobs:
           mkdir to_blob
           cp gg.cmd to_blob
 
-      - uses: LanceMcCarthy/Action-AzureBlobUpload@v2
+      - uses: LanceMcCarthy/Action-AzureBlobUpload@v3
         with:
           connection_string: ${{ secrets.ConnectionString }}
           container_name: $web
