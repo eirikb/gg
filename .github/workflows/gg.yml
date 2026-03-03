@@ -287,7 +287,9 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$HOME/.cache/gg/gg-dev"
-          echo "${{ matrix.stage4_target }}" > "$HOME/.cache/gg/gg-dev/system"
+          SYSTEM="${{ matrix.stage4_target }}"
+          if getconf GNU_LIBC_VERSION >/dev/null 2>&1; then SYSTEM="${SYSTEM/musl/gnu}"; fi
+          echo "$SYSTEM" > "$HOME/.cache/gg/gg-dev/system"
           if [[ "${{ runner.os }}" == "Windows" ]]; then
             cp stage4 "$HOME/.cache/gg/gg-dev/stage4.exe"
           else
@@ -334,7 +336,9 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$HOME/.cache/gg/gg-dev"
-          echo "${{ matrix.stage4_target }}" > "$HOME/.cache/gg/gg-dev/system"
+          SYSTEM="${{ matrix.stage4_target }}"
+          if getconf GNU_LIBC_VERSION >/dev/null 2>&1; then SYSTEM="${SYSTEM/musl/gnu}"; fi
+          echo "$SYSTEM" > "$HOME/.cache/gg/gg-dev/system"
           cp stage4 "$HOME/.cache/gg/gg-dev/stage4"
           chmod +x "$HOME/.cache/gg/gg-dev/stage4"
 
@@ -378,7 +382,9 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$HOME/.cache/gg/gg-dev"
-          echo "${{ matrix.stage4_target }}" > "$HOME/.cache/gg/gg-dev/system"
+          SYSTEM="${{ matrix.stage4_target }}"
+          if getconf GNU_LIBC_VERSION >/dev/null 2>&1; then SYSTEM="${SYSTEM/musl/gnu}"; fi
+          echo "$SYSTEM" > "$HOME/.cache/gg/gg-dev/system"
           cp stage4 "$HOME/.cache/gg/gg-dev/stage4"
           chmod +x "$HOME/.cache/gg/gg-dev/stage4"
 
@@ -457,7 +463,9 @@ jobs:
         if: needs.hash.outputs.has_secret != 'true'
         run: |
           mkdir -p "$HOME/.cache/gg/gg-dev"
-          echo "x86_64-unknown-linux-musl" > "$HOME/.cache/gg/gg-dev/system"
+          SYSTEM="x86_64-unknown-linux-musl"
+          if getconf GNU_LIBC_VERSION >/dev/null 2>&1; then SYSTEM="${SYSTEM/musl/gnu}"; fi
+          echo "$SYSTEM" > "$HOME/.cache/gg/gg-dev/system"
           cp stage4 "$HOME/.cache/gg/gg-dev/stage4"
           chmod +x "$HOME/.cache/gg/gg-dev/stage4"
 
