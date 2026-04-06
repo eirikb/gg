@@ -228,5 +228,12 @@ pub async fn perform_update(ver: &str, force: bool) {
 
     if let Err(e) = move_temp_to_final(&temp_path, &final_path) {
         println!("Final move failed: {}", e);
+        return;
     }
+
+    let absolute_path = std::path::Path::new(&final_path)
+        .canonicalize()
+        .map(|p| p.display().to_string())
+        .unwrap_or_else(|_| final_path.clone());
+    println!("Updated: {}", absolute_path);
 }
