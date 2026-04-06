@@ -16,7 +16,7 @@ fn get_file_name(url: &str) -> String {
         .unwrap()
         .path_segments()
         .unwrap()
-        .last()
+        .next_back()
         .unwrap()
         .to_string()
 }
@@ -89,10 +89,10 @@ impl BloodyIndianaJones {
             .get(&self.url)
             .send()
             .await
-            .expect(format!("Failed to get {}", &self.url).as_str());
+            .unwrap_or_else(|_| panic!("Failed to get {}", &self.url));
         let total_size = res
             .content_length()
-            .expect(format!("Failed to get content length from {}", &self.url).as_str());
+            .unwrap_or_else(|| panic!("Failed to get content length from {}", &self.url));
 
         debug!("Total size {:?}", total_size);
 
@@ -104,7 +104,7 @@ impl BloodyIndianaJones {
         debug!("{:?}", &self.file_path);
 
         let mut file = File::create(&self.file_path)
-            .expect(format!("Failed to create file '{}'", &self.file_path).as_str());
+            .unwrap_or_else(|_| panic!("Failed to create file '{}'", &self.file_path));
         let mut downloaded: u64 = 0;
         let mut stream = res.bytes_stream();
 
@@ -248,24 +248,20 @@ impl BloodyIndianaJones {
             if let Ok(entries) = entries {
                 let entries = entries.collect::<Vec<_>>();
                 if entries.len() == 1 {
-                    for entry in entries {
-                        if let Ok(entry) = entry {
-                            if entry.path().is_dir() {
-                                debug!(
-                                    "Extracted files are contained in sub-folder. Moving them up"
-                                );
-                                let parent = entry.path();
-                                if let Ok(entries) = read_dir(&parent) {
-                                    for entry in entries {
-                                        if let Ok(entry) = entry {
-                                            let path = entry.path();
-                                            let new_path =
-                                                parent_path.join(path.file_name().unwrap());
-                                            rename(&path, new_path).unwrap();
-                                        }
-                                    }
-                                    remove_dir(parent).ok();
+                    for entry in entries.into_iter().flatten() {
+                        if entry.path().is_dir() {
+                            debug!(
+                                "Extracted files are contained in sub-folder. Moving them up"
+                            );
+                            let parent = entry.path();
+                            if let Ok(entries) = read_dir(&parent) {
+                                for entry in entries.flatten() {
+                                    let path = entry.path();
+                                    let new_path =
+                                        parent_path.join(path.file_name().unwrap());
+                                    rename(&path, new_path).unwrap();
                                 }
+                                remove_dir(parent).ok();
                             }
                         }
                     }

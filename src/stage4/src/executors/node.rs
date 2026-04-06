@@ -17,7 +17,7 @@ type Root = Vec<Root2>;
 
 #[derive(Serialize, Debug, Clone, PartialEq, Deserialize)]
 #[serde(untagged)]
-enum LTS {
+enum Lts {
     String(String),
     Bool(bool),
 }
@@ -34,7 +34,7 @@ struct Root2 {
     pub zlib: Option<String>,
     pub openssl: Option<String>,
     pub modules: Option<String>,
-    pub lts: LTS,
+    pub lts: Lts,
     pub security: bool,
 }
 
@@ -55,7 +55,7 @@ fn get_package_version() -> Option<Box<VersionReq>> {
                             .get("node")
                             .unwrap_or(&"".to_string()),
                     )
-                    .unwrap_or(VersionReq::default()),
+                    .unwrap_or_default(),
                 ));
             }
         }
@@ -65,7 +65,7 @@ fn get_package_version() -> Option<Box<VersionReq>> {
         let nvmrc = Regex::new("^v").unwrap().replace(&nvmrc, "");
         let nvmrc = nvmrc.trim();
         info!("Got version {nvmrc} from .nvmrc");
-        if let Ok(ver) = VersionReq::parse(&nvmrc) {
+        if let Ok(ver) = VersionReq::parse(nvmrc) {
             info!("Got parsed version {ver} from .nvmrc");
             return Some(Box::new(ver.clone()));
         }
@@ -79,11 +79,7 @@ impl Executor for Node {
     }
 
     fn get_version_req(&self) -> Option<VersionReq> {
-        if let Some(v) = get_package_version() {
-            Some(*v)
-        } else {
-            None
-        }
+        get_package_version().map(|v| *v)
     }
 
     fn get_download_urls<'a>(
@@ -149,10 +145,7 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
     root.iter().filter(|r|
         r.files.contains(&file.to_string())
     ).map(|r| {
-        let lts = match r.lts {
-            LTS::String(_) => true,
-            _ => false
-        };
+        let lts = matches!(r.lts, Lts::String(_));
         let file_fix = if file.ends_with("-zip") {
             file.replace("-zip", ".zip")
         } else {
@@ -166,7 +159,7 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
         };
         let version_string = r.version.as_str();
         let version = GgVersion::new(version_string);
-        return Download {
+        Download {
             download_url: format!("https://{host}/download/release/{version_string}/node-{version_string}-{file_fix}"),
             version,
             tags,
@@ -174,7 +167,7 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
             arch: Some(Arch::Any),
             os: Some(Os::Any),
             variant: Some(Variant::Any),
-        };
+        }
     }).collect()
 }
 

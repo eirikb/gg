@@ -34,13 +34,15 @@ pub struct GgVersion(String);
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GgVersionReq(String);
 
+impl std::fmt::Display for GgVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 impl GgVersion {
     pub fn to_version(&self) -> Version {
         Version::parse(&self.0).unwrap()
-    }
-
-    pub fn to_string(&self) -> String {
-        self.0.clone()
     }
 
     pub fn new(version: &str) -> Option<Self> {
@@ -61,13 +63,15 @@ impl GgVersion {
     }
 }
 
+impl std::fmt::Display for GgVersionReq {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 impl GgVersionReq {
     pub fn to_version_req(&self) -> VersionReq {
         VersionReq::parse(&self.0).unwrap()
-    }
-
-    pub fn to_string(&self) -> String {
-        self.0.clone()
     }
 
     pub fn new(version_req: &str) -> Option<Self> {
@@ -215,7 +219,7 @@ impl dyn Executor {
         None
     }
 
-    pub fn get_url_matches(&self, urls: &Vec<Download>, input: &AppInput) -> Vec<Download> {
+    pub fn get_url_matches(&self, urls: &[Download], input: &AppInput) -> Vec<Download> {
         get_url_matches(urls, input, self)
     }
 }
@@ -293,11 +297,7 @@ fn get_executor_app_path(
     path: &str,
 ) -> Option<AppPath> {
     info!("Trying to find {path}");
-    if let Ok(app_path) = get_app_path(path, input) {
-        Some(app_path)
-    } else {
-        None
-    }
+    get_app_path(path, input).ok()
 }
 
 pub async fn prep(
@@ -312,11 +312,7 @@ pub async fn prep(
     let executor_cmd = &executor.get_executor_cmd();
     let version_req = if let Some(ver) = &executor_cmd.version {
         Some(ver.to_version_req())
-    } else if let Some(ver) = executor.get_version_req() {
-        Some(ver)
-    } else {
-        None
-    };
+    } else { executor.get_version_req() };
     let version_req_str = &version_req
         .as_ref()
         .map(|v| v.to_string())
@@ -411,7 +407,6 @@ pub async fn prep(
     bloody_indiana_jones.cleanup_download();
 
     if let Some(download) = url {
-        let download = download;
         let meta = GgMeta {
             download: download.clone(),
             version_req: GgVersionReq(version_req_str.to_string()),
@@ -456,7 +451,7 @@ fn score_filename_match(filename: &str, tool_name: &str, version_re: &Regex) -> 
 }
 
 fn get_url_matches(
-    urls: &Vec<Download>,
+    urls: &[Download],
     input: &AppInput,
     executor: &dyn Executor,
 ) -> Vec<Download> {
@@ -471,11 +466,9 @@ fn get_url_matches(
                 } else {
                     return false;
                 }
-            } else {
-                if let Some(u_var) = u.variant {
-                    if u_var != Variant::Any {
-                        return false;
-                    }
+            } else if let Some(u_var) = u.variant {
+                if u_var != Variant::Any {
+                    return false;
                 }
             }
 
@@ -532,7 +525,7 @@ fn get_url_matches(
                 "Keeping download: {:?} (OS: {:?}, Arch: {:?}) for target (OS: {:?}, Arch: {:?})",
                 u.download_url, u.os, u.arch, input.target.os, input.target.arch
             );
-            return true;
+            true
         })
         .collect::<Vec<_>>();
 
@@ -545,13 +538,13 @@ fn get_url_matches(
         let a_filename = a
             .download_url
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or("")
             .to_lowercase();
         let b_filename = b
             .download_url
             .split('/')
-            .last()
+            .next_back()
             .unwrap_or("")
             .to_lowercase();
 
@@ -587,7 +580,7 @@ fn get_url_matches(
         }
     });
 
-    urls_match.into_iter().map(|d| d.clone()).collect()
+    urls_match.into_iter().cloned().collect()
 }
 
 fn get_app_path(path: &str, _input: &AppInput) -> Result<AppPath, String> {
@@ -611,19 +604,19 @@ pub async fn try_run(
     path_vars: Vec<String>,
     env_vars: HashMap<String, String>,
 ) -> Result<bool, String> {
-    let args = executor.customize_args(&input, &app_path);
+    let args = executor.customize_args(input, &app_path);
     let path_string = &env::var("PATH").unwrap_or("".to_string());
     let paths = env::join_paths(path_vars.clone())
         .unwrap()
         .to_str()
         .unwrap()
         .to_string();
-    let all_paths = vec![paths, path_string.to_string()].join(match env::consts::OS {
+    let all_paths = [paths, path_string.to_string()].join(match env::consts::OS {
         "windows" => ";",
         _ => ":",
     });
     info!("PATH: {all_paths}");
-    let bins = executor.get_bins(&input);
+    let bins = executor.get_bins(input);
     info!("Trying to find these bins: {:?}", bins);
     for bin in bins {
         let bin_path = match bin {

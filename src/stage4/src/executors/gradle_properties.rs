@@ -26,7 +26,7 @@ pub struct GradleAndWrapperProperties {
 fn get_version_from_gradle_url(gradle_url: &str) -> Option<String> {
     if let Ok(r) = Regex::new(r"gradle-(.*)-") {
         let captures: Vec<_> = r.captures_iter(gradle_url).collect();
-        if captures.len() > 0 {
+        if !captures.is_empty() {
             if let Some(cap) = captures[0].get(1) {
                 return Some(cap.as_str().to_string());
             }
@@ -55,7 +55,7 @@ impl GradleAndWrapperProperties {
     }
 
     pub fn get_version_from_distribution_url(&self) -> Option<String> {
-        self.get_distribution_url().map(|url| get_version_from_gradle_url(url.as_str())).flatten()
+        self.get_distribution_url().and_then(|url| get_version_from_gradle_url(url.as_str()))
     }
 
     pub fn get_distribution_url(&self) -> Option<String> {

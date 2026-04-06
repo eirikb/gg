@@ -68,10 +68,8 @@ pub fn install_gem_to_cache(
                                     new_content.insert_str(require_pos, env_setup);
                                 } else if let Some(require_pos) = new_content.find("require ") {
                                     new_content.insert_str(require_pos, env_setup);
-                                } else {
-                                    if let Some(newline_pos) = new_content.find('\n') {
-                                        new_content.insert_str(newline_pos + 1, env_setup);
-                                    }
+                                } else if let Some(newline_pos) = new_content.find('\n') {
+                                    new_content.insert_str(newline_pos + 1, env_setup);
                                 }
 
                                 let _ = std::fs::write(&exe_path, new_content);

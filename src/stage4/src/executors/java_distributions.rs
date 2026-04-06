@@ -8,12 +8,14 @@ use serde::Serialize;
 use crate::executor::{Download, GgVersion};
 use crate::target::{Arch, Os, Target, Variant};
 
+type DistributionHandler = fn(&Target) -> Pin<Box<dyn Future<Output = Vec<Download>> + Send>>;
+
 #[derive(Debug, Clone)]
 pub struct DistributionConfig {
     pub name: &'static str,
     pub short_name: &'static str,
     pub default_tags: Vec<&'static str>,
-    pub handler: fn(&Target) -> Pin<Box<dyn Future<Output = Vec<Download>> + Send>>,
+    pub handler: DistributionHandler,
 }
 
 pub struct JavaDistributions;
@@ -78,7 +80,7 @@ struct AzulBundle {
 }
 
 fn get_azul_downloads(target: &Target) -> Pin<Box<dyn Future<Output = Vec<Download>> + Send>> {
-    let target = target.clone();
+    let target = *target;
     Box::pin(async move {
         let json = reqwest::get("https://www.azul.com/wp-admin/admin-ajax.php?action=bundles&endpoint=community&use_stage=false&include_fields=java_version,release_status,abi,arch,bundle_type,cpu_gen,ext,features,hw_bitness,javafx,latest,os,support_term").await.unwrap().text().await.unwrap();
         let bundles: Vec<AzulBundle> =
@@ -192,7 +194,7 @@ struct TemurinVersionData {
 }
 
 fn get_temurin_downloads(target: &Target) -> Pin<Box<dyn Future<Output = Vec<Download>> + Send>> {
-    let target = target.clone();
+    let target = *target;
     Box::pin(async move {
         let mut downloads = Vec::new();
 
@@ -240,16 +242,15 @@ fn get_temurin_downloads(target: &Target) -> Pin<Box<dyn Future<Output = Vec<Dow
                                     _ => false,
                                 };
 
-                                let arch_match = match (&target.arch, binary.architecture.as_str())
-                                {
-                                    (Arch::X86_64, "x64") => true,
-                                    (Arch::X86_64, "x86_64") => true,
-                                    (Arch::Arm64, "aarch64") => true,
-                                    (Arch::Arm64, "arm64") => true,
-                                    (Arch::Armv7, "arm") => true,
-                                    (Arch::Any, _) => true,
-                                    _ => false,
-                                };
+                                let arch_match = matches!(
+                                    (&target.arch, binary.architecture.as_str()),
+                                    (Arch::X86_64, "x64")
+                                        | (Arch::X86_64, "x86_64")
+                                        | (Arch::Arm64, "aarch64")
+                                        | (Arch::Arm64, "arm64")
+                                        | (Arch::Armv7, "arm")
+                                        | (Arch::Any, _)
+                                );
 
                                 if os_match && arch_match {
                                     let mut tags = HashSet::new();
@@ -282,7 +283,7 @@ fn get_temurin_downloads(target: &Target) -> Pin<Box<dyn Future<Output = Vec<Dow
                                     let variant = if binary.os == "alpine-linux" {
                                         Some(Variant::Musl)
                                     } else {
-                                        target.variant.clone()
+                                        target.variant
                                     };
 
                                     downloads.push(Download {

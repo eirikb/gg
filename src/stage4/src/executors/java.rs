@@ -52,7 +52,7 @@ impl Java {
     fn get_distribution(&self) -> crate::executors::java_distributions::DistributionConfig {
         if let Some(ref dist_name) = self.executor_cmd.distribution {
             JavaDistributions::get_by_name(dist_name)
-                .unwrap_or_else(|| JavaDistributions::get_default())
+                .unwrap_or_else(JavaDistributions::get_default)
         } else {
             JavaDistributions::get_default()
         }

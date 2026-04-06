@@ -169,71 +169,69 @@ impl Cli {
                     )
                 }
             }
-        } else {
-            if let Some(first_arg) = self.args.first() {
-                if let Some(alias_commands) = config.resolve_alias_with_and(first_arg) {
-                    if alias_commands.len() > 1 {
-                        return (
-                            vec![ClapCmd {
-                                cmd: format!("__multi_alias__{}", first_arg),
-                                version: None,
-                                distribution: None,
-                                include_tags: HashSet::new(),
-                                exclude_tags: HashSet::new(),
-                                gems: None,
-                            }],
-                            self.args[1..].to_vec(),
-                        );
-                    }
+        } else if let Some(first_arg) = self.args.first() {
+            if let Some(alias_commands) = config.resolve_alias_with_and(first_arg) {
+                if alias_commands.len() > 1 {
+                    return (
+                        vec![ClapCmd {
+                            cmd: format!("__multi_alias__{}", first_arg),
+                            version: None,
+                            distribution: None,
+                            include_tags: HashSet::new(),
+                            exclude_tags: HashSet::new(),
+                            gems: None,
+                        }],
+                        self.args[1..].to_vec(),
+                    );
                 }
-
-                if let Some(alias_args) = config.resolve_alias(first_arg) {
-                    let mut expanded_args = alias_args;
-                    expanded_args.extend_from_slice(&self.args[1..]);
-
-                    let mut depth = 0;
-                    const MAX_DEPTH: usize = 10;
-                    while depth < MAX_DEPTH {
-                        if let Some(first) = expanded_args.first() {
-                            if let Some(nested_alias) = config.resolve_alias(first) {
-                                let rest = expanded_args[1..].to_vec();
-                                expanded_args = nested_alias;
-                                expanded_args.extend(rest);
-                                depth += 1;
-                                continue;
-                            }
-                        }
-                        break;
-                    }
-
-                    let cmds = if let Some(cmd_part) = expanded_args.first() {
-                        parse_command_string(cmd_part, config)
-                    } else {
-                        vec![]
-                    };
-                    let app_args = expanded_args[1..].to_vec();
-                    (cmds, app_args)
-                } else {
-                    let cmds = parse_command_string(first_arg, config);
-                    let app_args = self.args[1..].to_vec();
-
-                    if cmds.len() == 1
-                        && cmds[0].cmd == "run"
-                        && app_args.first().map_or(false, |a| {
-                            a.starts_with("gh/") || get_tool_info(a).is_some()
-                        })
-                    {
-                        let tool = &app_args[0];
-                        let new_cmds = parse_command_string(tool, config);
-                        let new_app_args = app_args[1..].to_vec();
-                        return (new_cmds, new_app_args);
-                    }
-
-                    (cmds, app_args)
-                }
-            } else {
-                (vec![], vec![])
             }
+
+            if let Some(alias_args) = config.resolve_alias(first_arg) {
+                let mut expanded_args = alias_args;
+                expanded_args.extend_from_slice(&self.args[1..]);
+
+                let mut depth = 0;
+                const MAX_DEPTH: usize = 10;
+                while depth < MAX_DEPTH {
+                    if let Some(first) = expanded_args.first() {
+                        if let Some(nested_alias) = config.resolve_alias(first) {
+                            let rest = expanded_args[1..].to_vec();
+                            expanded_args = nested_alias;
+                            expanded_args.extend(rest);
+                            depth += 1;
+                            continue;
+                        }
+                    }
+                    break;
+                }
+
+                let cmds = if let Some(cmd_part) = expanded_args.first() {
+                    parse_command_string(cmd_part, config)
+                } else {
+                    vec![]
+                };
+                let app_args = expanded_args[1..].to_vec();
+                (cmds, app_args)
+            } else {
+                let cmds = parse_command_string(first_arg, config);
+                let app_args = self.args[1..].to_vec();
+
+                if cmds.len() == 1
+                    && cmds[0].cmd == "run"
+                    && app_args.first().is_some_and(|a| {
+                        a.starts_with("gh/") || get_tool_info(a).is_some()
+                    })
+                {
+                    let tool = &app_args[0];
+                    let new_cmds = parse_command_string(tool, config);
+                    let new_app_args = app_args[1..].to_vec();
+                    return (new_cmds, new_app_args);
+                }
+
+                (cmds, app_args)
+            }
+        } else {
+            (vec![], vec![])
         }
     }
 

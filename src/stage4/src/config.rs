@@ -6,6 +6,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Default)]
 pub struct GgConfig {
     #[serde(default)]
     pub dependencies: HashMap<String, String>,
@@ -13,14 +14,6 @@ pub struct GgConfig {
     pub aliases: HashMap<String, String>,
 }
 
-impl Default for GgConfig {
-    fn default() -> Self {
-        Self {
-            dependencies: HashMap::new(),
-            aliases: HashMap::new(),
-        }
-    }
-}
 
 impl GgConfig {
     pub fn load() -> Self {
