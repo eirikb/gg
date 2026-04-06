@@ -186,8 +186,8 @@ impl BloodyIndianaJones {
                 task::spawn_blocking(move || {
                     create_dir_all(&path_string).expect("Unable to create download dir");
                     let target_dir = PathBuf::from(&path_string);
-                    zip_extract::extract(File::open(file_path_string).unwrap(), &target_dir, true)
-                        .unwrap();
+                    let file = File::open(file_path_string).unwrap();
+                    zip::ZipArchive::new(file).unwrap().extract(&target_dir).unwrap();
                 })
                 .await
                 .expect("Unable to unzip");
