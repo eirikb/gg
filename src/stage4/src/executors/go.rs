@@ -16,7 +16,7 @@ fn link_href_to_download(href: &str) -> Option<Download> {
     let href_part = href.replace("/dl/go", "");
     let supported_oses = vec![("linux", Linux), ("darwin", Mac), ("windows", Windows)];
     let supported_archs = vec![("amd64", X86_64), ("arm64", Arm64)];
-    let supported_extensions = vec!["tar.gz", "zip"];
+    let supported_extensions = ["tar.gz", "zip"];
 
     if !supported_extensions
         .iter()
@@ -77,14 +77,13 @@ impl Executor for Go {
             let document = Html::parse_document(body.as_str());
             let downloads: Vec<Download> = document
                 .select(&Selector::parse("a.download").unwrap())
-                .map(|link| {
-                    return if let Some(href) = link.value().attr("href") {
+                .filter_map(|link| {
+                    if let Some(href) = link.value().attr("href") {
                         link_href_to_download(href)
                     } else {
                         None
-                    };
+                    }
                 })
-                .filter_map(|document| document)
                 .collect();
             downloads
         })

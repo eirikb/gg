@@ -63,7 +63,7 @@ impl Bld {
                         if let Some(class_name) = find_java_files(&path, &new_package) {
                             return Some(class_name);
                         }
-                    } else if path.extension().map_or(false, |ext| ext == "java") {
+                    } else if path.extension().is_some_and(|ext| ext == "java") {
                         let file_name = path.file_stem()?.to_str()?;
                         if file_name.ends_with("Build") {
                             return Some(if package_prefix.is_empty() {

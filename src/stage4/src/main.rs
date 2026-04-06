@@ -382,7 +382,7 @@ async fn main() -> ExitCode {
     };
     info!("System is {system}{}. {:?}", override_info, &target);
 
-    if cmds.first().is_some() {
+    if !cmds.is_empty() {
         let mut executors = cmds
             .iter()
             .filter_map(|cmd| {
@@ -403,20 +403,20 @@ async fn main() -> ExitCode {
         let mut processed_deps = std::collections::HashSet::new();
         while look_for_deps {
             look_for_deps = false;
-            let mut to_add = Vec::new();
+            let mut to_add: Vec<Box<dyn Executor>> = Vec::new();
             for x in &executors {
                 let deps = x.get_deps(input).await;
                 for dep in deps {
                     if !executors
                         .iter()
-                        .any(|e| &e.get_name().to_string() == &dep.name)
+                        .any(|e| e.get_name() == dep.name)
                         && !to_add
                             .iter()
-                            .any(|e: &Box<dyn Executor>| &e.get_name().to_string() == &dep.name)
+                            .any(|e| e.get_name() == dep.name)
                         && !processed_deps.contains(&dep.name)
                     {
                         if dep.optional {
-                            if let Ok(_) = which::which(&dep.name) {
+                            if which::which(&dep.name).is_ok() {
                                 info!(
                                     "Optional dependency '{}' found in PATH, using system version",
                                     dep.name
@@ -451,7 +451,7 @@ async fn main() -> ExitCode {
             }
         }
 
-        if executors.first().is_some() {
+        if !executors.is_empty() {
             let mut env_vars: HashMap<String, String> = HashMap::new();
             let mut path_vars: Vec<String> = vec![];
 
@@ -466,7 +466,7 @@ async fn main() -> ExitCode {
                     (x, pb)
                 })
                 .map(|(x, pb)| async move {
-                    let app_path = prep(&**x, &input, &pb).await?;
+                    let app_path = prep(&**x, input, &pb).await?;
                     let env = x.get_env(&app_path);
                     let bin_dirs = x.get_bin_dirs();
                     Ok::<_, String>((app_path, env, bin_dirs))

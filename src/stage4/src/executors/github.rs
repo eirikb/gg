@@ -206,11 +206,8 @@ impl Executor for GitHub {
             BinPattern::Exact(base_name.to_lowercase()),
         ];
 
-        match &input.target.os {
-            Windows => {
-                patterns.push(BinPattern::Regex(r".*\.exe$".to_string()));
-            }
-            _ => {}
+        if input.target.os == Windows {
+            patterns.push(BinPattern::Regex(r".*\.exe$".to_string()));
         }
 
         patterns.push(BinPattern::Regex(r"^[^.]*$".to_string()));

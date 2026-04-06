@@ -82,7 +82,7 @@ impl Target {
     }
 
     fn detect_arch_from_input(parts: &[&str], _input: &str) -> Arch {
-        match parts.get(0).unwrap_or(&"") {
+        match parts.first().unwrap_or(&"") {
             x if x.contains("x86_64") => Arch::X86_64,
             x if x.contains("arm64") => Arch::Arm64,
             x if x.contains("aarch64") => Arch::Arm64,

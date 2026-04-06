@@ -228,6 +228,5 @@ pub async fn perform_update(ver: &str, force: bool) {
 
     if let Err(e) = move_temp_to_final(&temp_path, &final_path) {
         println!("Final move failed: {}", e);
-        return;
     }
 }

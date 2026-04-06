@@ -3,7 +3,6 @@ use crate::executor::{prep, AppInput, GgMeta};
 use crate::updater;
 use crate::Executor;
 use futures_util::future::join_all;
-use glob;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use log::{debug, info};
 use std::collections::HashMap;
@@ -206,7 +205,7 @@ pub async fn check_or_update_all(
     let update_infos: Vec<UpdateInfo> = join_all(check_tasks)
         .await
         .into_iter()
-        .filter_map(|x| x)
+        .flatten()
         .collect();
 
     m.clear().unwrap();
@@ -226,7 +225,7 @@ pub async fn check_or_update_all(
     for info in &update_infos {
         grouped_tools
             .entry(info.tool_name.clone())
-            .or_insert(Vec::new())
+            .or_default()
             .push(info);
     }
 
