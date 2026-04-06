@@ -27,7 +27,7 @@ impl Executor for Flutter {
 
     fn get_version_req(&self) -> Option<VersionReq> {
         if let Ok(content) = std::fs::read_to_string("pubspec.yaml") {
-            if let Ok(pubspec) = serde_yml::from_str::<Pubspec>(&content) {
+            if let Ok(pubspec) = serde_yaml::from_str::<Pubspec>(&content) {
                 if let Some(environment) = pubspec.environment {
                     if let Some(flutter_version) = environment.flutter {
                         if let Ok(version_req) = VersionReq::parse(&flutter_version) {
