@@ -84,6 +84,11 @@ impl GitHub {
             return false;
         }
 
+        if name_lower.contains("i686") || name_lower.contains("i386") || name_lower.contains("ia32")
+        {
+            return false;
+        }
+
         let binary_extensions = [
             ".exe", ".zip", ".tar.gz", ".tgz", ".tar.bz2", ".7z", ".gem", ".jar",
         ];
@@ -283,6 +288,17 @@ mod tests {
         assert!(!GitHub::is_likely_binary("tool_1.0.0_src.zip"));
         assert!(!GitHub::is_likely_binary("tool-source.tar.gz"));
         assert!(!GitHub::is_likely_binary("tool_source.zip"));
+    }
+
+    #[test]
+    fn test_is_likely_binary_rejects_32bit_x86() {
+        assert!(!GitHub::is_likely_binary("uv-i686-pc-windows-msvc.zip"));
+        assert!(!GitHub::is_likely_binary("tool-i386-linux.tar.gz"));
+        assert!(!GitHub::is_likely_binary("tool-ia32.zip"));
+        assert!(!GitHub::is_likely_binary("node-v20.0.0-win-ia32.zip"));
+
+        assert!(GitHub::is_likely_binary("uv-x86_64-pc-windows-msvc.zip"));
+        assert!(GitHub::is_likely_binary("tool-v1.0.0-linux-x86_64.tar.bz2"));
     }
 
     #[test]
