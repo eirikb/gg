@@ -252,7 +252,10 @@ pub static TOOL_REGISTRY: LazyLock<HashMap<&'static str, ToolInfo>> = LazyLock::
             example: Some("gg fastlane --version"),
             factory: |cmd| {
                 let mut ruby_cmd = cmd.clone();
-                ruby_cmd.gems = Some(vec!["fastlane".to_string()]);
+                // multi_json: representable (in fastlane's dep tree) requires it at
+                // runtime without declaring it in its gemspec. It used to arrive
+                // transitively via googleauth, but googleauth 1.17.0 dropped it.
+                ruby_cmd.gems = Some(vec!["fastlane".to_string(), "multi_json".to_string()]);
                 Some(Box::new(Ruby { executor_cmd: ruby_cmd }))
             },
         },
