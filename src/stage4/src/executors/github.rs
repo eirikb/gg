@@ -75,6 +75,37 @@ impl GitHub {
             return false;
         }
 
+        // Checksum/signature/metadata companions (e.g. deno publishes
+        // deno-x86_64-unknown-linux-gnu.sha256sum next to the .zip). These
+        // would otherwise pass the os+arch heuristic below.
+        let metadata_suffixes = [
+            ".sha256sum",
+            ".sha512sum",
+            ".sha1sum",
+            ".md5sum",
+            ".sha256",
+            ".sha512",
+            ".sha1",
+            ".md5",
+            ".sum",
+            ".sig",
+            ".asc",
+            ".sigstore",
+            ".minisig",
+            ".pem",
+            ".sbom",
+            ".json",
+            ".jsonl",
+            ".txt",
+            ".md",
+        ];
+        if metadata_suffixes
+            .iter()
+            .any(|ext| name_lower.ends_with(ext))
+        {
+            return false;
+        }
+
         if name_lower.contains(".orig.tar")
             || name_lower.contains("-src.")
             || name_lower.contains("_src.")
@@ -297,5 +328,27 @@ mod tests {
         assert!(!GitHub::is_likely_binary("SHA256SUMS"));
         assert!(!GitHub::is_likely_binary("tool.asc"));
         assert!(!GitHub::is_likely_binary("CHANGELOG.md"));
+    }
+
+    #[test]
+    fn test_is_likely_binary_rejects_checksum_companions() {
+        // Real-world: deno publishes these next to each platform zip,
+        // and they used to pass the os+arch heuristic
+        assert!(!GitHub::is_likely_binary(
+            "deno-x86_64-unknown-linux-gnu.sha256sum"
+        ));
+        assert!(!GitHub::is_likely_binary("deno-x86_64-pc-windows-msvc.sha256sum"));
+        assert!(!GitHub::is_likely_binary("tool-linux-x64.zip.sha256"));
+        assert!(!GitHub::is_likely_binary("tool-darwin-arm64.tar.gz.sig"));
+        assert!(!GitHub::is_likely_binary("tool-windows-x64.zip.asc"));
+        assert!(!GitHub::is_likely_binary("tool-linux-arm64.tgz.minisig"));
+        assert!(!GitHub::is_likely_binary("tool-linux-x64.sbom"));
+        assert!(!GitHub::is_likely_binary("tool-macos-arm64.spdx.json"));
+        assert!(!GitHub::is_likely_binary("tool-linux-x64.intoto.jsonl"));
+        assert!(!GitHub::is_likely_binary("tool-linux-x64.zip.md5"));
+
+        // ...but the actual archives still pass
+        assert!(GitHub::is_likely_binary("deno-x86_64-unknown-linux-gnu.zip"));
+        assert!(GitHub::is_likely_binary("deno-x86_64-pc-windows-msvc.zip"));
     }
 }

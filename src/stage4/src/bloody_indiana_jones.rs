@@ -1,5 +1,5 @@
 use std::cmp::min;
-use std::fs::{create_dir_all, read_dir, remove_dir, rename, File};
+use std::fs::{create_dir_all, read_dir, remove_dir, remove_dir_all, rename, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -267,6 +267,21 @@ impl BloodyIndianaJones {
                     }
                 }
             }
+
+            // macOS JDK bundles (e.g. zulu26+) nest everything under Contents/Home.
+            // Move the real home up so bin/ etc. sit directly in the install dir
+            let contents_home = parent_path.join("Contents").join("Home");
+            if contents_home.is_dir() {
+                debug!("Found macOS bundle layout (Contents/Home). Moving them up");
+                if let Ok(entries) = read_dir(&contents_home) {
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        let new_path = parent_path.join(path.file_name().unwrap());
+                        rename(&path, new_path).unwrap();
+                    }
+                }
+                remove_dir_all(parent_path.join("Contents")).ok();
+            }
         })
         .await
         .expect("Unable to move files");
@@ -279,5 +294,74 @@ impl BloodyIndianaJones {
             "Cleaning up temp directory: {}",
             self.temp_dir.path().display()
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    async fn make_tar_gz(file_path: &str, entries: &[&str]) {
+        let mut builder = tar::Builder::new(Vec::new());
+        for entry in entries {
+            let mut header = tar::Header::new_gnu();
+            header.set_size(0);
+            header.set_mode(0o755);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, entry, std::io::empty())
+                .unwrap();
+        }
+        let tar_bytes = builder.into_inner().unwrap();
+        let mut encoder = async_compression::tokio::write::GzipEncoder::new(
+            tokio::fs::File::create(file_path).await.unwrap(),
+        );
+        tokio::io::AsyncWriteExt::write_all(&mut encoder, &tar_bytes)
+            .await
+            .unwrap();
+        tokio::io::AsyncWriteExt::shutdown(&mut encoder)
+            .await
+            .unwrap();
+    }
+
+    async fn unpack(entries: &[&str]) -> tempfile::TempDir {
+        let target = tempdir().unwrap();
+        let path = target.path().join("java_star_");
+        let mut bij = BloodyIndianaJones::new_with_file_name(
+            "http://example.com/test.tar.gz".to_string(),
+            path.to_str().unwrap().to_string(),
+            ProgressBar::hidden(),
+        );
+        make_tar_gz(&bij.file_path, entries).await;
+        bij.unpack_and_all_that_stuff().await;
+        target
+    }
+
+    #[tokio::test]
+    async fn test_unpack_macos_jdk_bundle_layout() {
+        // zulu26+ macOS tarballs nest everything under <top>/Contents/Home
+        let target = unpack(&[
+            "zulu26.30.11-ca-jdk26.0.1-macosx_x64/Contents/Home/bin/java",
+            "zulu26.30.11-ca-jdk26.0.1-macosx_x64/Contents/Home/lib/jvm.cfg",
+            "zulu26.30.11-ca-jdk26.0.1-macosx_x64/Contents/Info.plist",
+        ])
+        .await;
+        let install_dir = target.path().join("java_star_");
+        assert!(install_dir.join("bin").join("java").exists());
+        assert!(install_dir.join("lib").join("jvm.cfg").exists());
+        assert!(!install_dir.join("Contents").exists());
+    }
+
+    #[tokio::test]
+    async fn test_unpack_regular_layout() {
+        // zulu25-style tarballs have bin/lib directly under the top dir
+        let target = unpack(&[
+            "zulu25.28.85-ca-jdk25.0.0-macosx_x64/bin/java",
+            "zulu25.28.85-ca-jdk25.0.0-macosx_x64/lib/jvm.cfg",
+        ])
+        .await;
+        let install_dir = target.path().join("java_star_");
+        assert!(install_dir.join("bin").join("java").exists());
+        assert!(install_dir.join("lib").join("jvm.cfg").exists());
     }
 }
