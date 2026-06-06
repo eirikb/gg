@@ -69,6 +69,23 @@ pub struct Cli {
     pub args: Vec<String>,
 }
 
+/// If gg.cmd has been renamed (e.g. to `postmortemthis.cmd`), the new name
+/// acts as an applet (busybox-style): `postmortemthis.cmd args` behaves as
+/// `gg.cmd postmortemthis args`. The name is resolved like any other command
+/// (tool registry or gg.toml alias).
+pub fn applet_from_cmd_path(path: &str) -> Option<String> {
+    let base = path.rsplit(['/', '\\']).next()?;
+    let name = base
+        .strip_suffix(".cmd")
+        .or_else(|| base.strip_suffix(".CMD"))
+        .unwrap_or(base);
+    if name.is_empty() || name.eq_ignore_ascii_case("gg") {
+        None
+    } else {
+        Some(name.to_string())
+    }
+}
+
 #[derive(Subcommand, Debug, Clone)]
 pub enum Commands {
     #[command(about = "Check for updates for all tools (including gg)")]
@@ -397,6 +414,28 @@ mod tests {
             .map(String::from)
             .collect::<Vec<_>>();
         Cli::try_parse_from(args).unwrap()
+    }
+
+    #[test]
+    fn test_applet_from_cmd_path() {
+        assert_eq!(applet_from_cmd_path("./gg.cmd"), None);
+        assert_eq!(applet_from_cmd_path("/home/x/gg.cmd"), None);
+        assert_eq!(applet_from_cmd_path("C:\\tools\\GG.CMD"), None);
+        assert_eq!(applet_from_cmd_path("gg"), None);
+        assert_eq!(applet_from_cmd_path(""), None);
+        assert_eq!(
+            applet_from_cmd_path("./postmortemthis.cmd"),
+            Some("postmortemthis".to_string())
+        );
+        assert_eq!(
+            applet_from_cmd_path("/a/b/build.cmd"),
+            Some("build".to_string())
+        );
+        assert_eq!(
+            applet_from_cmd_path("C:\\proj\\deploy.cmd"),
+            Some("deploy".to_string())
+        );
+        assert_eq!(applet_from_cmd_path("node"), Some("node".to_string()));
     }
 
     #[test]
