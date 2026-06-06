@@ -20,18 +20,34 @@ int main() {
     char path[1000];
     snprintf(path, 1000, "/%s", hash);
 
-    struct sockaddr_in serv_addr;
-    const int sock = socket(AF_INET, SOCK_STREAM, 0);
+    struct addrinfo hints;
+    struct addrinfo *result = NULL;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
 
-    struct hostent *server = gethostbyname(host);
+    if (getaddrinfo(host, "80", &hints, &result) != 0 || result == NULL) {
+        printf("DNS lookup failed for %s\n", host);
+        return 1;
+    }
 
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(80);
-    memcpy(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
+    int sock = -1;
+    for (struct addrinfo *ptr = result; ptr != NULL; ptr = ptr->ai_next) {
+        sock = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+        if (sock < 0) {
+            continue;
+        }
+        if (connect(sock, ptr->ai_addr, ptr->ai_addrlen) == 0) {
+            break;
+        }
+        close(sock);
+        sock = -1;
+    }
+    freeaddrinfo(result);
 
-    if (connect(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-        printf("\nConnection Failed \n");
-        return -1;
+    if (sock < 0) {
+        printf("Connection to %s failed\n", host);
+        return 1;
     }
 
     FILE *f = fopen("stage4.tmp", "w");
@@ -53,11 +69,24 @@ int main() {
 
     do {
         const long res = read(sock, buffer, bufferSize);
+        if (res <= 0) {
+            printf("\nDownload interrupted\n");
+            fclose(f);
+            remove("stage4.tmp");
+            return 1;
+        }
         if (dataSize == 0) {
-            const char *cl = strstr(strstr(buffer, "Content-Length"), " ");
+            const char *clHeader = strstr(buffer, "Content-Length");
+            const char *cl = clHeader ? strstr(clHeader, " ") : NULL;
+            const char *end = strstr(buffer, "\r\n\r\n");
+            if (cl == NULL || end == NULL) {
+                printf("Unexpected HTTP response from %s\n", host);
+                fclose(f);
+                remove("stage4.tmp");
+                return 1;
+            }
             char *to = strstr(cl, "\r");
             dataSize = strtol(cl, &to, 10);
-            const char *end = strstr(buffer, "\r\n\r\n");
             messageSize = end - buffer + dataSize + 4;
             totalSize = messageSize;
             fwrite(end + 4, 1, res - (messageSize - dataSize), f);
