@@ -80,35 +80,61 @@ impl BloodyIndianaJones {
         info!("Downloading {}", &self.url);
         self.pb.reset();
         self.pb.set_message("Preparing");
-
         self.pb.set_message("Downloading");
+
         let client = reqwest::Client::builder()
             .build()
             .expect("Failed to create HTTP client");
-        let res = client
-            .get(&self.url)
-            .send()
-            .await
-            .unwrap_or_else(|_| panic!("Failed to get {}", &self.url));
-        if !res.status().is_success() {
-            panic!(
-                "Failed to download {}: server returned HTTP {}",
-                &self.url,
-                res.status()
-            );
+
+        // Release CDNs (GitHub, Azul, ...) intermittently return 5xx/429,
+        // especially from CI. Retry transient failures with linear backoff so
+        // a single hiccup doesn't fail the whole run.
+        let max_attempts = 5;
+        let mut last_error = String::new();
+        for attempt in 1..=max_attempts {
+            match self.try_download(&client).await {
+                Ok(()) => {
+                    info!("Downloaded {} to {}", &self.url, &self.file_path);
+                    return;
+                }
+                Err((reason, retryable)) if retryable && attempt < max_attempts => {
+                    let backoff = std::time::Duration::from_secs(attempt as u64);
+                    info!(
+                        "Download attempt {}/{} failed ({}). Retrying in {}s...",
+                        attempt,
+                        max_attempts,
+                        reason,
+                        backoff.as_secs()
+                    );
+                    last_error = reason;
+                    tokio::time::sleep(backoff).await;
+                }
+                Err((reason, _)) => panic!("Failed to download {}: {}", &self.url, reason),
+            }
         }
+        panic!("Failed to download {}: {}", &self.url, last_error);
+    }
+
+    /// One download attempt. Err carries (reason, retryable).
+    async fn try_download(&self, client: &reqwest::Client) -> Result<(), (String, bool)> {
+        let res = match client.get(&self.url).send().await {
+            Ok(res) => res,
+            Err(e) => return Err((format!("request failed: {e}"), true)),
+        };
+
+        let status = res.status();
+        if !status.is_success() {
+            // 5xx and 429 are transient; other 4xx (e.g. 404) are permanent.
+            let retryable =
+                status.is_server_error() || status == reqwest::StatusCode::TOO_MANY_REQUESTS;
+            return Err((format!("server returned HTTP {status}"), retryable));
+        }
+
         let total_size = res
             .content_length()
             .unwrap_or_else(|| panic!("Failed to get content length from {}", &self.url));
-
         debug!("Total size {:?}", total_size);
-
         self.pb.set_length(total_size);
-
-        let file_name = get_file_name(&self.url);
-        debug!("File name {:?}", file_name);
-
-        debug!("{:?}", &self.file_path);
 
         let mut file = File::create(&self.file_path)
             .unwrap_or_else(|_| panic!("Failed to create file '{}'", &self.file_path));
@@ -116,14 +142,17 @@ impl BloodyIndianaJones {
         let mut stream = res.bytes_stream();
 
         while let Some(item) = stream.next().await {
-            let chunk = item.expect("Error while downloading file");
+            let chunk = match item {
+                Ok(chunk) => chunk,
+                Err(e) => return Err((format!("connection dropped: {e}"), true)),
+            };
             file.write_all(&chunk).expect("Error while writing to file");
             let new = min(downloaded + (chunk.len() as u64), total_size);
             downloaded = new;
             self.pb.set_position(new);
         }
 
-        info!("Downloaded {} to {}", &self.url, &self.file_path);
+        Ok(())
     }
 
     pub async fn unpack_and_all_that_stuff(&mut self) {
@@ -372,35 +401,57 @@ mod tests {
         assert!(install_dir.join("lib").join("jvm.cfg").exists());
     }
 
-    // Serve one HTTP response, then close. Returns the bound port.
-    async fn serve_once(response: &'static [u8]) -> u16 {
+    // Serve a sequence of raw HTTP responses, one per incoming connection.
+    // Returns the bound port.
+    async fn serve_seq(responses: Vec<&'static [u8]>) -> u16 {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
         tokio::spawn(async move {
-            if let Ok((mut socket, _)) = listener.accept().await {
-                use tokio::io::{AsyncReadExt, AsyncWriteExt};
-                let mut buf = [0u8; 1024];
-                let _ = socket.read(&mut buf).await;
-                let _ = socket.write_all(response).await;
-                let _ = socket.shutdown().await;
+            for response in responses {
+                if let Ok((mut socket, _)) = listener.accept().await {
+                    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+                    let mut buf = [0u8; 1024];
+                    let _ = socket.read(&mut buf).await;
+                    let _ = socket.write_all(response).await;
+                    let _ = socket.shutdown().await;
+                }
             }
         });
         port
     }
 
-    #[tokio::test]
-    #[should_panic(expected = "server returned HTTP 403")]
-    async fn test_download_rejects_error_status() {
-        // A rate-limited/forbidden source must fail at download with a clear
-        // message, not stream the error body and panic later as "invalid gzip".
-        let response = b"HTTP/1.1 403 Forbidden\r\nContent-Length: 9\r\n\r\nforbidden";
-        let port = serve_once(response).await;
-        let target = tempdir().unwrap();
-        let bij = BloodyIndianaJones::new_with_file_name(
+    fn bij_for(port: u16, target: &tempfile::TempDir) -> BloodyIndianaJones {
+        BloodyIndianaJones::new_with_file_name(
             format!("http://127.0.0.1:{port}/tool.tar.gz"),
             target.path().join("out").to_str().unwrap().to_string(),
             ProgressBar::hidden(),
-        );
+        )
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "server returned HTTP 403")]
+    async fn test_download_rejects_permanent_status() {
+        // A 4xx (e.g. forbidden) is permanent: fail immediately with a clear
+        // message, not stream the error body and panic later as "invalid gzip".
+        let port = serve_seq(vec![
+            b"HTTP/1.1 403 Forbidden\r\nContent-Length: 9\r\n\r\nforbidden",
+        ])
+        .await;
+        let target = tempdir().unwrap();
+        bij_for(port, &target).download().await;
+    }
+
+    #[tokio::test]
+    async fn test_download_retries_transient_status() {
+        // A transient 503 should be retried; the next attempt succeeds.
+        let port = serve_seq(vec![
+            b"HTTP/1.1 503 Service Unavailable\r\nContent-Length: 3\r\n\r\nbad",
+            b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\ngood",
+        ])
+        .await;
+        let target = tempdir().unwrap();
+        let bij = bij_for(port, &target);
         bij.download().await;
+        assert_eq!(std::fs::read_to_string(&bij.file_path).unwrap(), "good");
     }
 }
