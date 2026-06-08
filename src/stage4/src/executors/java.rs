@@ -121,99 +121,83 @@ impl Executor for Java {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
     use std::fs;
+    use tempfile::TempDir;
 
-    fn create_isolated_test_dir() -> std::path::PathBuf {
-        use std::time::{SystemTime, UNIX_EPOCH};
-        let timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let temp_dir = env::temp_dir().join(format!("java_test_{}", timestamp));
-        fs::create_dir_all(&temp_dir).unwrap();
-        temp_dir
+    // A guaranteed-unique temp dir that auto-removes on drop. (The old
+    // timestamp-named dirs could collide under parallel test runs, making
+    // one test delete another's dir mid-flight.)
+    fn create_isolated_test_dir() -> TempDir {
+        tempfile::tempdir().unwrap()
     }
 
     #[test]
     fn test_get_jdk_version_from_java_version_file() {
         let temp_dir = create_isolated_test_dir();
-        let java_version_path = temp_dir.join(".java-version");
+        let java_version_path = temp_dir.path().join(".java-version");
 
         fs::write(&java_version_path, "17.0.1").unwrap();
 
-        let version = get_jdk_version_from_path(temp_dir.to_str().unwrap());
+        let version = get_jdk_version_from_path(temp_dir.path().to_str().unwrap());
         assert_eq!(version, Some("17.0.1".to_string()));
-
-        fs::remove_dir_all(&temp_dir).unwrap();
     }
 
     #[test]
     fn test_get_jdk_version_from_java_version_file_with_whitespace() {
         let temp_dir = create_isolated_test_dir();
-        let java_version_path = temp_dir.join(".java-version");
+        let java_version_path = temp_dir.path().join(".java-version");
 
         fs::write(&java_version_path, "  21.0.2  \n").unwrap();
 
-        let version = get_jdk_version_from_path(temp_dir.to_str().unwrap());
+        let version = get_jdk_version_from_path(temp_dir.path().to_str().unwrap());
         assert_eq!(version, Some("21.0.2".to_string()));
-
-        fs::remove_dir_all(&temp_dir).unwrap();
     }
 
     #[test]
     fn test_get_jdk_version_from_sdkmanrc() {
         let temp_dir = create_isolated_test_dir();
-        let sdkmanrc_path = temp_dir.join(".sdkmanrc");
+        let sdkmanrc_path = temp_dir.path().join(".sdkmanrc");
 
         fs::write(&sdkmanrc_path, "java=11.0.16-zulu").unwrap();
 
-        let version = get_jdk_version_from_path(temp_dir.to_str().unwrap());
+        let version = get_jdk_version_from_path(temp_dir.path().to_str().unwrap());
         assert_eq!(version, Some("11.0.16-zulu".to_string()));
-
-        fs::remove_dir_all(&temp_dir).unwrap();
     }
 
     #[test]
     fn test_get_jdk_version_priority() {
         let temp_dir = create_isolated_test_dir();
-        let java_version_path = temp_dir.join(".java-version");
-        let sdkmanrc_path = temp_dir.join(".sdkmanrc");
+        let java_version_path = temp_dir.path().join(".java-version");
+        let sdkmanrc_path = temp_dir.path().join(".sdkmanrc");
 
         fs::write(&java_version_path, "17.0.1").unwrap();
         fs::write(&sdkmanrc_path, "java=11.0.16-zulu").unwrap();
 
-        let version = get_jdk_version_from_path(temp_dir.to_str().unwrap());
+        let version = get_jdk_version_from_path(temp_dir.path().to_str().unwrap());
         assert_eq!(version, Some("17.0.1".to_string()));
-
-        fs::remove_dir_all(&temp_dir).unwrap();
     }
 
     #[test]
     fn test_get_jdk_version_empty_java_version_falls_back_to_sdkmanrc() {
         let temp_dir = create_isolated_test_dir();
-        let java_version_path = temp_dir.join(".java-version");
-        let sdkmanrc_path = temp_dir.join(".sdkmanrc");
+        let java_version_path = temp_dir.path().join(".java-version");
+        let sdkmanrc_path = temp_dir.path().join(".sdkmanrc");
 
         fs::write(&java_version_path, "").unwrap();
         fs::write(&sdkmanrc_path, "java=11.0.16-zulu").unwrap();
 
-        let version = get_jdk_version_from_path(temp_dir.to_str().unwrap());
+        let version = get_jdk_version_from_path(temp_dir.path().to_str().unwrap());
         assert_eq!(version, Some("11.0.16-zulu".to_string()));
-
-        fs::remove_dir_all(&temp_dir).unwrap();
     }
 
     #[test]
     fn test_get_jdk_version_invalid_sdkmanrc() {
         let temp_dir = create_isolated_test_dir();
-        let sdkmanrc_path = temp_dir.join(".sdkmanrc");
+        let sdkmanrc_path = temp_dir.path().join(".sdkmanrc");
 
         fs::write(&sdkmanrc_path, "invalid content").unwrap();
 
-        let version = get_jdk_version_from_path(temp_dir.to_str().unwrap());
+        let version = get_jdk_version_from_path(temp_dir.path().to_str().unwrap());
         assert_eq!(version, None);
-
-        fs::remove_dir_all(&temp_dir).unwrap();
     }
 }
