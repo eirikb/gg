@@ -40,6 +40,20 @@ struct Root2 {
 
 pub struct Node {
     pub executor_cmd: ExecutorCmd,
+    pub npm_package: Option<NpmPackageSpec>,
+}
+
+/// A tool distributed as an npm package, executed on a gg-managed Node.js.
+/// Gets its own cache dir (named `name`), with the package installed into
+/// `npm_home/` by `post_prep` (mirrors the Ruby gems pattern).
+#[derive(Clone)]
+pub struct NpmPackageSpec {
+    /// Tool name (cache dir name), e.g. "gemini-cli"
+    pub name: String,
+    /// npm package, e.g. "@google/gemini-cli"
+    pub package: String,
+    /// Executable name the package installs, e.g. "gemini"
+    pub bin: String,
 }
 
 fn get_package_version() -> Option<Box<VersionReq>> {
@@ -90,6 +104,15 @@ impl Executor for Node {
     }
 
     fn get_bins(&self, input: &AppInput) -> Vec<BinPattern> {
+        if let Some(spec) = &self.npm_package {
+            return match &input.target.os {
+                Os::Windows => vec![
+                    BinPattern::Exact(format!("npm_home/{}.cmd", spec.bin)),
+                    BinPattern::Exact(format!("npm_home/{}", spec.bin)),
+                ],
+                _ => vec![BinPattern::Exact(format!("npm_home/bin/{}", spec.bin))],
+            };
+        }
         vec![BinPattern::Exact(
             match &input.target.os {
                 Os::Windows => match self.executor_cmd.cmd.as_str() {
@@ -108,7 +131,73 @@ impl Executor for Node {
     }
 
     fn get_name(&self) -> &str {
-        "node"
+        match &self.npm_package {
+            Some(spec) => &spec.name,
+            None => "node",
+        }
+    }
+
+    fn get_bin_dirs(&self) -> Vec<String> {
+        if self.npm_package.is_some() {
+            // node itself + npm-installed bins (unix: npm_home/bin, windows: npm_home)
+            vec![
+                "bin".to_string(),
+                ".".to_string(),
+                "npm_home/bin".to_string(),
+                "npm_home".to_string(),
+            ]
+        } else {
+            vec!["bin".to_string(), ".".to_string()]
+        }
+    }
+
+    fn post_prep(&self, cache_path: &str) {
+        let Some(spec) = &self.npm_package else {
+            return;
+        };
+        let cache = std::path::Path::new(cache_path);
+        let npm_home = cache.join("npm_home");
+        let _ = fs::create_dir_all(&npm_home);
+        // Keep npm's own download cache (~/.npm) and node-gyp's header cache
+        // (~/.cache/node-gyp) inside gg's cache dir, so install is fully
+        // self-contained.
+        let npm_cache = cache.join("npm_cache");
+        let node_gyp_dir = cache.join("node_gyp");
+
+        let (npm, node_bin_dir) = if cfg!(windows) {
+            (cache.join("npm.cmd"), cache.to_path_buf())
+        } else {
+            (cache.join("bin").join("npm"), cache.join("bin"))
+        };
+
+        let path_sep = if cfg!(windows) { ";" } else { ":" };
+        let path_env = format!(
+            "{}{}{}",
+            node_bin_dir.display(),
+            path_sep,
+            std::env::var("PATH").unwrap_or_default()
+        );
+
+        info!(
+            "Installing npm package {} into {:?}",
+            spec.package, npm_home
+        );
+        let status = std::process::Command::new(&npm)
+            .arg("install")
+            .arg("-g")
+            .arg("--prefix")
+            .arg(&npm_home)
+            .arg(&spec.package)
+            .env("PATH", path_env)
+            .env("npm_config_cache", &npm_cache)
+            .env("npm_config_devdir", &node_gyp_dir)
+            .status();
+
+        match status {
+            Ok(s) if s.success() => {}
+            Ok(s) => println!("npm install {} failed: {}", spec.package, s),
+            Err(e) => println!("npm install {} failed: {}", spec.package, e),
+        }
     }
 }
 

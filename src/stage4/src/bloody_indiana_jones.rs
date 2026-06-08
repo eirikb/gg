@@ -160,7 +160,9 @@ impl BloodyIndianaJones {
         self.pb.set_message("Extracting");
 
         info!("Extracting {}", self.file_name);
-        let ext = Path::new(&self.file_name).extension().unwrap().to_str();
+        let ext = Path::new(&self.file_name)
+            .extension()
+            .and_then(|e| e.to_str());
         let file_buf_reader =
             tokio::io::BufReader::new(tokio::fs::File::open(&self.file_path).await.unwrap());
         let file_path_decomp = if ext == Some("tgz") {
