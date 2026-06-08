@@ -90,6 +90,13 @@ impl BloodyIndianaJones {
             .send()
             .await
             .unwrap_or_else(|_| panic!("Failed to get {}", &self.url));
+        if !res.status().is_success() {
+            panic!(
+                "Failed to download {}: server returned HTTP {}",
+                &self.url,
+                res.status()
+            );
+        }
         let total_size = res
             .content_length()
             .unwrap_or_else(|| panic!("Failed to get content length from {}", &self.url));
@@ -363,5 +370,37 @@ mod tests {
         let install_dir = target.path().join("java_star_");
         assert!(install_dir.join("bin").join("java").exists());
         assert!(install_dir.join("lib").join("jvm.cfg").exists());
+    }
+
+    // Serve one HTTP response, then close. Returns the bound port.
+    async fn serve_once(response: &'static [u8]) -> u16 {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            if let Ok((mut socket, _)) = listener.accept().await {
+                use tokio::io::{AsyncReadExt, AsyncWriteExt};
+                let mut buf = [0u8; 1024];
+                let _ = socket.read(&mut buf).await;
+                let _ = socket.write_all(response).await;
+                let _ = socket.shutdown().await;
+            }
+        });
+        port
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "server returned HTTP 403")]
+    async fn test_download_rejects_error_status() {
+        // A rate-limited/forbidden source must fail at download with a clear
+        // message, not stream the error body and panic later as "invalid gzip".
+        let response = b"HTTP/1.1 403 Forbidden\r\nContent-Length: 9\r\n\r\nforbidden";
+        let port = serve_once(response).await;
+        let target = tempdir().unwrap();
+        let bij = BloodyIndianaJones::new_with_file_name(
+            format!("http://127.0.0.1:{port}/tool.tar.gz"),
+            target.path().join("out").to_str().unwrap().to_string(),
+            ProgressBar::hidden(),
+        );
+        bij.download().await;
     }
 }
