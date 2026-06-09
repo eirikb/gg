@@ -68,9 +68,28 @@ if ($hash)
         Remove-Item $tempFile -Force
     }
 
+    # Invoke-WebRequest only knows the system (WinINET) proxy and ignores the
+    # conventional env vars, which breaks behind proxies configured that way
+    # (e.g. corporate networks pointing https_proxy at an unauthenticated
+    # proxy). Env vars are case-insensitive on Windows, so https_proxy also
+    # matches HTTPS_PROXY.
+    $proxyArgs = @{ }
+    $envProxy = if ($env:https_proxy)
+    {
+        $env:https_proxy
+    }
+    else
+    {
+        $env:all_proxy
+    }
+    if ($envProxy -and $envProxy -match '^https?://')
+    {
+        $proxyArgs = @{ Proxy = $envProxy; ProxyUseDefaultCredentials = $true }
+    }
+
     try
     {
-        Invoke-WebRequest "https://ggcmd.z13.web.core.windows.net/$hash" -OutFile $tempFile
+        Invoke-WebRequest "https://ggcmd.z13.web.core.windows.net/$hash" -OutFile $tempFile @proxyArgs
         if ((Test-Path $tempFile) -and ((Get-Item $tempFile).Length -gt 0))
         {
             Move-Item $tempFile $stage4 -Force
