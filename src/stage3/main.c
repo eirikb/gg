@@ -13,6 +13,57 @@
  * Using HTTP, not HTTPS. Hard coded checksum.
  **/
 
+/* Honor http_proxy / all_proxy (the download is plain HTTP). Accepts
+ * [http://]host[:port]; other schemes (socks, https) are ignored and we
+ * connect directly. Credentials are not supported (no base64 here) and are
+ * stripped, so an authenticating proxy will answer 407. */
+static int parseProxy(char *host, size_t hostSize, char *port, size_t portSize) {
+    const char *vars[] = {"http_proxy", "HTTP_PROXY", "all_proxy", "ALL_PROXY"};
+    const char *v = NULL;
+    for (size_t i = 0; i < sizeof(vars) / sizeof(vars[0]) && v == NULL; i++) {
+        v = getenv(vars[i]);
+        if (v != NULL && *v == '\0') {
+            v = NULL;
+        }
+    }
+    if (v == NULL) {
+        return 0;
+    }
+    const char *p = strstr(v, "://");
+    if (p != NULL) {
+        if (strncmp(v, "http://", 7) != 0) {
+            return 0;
+        }
+        p += 3;
+    } else {
+        p = v;
+    }
+    const char *at = strchr(p, '@');
+    if (at != NULL) {
+        printf("Proxy credentials are not supported, trying without\n");
+        p = at + 1;
+    }
+    size_t hostLen = strcspn(p, ":/");
+    if (hostLen == 0 || hostLen >= hostSize) {
+        return 0;
+    }
+    memcpy(host, p, hostLen);
+    host[hostLen] = '\0';
+    p += hostLen;
+    if (*p == ':') {
+        p++;
+        size_t portLen = strcspn(p, "/");
+        if (portLen == 0 || portLen >= portSize) {
+            return 0;
+        }
+        memcpy(port, p, portLen);
+        port[portLen] = '\0';
+    } else {
+        snprintf(port, portSize, "80");
+    }
+    return 1;
+}
+
 int main() {
     const long bufferSize = 65536;
     const char *host = "ggcmd.z13.web.core.windows.net";
@@ -20,14 +71,20 @@ int main() {
     char path[1000];
     snprintf(path, 1000, "/%s", hash);
 
+    char proxyHost[256];
+    char proxyPort[16];
+    const int useProxy = parseProxy(proxyHost, sizeof(proxyHost), proxyPort, sizeof(proxyPort));
+    const char *connectHost = useProxy ? proxyHost : host;
+    const char *connectPort = useProxy ? proxyPort : "80";
+
     struct addrinfo hints;
     struct addrinfo *result = NULL;
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
-    if (getaddrinfo(host, "80", &hints, &result) != 0 || result == NULL) {
-        printf("DNS lookup failed for %s\n", host);
+    if (getaddrinfo(connectHost, connectPort, &hints, &result) != 0 || result == NULL) {
+        printf("DNS lookup failed for %s\n", connectHost);
         return 1;
     }
 
@@ -46,7 +103,7 @@ int main() {
     freeaddrinfo(result);
 
     if (sock < 0) {
-        printf("Connection to %s failed\n", host);
+        printf("Connection to %s failed\n", connectHost);
         return 1;
     }
 
@@ -56,9 +113,15 @@ int main() {
         exit(1);
     }
 
-    char header[1024];
-    snprintf(header, sizeof(header), "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", path,
-             host);
+    char header[1200];
+    if (useProxy) {
+        // Through a proxy the request line must carry the absolute URI
+        snprintf(header, sizeof(header),
+                 "GET http://%s%s HTTP/1.1\r\nHost: %s\r\n\r\n", host, path, host);
+    } else {
+        snprintf(header, sizeof(header), "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n",
+                 path, host);
+    }
     send(sock, header, strlen(header), 0);
 
     char buffer[bufferSize];
@@ -68,7 +131,7 @@ int main() {
     int p = 0;
 
     do {
-        const long res = read(sock, buffer, bufferSize);
+        const long res = read(sock, buffer, bufferSize - 1);
         if (res <= 0) {
             printf("\nDownload interrupted\n");
             fclose(f);
@@ -76,6 +139,15 @@ int main() {
             return 1;
         }
         if (dataSize == 0) {
+            buffer[res] = '\0';
+            const char *statusSpace = strncmp(buffer, "HTTP/", 5) == 0 ? strchr(buffer, ' ') : NULL;
+            const int status = statusSpace ? atoi(statusSpace + 1) : 0;
+            if (status != 200) {
+                printf("HTTP error %d from %s\n", status, connectHost);
+                fclose(f);
+                remove("stage4.tmp");
+                return 1;
+            }
             const char *clHeader = strstr(buffer, "Content-Length");
             const char *cl = clHeader ? strstr(clHeader, " ") : NULL;
             const char *end = strstr(buffer, "\r\n\r\n");
