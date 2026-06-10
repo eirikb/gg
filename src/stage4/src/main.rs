@@ -195,13 +195,7 @@ async fn main() -> ExitCode {
     let ver = option_env!("VERSION").unwrap_or("dev");
 
     let mut raw_args: Vec<String> = env::args().collect();
-    if let Some(applet) = env::var("GG_CMD_PATH")
-        .ok()
-        .as_deref()
-        .and_then(cli::applet_from_cmd_path)
-    {
-        raw_args.insert(1, applet);
-    }
+    cli::apply_applet_dispatch(&mut raw_args, env::var("GG_CMD_PATH").ok().as_deref());
     let cli = Cli::parse_from(&raw_args);
     let log_level = match cli.get_log_level().as_str() {
         "trace" => LevelFilter::Trace,

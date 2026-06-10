@@ -69,6 +69,21 @@ pub struct Cli {
     pub args: Vec<String>,
 }
 
+/// Applet dispatch (busybox-style) with a jump-out, applied to raw argv:
+/// - A literal `gg` first argument bypasses applet dispatch and is stripped,
+///   so a renamed gg.cmd still works as plain gg: `node.cmd gg update` behaves
+///   as `gg.cmd update`. This lets a tool launched via its own applet call
+///   back into gg through the same .cmd file.
+/// - Otherwise, if gg.cmd has been renamed, the new name is prepended as the
+///   command: `postmortemthis.cmd args` behaves as `gg.cmd postmortemthis args`.
+pub fn apply_applet_dispatch(raw_args: &mut Vec<String>, cmd_path: Option<&str>) {
+    if raw_args.get(1).map(String::as_str) == Some("gg") {
+        raw_args.remove(1);
+    } else if let Some(applet) = cmd_path.and_then(applet_from_cmd_path) {
+        raw_args.insert(1, applet);
+    }
+}
+
 /// If gg.cmd has been renamed (e.g. to `postmortemthis.cmd`), the new name
 /// acts as an applet (busybox-style): `postmortemthis.cmd args` behaves as
 /// `gg.cmd postmortemthis args`. The name is resolved like any other command
@@ -436,6 +451,48 @@ mod tests {
             Some("deploy".to_string())
         );
         assert_eq!(applet_from_cmd_path("node"), Some("node".to_string()));
+    }
+
+    fn dispatch(args: Vec<&str>, cmd_path: Option<&str>) -> Vec<String> {
+        let mut raw_args: Vec<String> = args.into_iter().map(String::from).collect();
+        apply_applet_dispatch(&mut raw_args, cmd_path);
+        raw_args
+    }
+
+    #[test]
+    fn test_applet_dispatch_prepends_renamed_cmd() {
+        assert_eq!(
+            dispatch(vec!["gg", "--version"], Some("./node.cmd")),
+            vec!["gg", "node", "--version"]
+        );
+    }
+
+    #[test]
+    fn test_applet_dispatch_plain_gg_cmd_unchanged() {
+        assert_eq!(
+            dispatch(vec!["gg", "node", "hello"], Some("./gg.cmd")),
+            vec!["gg", "node", "hello"]
+        );
+        assert_eq!(dispatch(vec!["gg", "node"], None), vec!["gg", "node"]);
+    }
+
+    #[test]
+    fn test_applet_dispatch_gg_jumpout() {
+        // `node.cmd gg update` behaves as `gg.cmd update`
+        assert_eq!(
+            dispatch(vec!["gg", "gg", "update"], Some("./node.cmd")),
+            vec!["gg", "update"]
+        );
+        // Uniform without an applet too: `gg.cmd gg node` = `gg.cmd node`
+        assert_eq!(
+            dispatch(vec!["gg", "gg", "node"], Some("./gg.cmd")),
+            vec!["gg", "node"]
+        );
+        // Strictly lowercase `gg` is the jump-out word
+        assert_eq!(
+            dispatch(vec!["gg", "GG", "update"], Some("./node.cmd")),
+            vec!["gg", "node", "GG", "update"]
+        );
     }
 
     #[test]
