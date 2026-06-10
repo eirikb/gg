@@ -17,6 +17,7 @@ pub struct GitHub {
     pub repo: String,
     pub predefined_deps: Option<Vec<ExecutorDep>>,
     pub predefined_bins: Option<Vec<String>>,
+    pub excluded_asset_keywords: Vec<String>,
 }
 
 impl GitHub {
@@ -27,6 +28,7 @@ impl GitHub {
             repo,
             predefined_deps: None,
             predefined_bins: None,
+            excluded_asset_keywords: vec![],
         }
     }
 
@@ -43,7 +45,23 @@ impl GitHub {
             repo,
             predefined_deps,
             predefined_bins,
+            excluded_asset_keywords: vec![],
         }
+    }
+
+    /// Skip assets whose name contains any of these keywords. For repos that
+    /// publish several same-platform variants per release (kimi-cli's
+    /// `-onedir` bundles, mistral-vibe's `vibe-acp-*` editor-protocol
+    /// builds), the os+arch+version sort ties and selection becomes
+    /// arbitrary; excluding the unwanted variants keeps it deterministic.
+    pub fn with_excluded_asset_keywords(mut self, keywords: Vec<&str>) -> Self {
+        self.excluded_asset_keywords = keywords.into_iter().map(|k| k.to_lowercase()).collect();
+        self
+    }
+
+    fn is_excluded_asset(name: &str, excluded_keywords: &[String]) -> bool {
+        let name_lower = name.to_lowercase();
+        excluded_keywords.iter().any(|k| name_lower.contains(k))
     }
 
     async fn detect_language_and_deps(&self) -> Vec<ExecutorDep> {
@@ -157,6 +175,7 @@ impl Executor for GitHub {
     ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
         let owner = self.owner.clone();
         let repo = self.repo.clone();
+        let excluded_keywords = self.excluded_asset_keywords.clone();
 
         Box::pin(async move {
             let mut downloads: Vec<Download> = vec![];
@@ -178,6 +197,11 @@ impl Executor for GitHub {
                     for release in releases.items {
                         for asset in release.assets {
                             if !Self::is_likely_binary(&asset.name) {
+                                continue;
+                            }
+
+                            if Self::is_excluded_asset(&asset.name, &excluded_keywords) {
+                                debug!("Skipping excluded asset: {}", asset.name);
                                 continue;
                             }
 
@@ -344,6 +368,39 @@ mod tests {
         assert!(!GitHub::is_likely_binary("SHA256SUMS"));
         assert!(!GitHub::is_likely_binary("tool.asc"));
         assert!(!GitHub::is_likely_binary("CHANGELOG.md"));
+    }
+
+    #[test]
+    fn test_is_excluded_asset() {
+        // kimi-cli ships a single-binary and an -onedir bundle per platform
+        let excluded = vec!["onedir".to_string()];
+        assert!(GitHub::is_excluded_asset(
+            "kimi-1.47.0-x86_64-unknown-linux-gnu-onedir.tar.gz",
+            &excluded
+        ));
+        assert!(!GitHub::is_excluded_asset(
+            "kimi-1.47.0-x86_64-unknown-linux-gnu.tar.gz",
+            &excluded
+        ));
+
+        // mistral-vibe ships vibe-acp-* (editor protocol) next to vibe-*
+        let excluded = vec!["vibe-acp".to_string()];
+        assert!(GitHub::is_excluded_asset(
+            "vibe-acp-linux-x86_64-2.14.1.zip",
+            &excluded
+        ));
+        assert!(!GitHub::is_excluded_asset(
+            "vibe-linux-x86_64-2.14.1.zip",
+            &excluded
+        ));
+
+        // matching is case-insensitive on the asset name
+        assert!(GitHub::is_excluded_asset(
+            "Tool-Linux-OneDir.tar.gz",
+            &["onedir".to_string()]
+        ));
+
+        assert!(!GitHub::is_excluded_asset("anything.tar.gz", &[]));
     }
 
     #[test]

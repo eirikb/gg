@@ -3,6 +3,7 @@ use std::sync::LazyLock;
 
 use crate::executor::{Executor, ExecutorCmd, ExecutorDep};
 use crate::executors::bld::Bld;
+use crate::executors::claude::Claude;
 use crate::executors::custom_command::CustomCommand;
 use crate::executors::flutter::Flutter;
 use crate::executors::github::GitHub;
@@ -11,7 +12,7 @@ use crate::executors::gradle::Gradle;
 use crate::executors::java::Java;
 use crate::executors::jbang::JBangExecutor;
 use crate::executors::maven::Maven;
-use crate::executors::node::Node;
+use crate::executors::node::{Node, NpmPackageSpec};
 use crate::executors::openapigenerator::OpenAPIGenerator;
 use crate::executors::rat::Rat;
 use crate::executors::ruby::Ruby;
@@ -44,7 +45,12 @@ pub static TOOL_REGISTRY: LazyLock<HashMap<&'static str, ToolInfo>> = LazyLock::
             category: ToolCategory::Language,
             tags: vec!["+lts"],
             example: Some("gg node@14 -e 'console.log(1)'"),
-            factory: |cmd| Some(Box::new(Node { executor_cmd: cmd })),
+            factory: |cmd| {
+                Some(Box::new(Node {
+                    executor_cmd: cmd,
+                    npm_package: None,
+                }))
+            },
         },
         ToolInfo {
             name: "java",
@@ -257,6 +263,113 @@ pub static TOOL_REGISTRY: LazyLock<HashMap<&'static str, ToolInfo>> = LazyLock::
                 // transitively via googleauth, but googleauth 1.17.0 dropped it.
                 ruby_cmd.gems = Some(vec!["fastlane".to_string(), "multi_json".to_string()]);
                 Some(Box::new(Ruby { executor_cmd: ruby_cmd }))
+            },
+        },
+        ToolInfo {
+            name: "claude",
+            aliases: vec!["claude-code"],
+            description: "Claude Code - Anthropic's coding agent for your terminal",
+            category: ToolCategory::Utility,
+            tags: vec![],
+            example: Some("gg claude --version"),
+            factory: |cmd| Some(Box::new(Claude { executor_cmd: cmd })),
+        },
+        ToolInfo {
+            name: "gemini-cli",
+            aliases: vec!["gemini"],
+            description: "Google Gemini CLI - coding agent for your terminal",
+            category: ToolCategory::Utility,
+            tags: vec![],
+            example: Some("gg gemini-cli --version"),
+            factory: |cmd| {
+                Some(Box::new(Node {
+                    executor_cmd: cmd,
+                    npm_package: Some(NpmPackageSpec {
+                        name: "gemini-cli".to_string(),
+                        package: "@google/gemini-cli".to_string(),
+                        bin: "gemini".to_string(),
+                    }),
+                }))
+            },
+        },
+        ToolInfo {
+            name: "codex",
+            aliases: vec![],
+            description: "OpenAI Codex CLI - coding agent for your terminal",
+            category: ToolCategory::Utility,
+            tags: vec![],
+            example: Some("gg codex --version"),
+            // npm, not GitHub releases: the release page mixes in alpha
+            // prereleases and many same-prefixed assets (codex-app-server,
+            // bundles, .zst); @openai/codex resolves the right stable native
+            // binary per platform via optionalDependencies.
+            factory: |cmd| {
+                Some(Box::new(Node {
+                    executor_cmd: cmd,
+                    npm_package: Some(NpmPackageSpec {
+                        name: "codex".to_string(),
+                        package: "@openai/codex".to_string(),
+                        bin: "codex".to_string(),
+                    }),
+                }))
+            },
+        },
+        ToolInfo {
+            name: "qwen",
+            aliases: vec!["qwen-code"],
+            description: "Qwen Code - Alibaba's coding agent for your terminal",
+            category: ToolCategory::Utility,
+            tags: vec![],
+            example: Some("gg qwen --version"),
+            factory: |cmd| {
+                Some(Box::new(Node {
+                    executor_cmd: cmd,
+                    npm_package: Some(NpmPackageSpec {
+                        name: "qwen".to_string(),
+                        package: "@qwen-code/qwen-code".to_string(),
+                        bin: "qwen".to_string(),
+                    }),
+                }))
+            },
+        },
+        ToolInfo {
+            name: "kimi",
+            aliases: vec!["kimi-cli"],
+            description: "Kimi CLI - Moonshot AI's coding agent for your terminal",
+            category: ToolCategory::Utility,
+            tags: vec![],
+            example: Some("gg kimi --version"),
+            factory: |cmd| {
+                Some(Box::new(
+                    GitHub::new_with_config(
+                        cmd,
+                        "MoonshotAI".to_string(),
+                        "kimi-cli".to_string(),
+                        Some(vec![]),
+                        Some(vec!["kimi".to_string(), "kimi.exe".to_string()]),
+                    )
+                    .with_excluded_asset_keywords(vec!["onedir"]),
+                ))
+            },
+        },
+        ToolInfo {
+            name: "vibe",
+            aliases: vec!["mistral-vibe"],
+            description: "Mistral Vibe - Mistral's coding agent for your terminal",
+            category: ToolCategory::Utility,
+            tags: vec![],
+            example: Some("gg vibe --version"),
+            factory: |cmd| {
+                Some(Box::new(
+                    GitHub::new_with_config(
+                        cmd,
+                        "mistralai".to_string(),
+                        "mistral-vibe".to_string(),
+                        Some(vec![]),
+                        Some(vec!["vibe".to_string(), "vibe.exe".to_string()]),
+                    )
+                    .with_excluded_asset_keywords(vec!["vibe-acp"]),
+                ))
             },
         },
         ToolInfo {

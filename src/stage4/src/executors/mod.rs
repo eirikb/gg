@@ -1,4 +1,5 @@
 pub mod bld;
+pub mod claude;
 pub mod custom_command;
 pub mod flutter;
 pub mod github;
