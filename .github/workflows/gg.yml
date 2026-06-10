@@ -441,12 +441,16 @@ jobs:
   test-container:
     needs: [ stage1, hash ]
     strategy:
+      # One flaky image pull should not cancel the rest of the matrix
+      fail-fast: false
       matrix:
         container: [ ubuntu, debian, alpine, archlinux ]
         cmd: [ "node@14 -v", "java -version", "gradle -version", "openapi version", "run:java@14 java -version", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "just -V", "fortio version", "gh/mozilla/sccache -V" ]
 
     runs-on: ubuntu-latest
-    container: ${{ matrix.container }}
+    # Docker Hub rate-limits anonymous pulls from shared GitHub runner IPs,
+    # so pull the same official images from AWS's public mirror instead
+    container: public.ecr.aws/docker/library/${{ matrix.container }}:latest
     steps:
       - name: Download gg
         uses: actions/download-artifact@v8
