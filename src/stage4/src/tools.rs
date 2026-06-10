@@ -315,6 +315,64 @@ pub static TOOL_REGISTRY: LazyLock<HashMap<&'static str, ToolInfo>> = LazyLock::
             },
         },
         ToolInfo {
+            name: "qwen",
+            aliases: vec!["qwen-code"],
+            description: "Qwen Code - Alibaba's coding agent for your terminal",
+            category: ToolCategory::Utility,
+            tags: vec![],
+            example: Some("gg qwen --version"),
+            factory: |cmd| {
+                Some(Box::new(Node {
+                    executor_cmd: cmd,
+                    npm_package: Some(NpmPackageSpec {
+                        name: "qwen".to_string(),
+                        package: "@qwen-code/qwen-code".to_string(),
+                        bin: "qwen".to_string(),
+                    }),
+                }))
+            },
+        },
+        ToolInfo {
+            name: "kimi",
+            aliases: vec!["kimi-cli"],
+            description: "Kimi CLI - Moonshot AI's coding agent for your terminal",
+            category: ToolCategory::Utility,
+            tags: vec![],
+            example: Some("gg kimi --version"),
+            factory: |cmd| {
+                Some(Box::new(
+                    GitHub::new_with_config(
+                        cmd,
+                        "MoonshotAI".to_string(),
+                        "kimi-cli".to_string(),
+                        Some(vec![]),
+                        Some(vec!["kimi".to_string(), "kimi.exe".to_string()]),
+                    )
+                    .with_excluded_asset_keywords(vec!["onedir"]),
+                ))
+            },
+        },
+        ToolInfo {
+            name: "vibe",
+            aliases: vec!["mistral-vibe"],
+            description: "Mistral Vibe - Mistral's coding agent for your terminal",
+            category: ToolCategory::Utility,
+            tags: vec![],
+            example: Some("gg vibe --version"),
+            factory: |cmd| {
+                Some(Box::new(
+                    GitHub::new_with_config(
+                        cmd,
+                        "mistralai".to_string(),
+                        "mistral-vibe".to_string(),
+                        Some(vec![]),
+                        Some(vec!["vibe".to_string(), "vibe.exe".to_string()]),
+                    )
+                    .with_excluded_asset_keywords(vec!["vibe-acp"]),
+                ))
+            },
+        },
+        ToolInfo {
             name: "git",
             aliases: vec![],
             description: "Git version control system",
