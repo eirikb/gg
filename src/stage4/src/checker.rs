@@ -302,29 +302,47 @@ pub async fn check_or_update_tool(
 
     let config_version = config.dependencies.get(tool_name);
 
-    let matching_meta = metas.into_iter().find(|(meta, _)| {
-        if let Some(executor) = <dyn Executor>::new(meta.cmd.clone()) {
-            let name_matches = executor.get_name() == tool_name;
+    let matching_metas: Vec<_> = metas
+        .into_iter()
+        .filter(|(meta, _)| {
+            if let Some(executor) = <dyn Executor>::new(meta.cmd.clone()) {
+                let name_matches = executor.get_name() == tool_name;
 
-            if let Some(config_ver) = config_version {
-                if let Some(version_req) = crate::executor::GgVersionReq::new(config_ver) {
-                    if let Some(meta_version) = &meta.download.version {
-                        return name_matches
-                            && version_req
-                                .to_version_req()
-                                .matches(&meta_version.to_version());
+                if let Some(config_ver) = config_version {
+                    if let Some(version_req) = crate::executor::GgVersionReq::new(config_ver) {
+                        if let Some(meta_version) = &meta.download.version {
+                            return name_matches
+                                && version_req
+                                    .to_version_req()
+                                    .matches(&meta_version.to_version());
+                        }
                     }
                 }
+
+                name_matches
+            } else {
+                false
             }
+        })
+        .collect();
 
-            name_matches
-        } else {
-            false
-        }
-    });
+    if matching_metas.is_empty() {
+        println!(
+            "Tool '{}' not found in cache. Install it first by running: gg {}",
+            tool_name, tool_name
+        );
+        return;
+    }
 
-    if let Some((meta, path)) = matching_meta {
+    let mut update_available = false;
+
+    for (meta, path) in matching_metas {
         if let Some(info) = check_tool_update(meta, path, input).await {
+            let display_name = if info.version_selector.is_empty() {
+                info.tool_name.clone()
+            } else {
+                format!("{}{}", info.tool_name, info.version_selector)
+            };
             let current = info.current_version.as_deref().unwrap_or("NA");
             let latest = info.latest_version.as_deref().unwrap_or("NA");
 
@@ -333,43 +351,42 @@ pub async fn check_or_update_tool(
 
             if should_perform_update {
                 if force {
-                    println!("Force updating {}...", tool_name);
+                    println!("Force updating {}...", display_name);
                 } else {
-                    println!("Updating {}...", tool_name);
+                    println!("Updating {}...", display_name);
                 }
 
                 if let Some(parent) = info.path.parent() {
                     if fs::remove_dir_all(parent).is_ok() {
                         let pb = create_barus();
                         let _ = prep(&*info.executor, input, &pb).await;
-                        println!("Successfully updated {}", tool_name);
+                        println!("Successfully updated {}", display_name);
                     } else {
-                        println!("Unable to update {}", tool_name);
+                        println!("Unable to update {}", display_name);
                     }
                 } else {
-                    println!("Unable to update {}", tool_name);
+                    println!("Unable to update {}", display_name);
                 }
             } else if !info.needs_update {
-                println!("{}: Already up to date (version {})", tool_name, current);
+                println!("{}: Already up to date (version {})", display_name, current);
             } else if info.is_major_update && !allow_major {
                 println!(
                     "{}: Current: {}, Latest: {} - Major update available (use --major to include)",
-                    tool_name, current, latest
+                    display_name, current, latest
                 );
             } else {
                 println!(
                     "{}: Current: {}, Latest: {} - Update available",
-                    tool_name, current, latest
+                    display_name, current, latest
                 );
-                println!("Run 'update {} -u' to update.", tool_name);
+                update_available = true;
             }
         } else {
             println!("Unable to check updates for {}", tool_name);
         }
-    } else {
-        println!(
-            "Tool '{}' not found in cache. Install it first by running: gg {}",
-            tool_name, tool_name
-        );
+    }
+
+    if update_available {
+        println!("Run 'update {} -u' to update.", tool_name);
     }
 }
