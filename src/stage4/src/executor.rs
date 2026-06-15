@@ -349,7 +349,26 @@ pub async fn prep(
     pb.set_prefix(String::from(name));
 
     match app_path {
-        Some(app_path_ok) if app_path_ok.install_dir.exists() => return Ok(app_path_ok),
+        Some(app_path_ok) if app_path_ok.install_dir.exists() => {
+            // A populated dir isn't enough: the executor backing a tool can
+            // change between gg versions (e.g. codex moving from a GitHub
+            // release to an npm package), leaving a dir that no longer holds the
+            // binary the current executor expects. Confirm the bin resolves
+            // under the cache's own search paths (not $PATH); otherwise drop the
+            // stale dir and re-download rather than return a hit that fails at
+            // run time.
+            let path_vars = bin_path_vars(executor, &app_path_ok);
+            let sep = if cfg!(windows) { ";" } else { ":" };
+            let all_paths = path_vars.join(sep);
+            if resolve_bin_path(&executor.get_bins(input), &path_vars, &all_paths).is_some() {
+                return Ok(app_path_ok);
+            }
+            info!(
+                "{name} cache dir {:?} exists but the expected binary is missing; invalidating and re-downloading",
+                app_path_ok.install_dir
+            );
+            let _ = std::fs::remove_dir_all(&app_path_ok.install_dir);
+        }
         _ => {
             info!("{name} not found in cache. Download time");
         }
@@ -597,27 +616,24 @@ fn get_app_path(path: &str, _input: &AppInput) -> Result<AppPath, String> {
     }
 }
 
-pub async fn try_run(
-    input: &AppInput,
-    executor: &dyn Executor,
-    app_path: AppPath,
-    path_vars: Vec<String>,
-    env_vars: HashMap<String, String>,
-) -> Result<bool, String> {
-    let args = executor.customize_args(input, &app_path);
-    let path_string = &env::var("PATH").unwrap_or("".to_string());
-    let paths = env::join_paths(path_vars.clone())
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .to_string();
-    let all_paths = [paths, path_string.to_string()].join(match env::consts::OS {
-        "windows" => ";",
-        _ => ":",
-    });
-    info!("PATH: {all_paths}");
-    let bins = executor.get_bins(input);
-    info!("Trying to find these bins: {:?}", bins);
+fn bin_path_vars(executor: &dyn Executor, app_path: &AppPath) -> Vec<String> {
+    executor
+        .get_bin_dirs()
+        .iter()
+        .map(|bin_dir| {
+            app_path
+                .install_dir
+                .join(bin_dir)
+                .to_str()
+                .unwrap_or("")
+                .to_string()
+        })
+        .collect()
+}
+
+/// Resolve the first of `bins` that exists under the given search paths. Shared
+/// by `try_run` and `prep`'s cache-hit check so resolution stays in lock-step.
+fn resolve_bin_path(bins: &[BinPattern], path_vars: &[String], all_paths: &str) -> Option<PathBuf> {
     for bin in bins {
         let bin_path = match bin {
             BinPattern::Exact(name) => {
@@ -640,15 +656,15 @@ pub async fn try_run(
                         });
                         which_in(binary_name, Some(&custom_paths_str), ".")
                     } else {
-                        which_in(&name, Some(&all_paths), ".")
+                        which_in(name, Some(all_paths), ".")
                     }
                 } else {
-                    which_in(&name, Some(&all_paths), ".")
+                    which_in(name, Some(all_paths), ".")
                 }
             }
             BinPattern::Regex(pattern) => {
-                if let Ok(regex) = Regex::new(&pattern) {
-                    which_re_in(regex, Some(&all_paths))
+                if let Ok(regex) = Regex::new(pattern) {
+                    which_re_in(regex, Some(all_paths))
                         .ok()
                         .and_then(|mut iter| iter.next())
                         .ok_or(which::Error::CannotFindBinaryPath)
@@ -659,48 +675,75 @@ pub async fn try_run(
         };
 
         if let Ok(bin_path) = bin_path {
-            info!("Executing: {:?}. With args:{:?}", bin_path, args);
-            let mut command = Command::new(&bin_path);
+            return Some(bin_path);
+        }
+    }
+    None
+}
 
-            let child = command
-                .env("PATH", all_paths.clone())
-                .envs(env_vars.clone())
-                .args(args.clone())
-                .stdin(Stdio::inherit())
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .spawn()
-                .map_err(|e| e.to_string())?;
+pub async fn try_run(
+    input: &AppInput,
+    executor: &dyn Executor,
+    app_path: AppPath,
+    path_vars: Vec<String>,
+    env_vars: HashMap<String, String>,
+) -> Result<bool, String> {
+    let args = executor.customize_args(input, &app_path);
+    let path_string = &env::var("PATH").unwrap_or("".to_string());
+    let paths = env::join_paths(path_vars.clone())
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    let all_paths = [paths, path_string.to_string()].join(match env::consts::OS {
+        "windows" => ";",
+        _ => ":",
+    });
+    info!("PATH: {all_paths}");
+    let bins = executor.get_bins(input);
+    info!("Trying to find these bins: {:?}", bins);
+    if let Some(bin_path) = resolve_bin_path(&bins, &path_vars, &all_paths) {
+        info!("Executing: {:?}. With args:{:?}", bin_path, args);
+        let mut command = Command::new(&bin_path);
 
-            let child_handle = Arc::new(Mutex::new(Some(child)));
-            let child_handle_clone = Arc::clone(&child_handle);
+        let child = command
+            .env("PATH", all_paths.clone())
+            .envs(env_vars.clone())
+            .args(args.clone())
+            .stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .map_err(|e| e.to_string())?;
 
-            let _result = ctrlc::set_handler(move || {
-                if let Ok(mut guard) = child_handle_clone.lock() {
-                    if let Some(ref mut child_process) = *guard {
-                        let _ = child_process.kill();
-                    }
+        let child_handle = Arc::new(Mutex::new(Some(child)));
+        let child_handle_clone = Arc::clone(&child_handle);
+
+        let _result = ctrlc::set_handler(move || {
+            if let Ok(mut guard) = child_handle_clone.lock() {
+                if let Some(ref mut child_process) = *guard {
+                    let _ = child_process.kill();
                 }
-            });
+            }
+        });
 
-            let res = if let Ok(mut guard) = child_handle.lock() {
-                if let Some(ref mut child) = *guard {
-                    child
-                        .wait()
-                        .map_err(|_| "Failed to wait for child process")?
-                        .success()
-                } else {
-                    false
-                }
+        let res = if let Ok(mut guard) = child_handle.lock() {
+            if let Some(ref mut child) = *guard {
+                child
+                    .wait()
+                    .map_err(|_| "Failed to wait for child process")?
+                    .success()
             } else {
                 false
-            };
-
-            if !res {
-                info!("Unable to execute {}", bin_path.display());
             }
-            return Ok(res);
+        } else {
+            false
+        };
+
+        if !res {
+            info!("Unable to execute {}", bin_path.display());
         }
+        return Ok(res);
     }
     Err(format!("Error: Unable to find executable for {}. The tool may not be properly installed or the binary name doesn't match expected patterns.", executor.get_name()))
 }
@@ -709,6 +752,40 @@ pub async fn try_run(
 mod tests {
     use super::*;
     use crate::github_utils::{detect_arch_from_name, detect_os_from_name};
+
+    // npm-package layout (e.g. codex -> npm_home/bin/codex): a nested bin path,
+    // searched via bin_dirs that include "." so base/./npm_home/bin resolves.
+    #[cfg(unix)]
+    #[test]
+    fn test_resolve_bin_path_present_vs_missing() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().unwrap();
+        let root = dir.path();
+        let bins = vec![BinPattern::Exact("npm_home/bin/codex".to_string())];
+        let path_vars: Vec<String> = ["bin", ".", "npm_home/bin", "npm_home"]
+            .iter()
+            .map(|d| root.join(d).to_str().unwrap().to_string())
+            .collect();
+        let all_paths = path_vars.join(":");
+
+        assert!(
+            resolve_bin_path(&bins, &path_vars, &all_paths).is_none(),
+            "must report a miss when the expected binary is absent"
+        );
+
+        let bin_dir = root.join("npm_home/bin");
+        std::fs::create_dir_all(&bin_dir).unwrap();
+        let bin = bin_dir.join("codex");
+        std::fs::write(&bin, "#!/bin/sh\n").unwrap();
+        std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        assert_eq!(
+            resolve_bin_path(&bins, &path_vars, &all_paths),
+            Some(bin),
+            "must resolve the nested bin once it is present"
+        );
+    }
 
     #[test]
     fn test_version_req_full_semver_exact() {
