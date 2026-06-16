@@ -88,12 +88,23 @@ pub fn apply_applet_dispatch(raw_args: &mut Vec<String>, cmd_path: Option<&str>)
 /// acts as an applet (busybox-style): `postmortemthis.cmd args` behaves as
 /// `gg.cmd postmortemthis args`. The name is resolved like any other command
 /// (tool registry or gg.toml alias).
+///
+/// The wrapper (`.cmd`) and the self-updater's temp marker (`.tmp`, from the
+/// `<name>.tmp.cmd` file it runs `--version` against before swapping it in) are
+/// stripped before matching, so `gg`, `gg.cmd` and `gg.tmp.cmd` all resolve to
+/// gg itself rather than a phantom applet. Internal dots survive, so a real
+/// applet like `my.alias.cmd` is still detected.
 pub fn applet_from_cmd_path(path: &str) -> Option<String> {
     let base = path.rsplit(['/', '\\']).next()?;
-    let name = base
+    let mut name = base;
+    while let Some(trimmed) = name
         .strip_suffix(".cmd")
-        .or_else(|| base.strip_suffix(".CMD"))
-        .unwrap_or(base);
+        .or_else(|| name.strip_suffix(".CMD"))
+        .or_else(|| name.strip_suffix(".tmp"))
+        .or_else(|| name.strip_suffix(".TMP"))
+    {
+        name = trimmed;
+    }
     if name.is_empty() || name.eq_ignore_ascii_case("gg") {
         None
     } else {
@@ -451,6 +462,58 @@ mod tests {
             Some("deploy".to_string())
         );
         assert_eq!(applet_from_cmd_path("node"), Some("node".to_string()));
+        assert_eq!(
+            applet_from_cmd_path("my.alias.cmd"),
+            Some("my.alias".to_string())
+        );
+    }
+
+    #[test]
+    fn test_self_update_temp_is_not_an_applet() {
+        // The updater downloads to `<name>.tmp.cmd` and runs `--version` against
+        // it. That file must be recognized as gg, not parsed as an applet named
+        // after the temp file, regardless of whether gg.cmd was named `gg` or
+        // `gg.cmd` and regardless of its path.
+        for temp in [
+            "gg.tmp.cmd",
+            "gg.cmd.tmp.cmd",
+            "/home/x/bin/gg.tmp.cmd",
+            "/usr/local/bin/gg.cmd.tmp.cmd",
+            "./gg.cmd.tmp.cmd",
+            ".cache/gg/gg.tmp.cmd",
+            "C:\\tools\\GG.TMP.CMD",
+        ] {
+            assert_eq!(applet_from_cmd_path(temp), None, "{} should be gg", temp);
+        }
+    }
+
+    #[test]
+    fn test_self_update_version_check_contract() {
+        // Frozen contract: an already-installed (old) gg runs the new binary as
+        // `sh <name>.tmp.cmd --version` to verify it. That invocation must parse
+        // as the version flag, never as an applet. Locks the self-update path so
+        // a future argv feature can't silently break it again.
+        for temp in ["gg.tmp.cmd", "gg.cmd.tmp.cmd", "/home/x/bin/gg.tmp.cmd"] {
+            let mut raw_args = vec!["gg".to_string(), "--version".to_string()];
+            apply_applet_dispatch(&mut raw_args, Some(temp));
+            let cli = Cli::try_parse_from(&raw_args).unwrap();
+            assert!(
+                cli.version,
+                "`--version` via {} must set the version flag",
+                temp
+            );
+        }
+    }
+
+    #[test]
+    fn test_self_update_literal_gg_arg_bypasses_applet() {
+        // Layer 2: the updater passes a literal `gg` first arg so the jump-out
+        // bypasses applet dispatch outright, even for an applet-named gg.cmd.
+        let mut raw_args = vec!["gg".to_string(), "gg".to_string(), "--version".to_string()];
+        apply_applet_dispatch(&mut raw_args, Some("./node.cmd"));
+        assert_eq!(raw_args, vec!["gg", "--version"]);
+        let cli = Cli::try_parse_from(&raw_args).unwrap();
+        assert!(cli.version);
     }
 
     fn dispatch(args: Vec<&str>, cmd_path: Option<&str>) -> Vec<String> {
