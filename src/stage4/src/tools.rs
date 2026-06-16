@@ -389,6 +389,25 @@ pub static TOOL_REGISTRY: LazyLock<HashMap<&'static str, ToolInfo>> = LazyLock::
                 ))
             },
         },
+        ToolInfo {
+            name: "postmortem",
+            // Applet alias: postmortemthis.cmd dispatches to this tool, so
+            // `sh postmortemthis.cmd skill` runs `postmortem skill`.
+            aliases: vec!["postmortemthis"],
+            description: "postmortem - run every AI coding CLI you have on your diff, read-only",
+            category: ToolCategory::GitHubRelease,
+            tags: vec![],
+            example: Some("gg postmortem doctor"),
+            factory: |cmd| {
+                Some(create_github_executor(
+                    cmd,
+                    "Softeria",
+                    "postmortemthis",
+                    vec![],
+                    vec!["postmortem", "postmortem.exe"],
+                ))
+            },
+        },
     ];
 
     let mut registry = HashMap::new();
