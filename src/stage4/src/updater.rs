@@ -54,11 +54,14 @@ fn execute_version_check(file_path: &str) -> Result<(), String> {
 
     // Bah! This is a hacky way to execute the script
     let child = {
+        // The literal `gg` first arg hits the applet-dispatch jump-out, so the
+        // temp file name (`<name>.tmp.cmd`) is never mistaken for an applet.
         #[cfg(unix)]
         {
             // On Unix, execute through shell since gg.cmd is a shell script
             std::process::Command::new("sh")
                 .arg(file_path)
+                .arg("gg")
                 .arg("--version")
                 .spawn()
         }
@@ -67,16 +70,19 @@ fn execute_version_check(file_path: &str) -> Result<(), String> {
             if env::var("MSYSTEM").is_ok() || env::var("MINGW_PREFIX").is_ok() {
                 std::process::Command::new("sh")
                     .arg(file_path)
+                    .arg("gg")
                     .arg("--version")
                     .spawn()
             } else if file_path.ends_with(".cmd") || file_path.ends_with(".bat") {
                 std::process::Command::new(file_path)
+                    .arg("gg")
                     .arg("--version")
                     .spawn()
             } else {
                 std::process::Command::new("cmd")
                     .arg("/c")
                     .arg(file_path)
+                    .arg("gg")
                     .arg("--version")
                     .spawn()
             }
