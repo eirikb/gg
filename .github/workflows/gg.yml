@@ -1,7 +1,7 @@
 on:
   workflow_dispatch:
   pull_request:
-    types: [ opened, synchronize, closed ]
+    types: [ opened, synchronize, reopened, closed ]
     branches: [ main ]
 
 concurrency:
