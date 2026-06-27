@@ -244,7 +244,20 @@ impl BloodyIndianaJones {
                 .await
                 .expect("Unable to extract 7z");
             }
-            Some("tar") => (),
+            Some("tar") => {
+                // A directly-downloaded plain .tar needs no decompression, but it
+                // still has to be unpacked. The shared untar step further down keys
+                // off file_path_decomp ending in ".tar" - but for a plain tar that
+                // name has already had its extension stripped (and version dots make
+                // it worse: jbang-0.139.3-linux-x64.tar -> "...-x64", ext "3-linux-x64"),
+                // so that step never fires. Untar the original file here instead.
+                info!("Untar {}", &self.file_path);
+                self.pb.set_message("Untar");
+                create_dir_all(&self.path).expect("Unable to create download dir");
+                let mut archive =
+                    tar::Archive::new(std::io::BufReader::new(File::open(&self.file_path).unwrap()));
+                archive.unpack(&self.path).expect("Unable to extract");
+            }
             Some("gem") => {
                 info!("Processing gem file");
                 self.pb.set_message("Installing gem");
@@ -388,6 +401,51 @@ mod tests {
         assert!(install_dir.join("bin").join("java").exists());
         assert!(install_dir.join("lib").join("jvm.cfg").exists());
         assert!(!install_dir.join("Contents").exists());
+    }
+
+    async fn make_tar(file_path: &str, entries: &[&str]) {
+        let mut builder = tar::Builder::new(Vec::new());
+        for entry in entries {
+            let mut header = tar::Header::new_gnu();
+            header.set_size(0);
+            header.set_mode(0o755);
+            header.set_cksum();
+            builder
+                .append_data(&mut header, entry, std::io::empty())
+                .unwrap();
+        }
+        let tar_bytes = builder.into_inner().unwrap();
+        tokio::fs::write(file_path, tar_bytes).await.unwrap();
+    }
+
+    async fn unpack_url(url: &str, entries: &[&str]) -> tempfile::TempDir {
+        let target = tempdir().unwrap();
+        let path = target.path().join("tool_star_");
+        let mut bij = BloodyIndianaJones::new_with_file_name(
+            url.to_string(),
+            path.to_str().unwrap().to_string(),
+            ProgressBar::hidden(),
+        );
+        make_tar(&bij.file_path, entries).await;
+        bij.unpack_and_all_that_stuff().await;
+        target
+    }
+
+    #[tokio::test]
+    async fn test_unpack_plain_tar_with_version_dots() {
+        // Regression: jbang ships native assets as a plain, uncompressed .tar
+        // (jbang-0.139.3-linux-x64.tar). Stripping ".tar" left
+        // "jbang-0.139.3-linux-x64", whose re-derived extension is "3-linux-x64",
+        // so the shared untar step was skipped and nothing got extracted -
+        // "Unable to locate jbang binary after download".
+        let target = unpack_url(
+            "http://example.com/jbang-0.139.3-linux-x64.tar",
+            &["jbang/bin/jbang", "jbang/bin/jbang.jar"],
+        )
+        .await;
+        let install_dir = target.path().join("tool_star_");
+        assert!(install_dir.join("bin").join("jbang").exists());
+        assert!(install_dir.join("bin").join("jbang.jar").exists());
     }
 
     #[tokio::test]
