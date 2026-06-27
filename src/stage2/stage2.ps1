@@ -92,6 +92,18 @@ if ($hash)
         Invoke-WebRequest "https://ggcmd.z13.web.core.windows.net/$hash" -OutFile $tempFile @proxyArgs
         if ((Test-Path $tempFile) -and ((Get-Item $tempFile).Length -gt 0))
         {
+            # The blob is named by its sha512, but stage3 (used on Linux/macOS)
+            # is the one that verifies it - here we download over HTTPS without
+            # stage3, so verify ourselves. Catches a tampered blob as well as
+            # the boring case: a truncated-but-non-empty download. -ne is
+            # case-insensitive, so uppercase vs lowercase hex is fine.
+            $actualHash = (Get-FileHash $tempFile -Algorithm SHA512).Hash
+            if ($actualHash -ne $hash)
+            {
+                Write-Host "Hash mismatch: expected $hash, got $actualHash"
+                Remove-Item $tempFile -Force
+                exit 1
+            }
             Move-Item $tempFile $stage4 -Force
         }
         else
