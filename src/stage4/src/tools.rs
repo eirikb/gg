@@ -14,6 +14,7 @@ use crate::executors::jbang::JBangExecutor;
 use crate::executors::maven::Maven;
 use crate::executors::node::{Node, NpmPackageSpec};
 use crate::executors::openapigenerator::OpenAPIGenerator;
+use crate::executors::python::Python;
 use crate::executors::rat::Rat;
 use crate::executors::ruby::Ruby;
 
@@ -51,6 +52,15 @@ pub static TOOL_REGISTRY: LazyLock<HashMap<&'static str, ToolInfo>> = LazyLock::
                     npm_package: None,
                 }))
             },
+        },
+        ToolInfo {
+            name: "python",
+            aliases: vec!["python3"],
+            description: "Python programming language (python-build-standalone)",
+            category: ToolCategory::Language,
+            tags: vec![],
+            example: Some("gg python --version"),
+            factory: |cmd| Some(Box::new(Python { executor_cmd: cmd })),
         },
         ToolInfo {
             name: "java",
