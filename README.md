@@ -16,13 +16,19 @@ Alpine and Ubuntu containers without curl/wget or updated CA certificates (all n
 functionality to gradlew (without need for JDK initially installed).
 
 Install with bash (wget):
-> wget ggcmd.io/gg.cmd
+> wget ggcmd.io/gg.cmd && chmod +x gg.cmd
 
 Install with bash (curl):
-> curl -L ggcmd.io > gg.cmd
+> curl -L ggcmd.io > gg.cmd && chmod +x gg.cmd
 
 Install with PowerShell:
 > wget ggcmd.io -OutFile gg.cmd
+
+> [!NOTE]
+> If installing via PowerShell, you still need to make `gg.cmd` executable if your project has contributors on Linux or macOS. You can do this with the following `git` command:
+> ```ps1
+> git update-index --chmod=+x
+> ```
 
 or
 
