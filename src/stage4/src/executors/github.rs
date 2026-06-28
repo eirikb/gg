@@ -164,6 +164,31 @@ impl GitHub {
     }
 }
 
+/// Prefer the host's libc variant, falling back to the other when it's the only
+/// one for a given os/arch/version (so a musl-only static build still resolves).
+fn prefer_libc_variant(downloads: Vec<Download>, prefer_musl: bool) -> Vec<Download> {
+    let key = |d: &Download| format!("{:?}|{:?}|{:?}", d.os, d.arch, d.version);
+    let mut has_preferred: HashSet<String> = HashSet::new();
+    for d in &downloads {
+        let is_musl = d.variant == Some(Variant::Musl);
+        if is_musl == prefer_musl {
+            has_preferred.insert(key(d));
+        }
+    }
+    downloads
+        .into_iter()
+        .filter(|d| {
+            let is_musl = d.variant == Some(Variant::Musl);
+            is_musl == prefer_musl || !has_preferred.contains(&key(d))
+        })
+        // Normalise to Any so the shared matcher doesn't re-drop a musl fallback.
+        .map(|mut d| {
+            d.variant = Some(Variant::Any);
+            d
+        })
+        .collect()
+}
+
 impl Executor for GitHub {
     fn get_executor_cmd(&self) -> &ExecutorCmd {
         &self.executor_cmd
@@ -171,11 +196,12 @@ impl Executor for GitHub {
 
     fn get_download_urls<'a>(
         &self,
-        _input: &'a AppInput,
+        input: &'a AppInput,
     ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
         let owner = self.owner.clone();
         let repo = self.repo.clone();
         let excluded_keywords = self.excluded_asset_keywords.clone();
+        let prefer_musl = input.target.variant == Some(Variant::Musl);
 
         Box::pin(async move {
             let mut downloads: Vec<Download> = vec![];
@@ -218,13 +244,20 @@ impl Executor for GitHub {
                                     "Adding download: {} with OS: {:?}, Arch: {:?}",
                                     asset.browser_download_url, os, arch
                                 );
+                                let is_musl = asset.name.to_lowercase().contains("musl")
+                                    && !matches!(os, Some(Os::Windows) | Some(Os::Mac));
+                                let variant = if is_musl {
+                                    Some(Variant::Musl)
+                                } else {
+                                    Some(Variant::Any)
+                                };
                                 downloads.push(Download {
                                     download_url: asset.browser_download_url.to_string(),
                                     version: GgVersion::new(release.tag_name.as_str()),
                                     os: os.or(Some(Os::Any)),
                                     arch: arch.or(Some(Arch::Any)),
                                     tags: HashSet::new(),
-                                    variant: Some(Variant::Any),
+                                    variant,
                                 });
                             }
                         }
@@ -239,7 +272,7 @@ impl Executor for GitHub {
                 }
             }
             debug!("Total downloads found: {}", downloads.len());
-            downloads
+            prefer_libc_variant(downloads, prefer_musl)
         })
     }
 
@@ -401,6 +434,71 @@ mod tests {
         ));
 
         assert!(!GitHub::is_excluded_asset("anything.tar.gz", &[]));
+    }
+
+    fn dl(url: &str, variant: Variant, version: &str) -> Download {
+        Download {
+            download_url: url.to_string(),
+            version: GgVersion::new(version),
+            os: Some(Os::Linux),
+            arch: Some(Arch::X86_64),
+            tags: HashSet::new(),
+            variant: Some(variant),
+        }
+    }
+
+    fn urls(downloads: Vec<Download>) -> Vec<String> {
+        let mut u: Vec<String> = downloads.into_iter().map(|d| d.download_url).collect();
+        u.sort();
+        u
+    }
+
+    #[test]
+    fn test_prefer_libc_glibc_host_drops_musl_when_glibc_exists() {
+        let downloads = vec![
+            dl("pnpm-linux-x64.tar.gz", Variant::Any, "11.9.0"),
+            dl("pnpm-linux-x64-musl.tar.gz", Variant::Musl, "11.9.0"),
+        ];
+        assert_eq!(
+            urls(prefer_libc_variant(downloads, false)),
+            vec!["pnpm-linux-x64.tar.gz"]
+        );
+    }
+
+    #[test]
+    fn test_prefer_libc_glibc_host_keeps_musl_only_build() {
+        let downloads = vec![dl("tool-linux-x64-musl.tar.gz", Variant::Musl, "1.0.0")];
+        let result = prefer_libc_variant(downloads, false);
+        assert_eq!(
+            result.iter().map(|d| d.download_url.clone()).collect::<Vec<_>>(),
+            vec!["tool-linux-x64-musl.tar.gz"]
+        );
+        // Re-tagged Any so the shared matcher won't hard-drop the fallback.
+        assert_eq!(result[0].variant, Some(Variant::Any));
+    }
+
+    #[test]
+    fn test_prefer_libc_musl_host_drops_glibc_when_musl_exists() {
+        let downloads = vec![
+            dl("pnpm-linux-x64.tar.gz", Variant::Any, "11.9.0"),
+            dl("pnpm-linux-x64-musl.tar.gz", Variant::Musl, "11.9.0"),
+        ];
+        assert_eq!(
+            urls(prefer_libc_variant(downloads, true)),
+            vec!["pnpm-linux-x64-musl.tar.gz"]
+        );
+    }
+
+    #[test]
+    fn test_prefer_libc_keeps_both_when_versions_differ() {
+        let downloads = vec![
+            dl("a-linux-x64.tar.gz", Variant::Any, "2.0.0"),
+            dl("b-linux-x64-musl.tar.gz", Variant::Musl, "1.0.0"),
+        ];
+        assert_eq!(
+            urls(prefer_libc_variant(downloads, false)),
+            vec!["a-linux-x64.tar.gz", "b-linux-x64-musl.tar.gz"]
+        );
     }
 
     #[test]
