@@ -219,56 +219,59 @@ impl Executor for GitHub {
                     .send()
                     .await;
 
-                if let Ok(releases) = releases_result {
-                    for release in releases.items {
-                        for asset in release.assets {
-                            if !Self::is_likely_binary(&asset.name) {
-                                continue;
-                            }
+                match releases_result {
+                    Ok(releases) => {
+                        for release in releases.items {
+                            for asset in release.assets {
+                                if !Self::is_likely_binary(&asset.name) {
+                                    continue;
+                                }
 
-                            if Self::is_excluded_asset(&asset.name, &excluded_keywords) {
-                                debug!("Skipping excluded asset: {}", asset.name);
-                                continue;
-                            }
+                                if Self::is_excluded_asset(&asset.name, &excluded_keywords) {
+                                    debug!("Skipping excluded asset: {}", asset.name);
+                                    continue;
+                                }
 
-                            let os = detect_os_from_name(&asset.name);
-                            let arch = detect_arch_from_name(&asset.name);
+                                let os = detect_os_from_name(&asset.name);
+                                let arch = detect_arch_from_name(&asset.name);
 
-                            debug!("Asset: {} -> OS: {:?}, Arch: {:?}", asset.name, os, arch);
+                                debug!("Asset: {} -> OS: {:?}, Arch: {:?}", asset.name, os, arch);
 
-                            if (os.is_some() && arch.is_some())
-                                || (os.is_none() && arch.is_none()
-                                    || (os == Some(Os::Windows) && arch.is_none()))
-                            {
-                                debug!(
-                                    "Adding download: {} with OS: {:?}, Arch: {:?}",
-                                    asset.browser_download_url, os, arch
-                                );
-                                let is_musl = asset.name.to_lowercase().contains("musl")
+                                if (os.is_some() && arch.is_some())
+                                    || (os.is_none() && arch.is_none()
+                                        || (os == Some(Os::Windows) && arch.is_none()))
+                                {
+                                    debug!(
+                                        "Adding download: {} with OS: {:?}, Arch: {:?}",
+                                        asset.browser_download_url, os, arch
+                                    );
+                                    let is_musl = asset.name.to_lowercase().contains("musl")
                                     && !matches!(os, Some(Os::Windows) | Some(Os::Mac));
                                 let variant = if is_musl {
                                     Some(Variant::Musl)
                                 } else {
                                     Some(Variant::Any)
-                                };
-                                downloads.push(Download {
-                                    download_url: asset.browser_download_url.to_string(),
-                                    version: GgVersion::new(release.tag_name.as_str()),
-                                    os: os.or(Some(Os::Any)),
-                                    arch: arch.or(Some(Arch::Any)),
-                                    tags: HashSet::new(),
-                                    variant,
-                                });
+                                };downloads.push(Download {
+                                        download_url: asset.browser_download_url.to_string(),
+                                        version: GgVersion::new(release.tag_name.as_str()),
+                                        os: os.or(Some(Os::Any)),
+                                        arch: arch.or(Some(Arch::Any)),
+                                        tags: HashSet::new(),
+                                        variant,
+                                    });
+                                }
                             }
                         }
-                    }
 
-                    if releases.next.is_none() {
+                        if releases.next.is_none() {
+                            break;
+                        }
+                        page += 1;
+                    }
+                    Err(err) => {
+                        debug!("Error: {err}");
                         break;
                     }
-                    page += 1;
-                } else {
-                    break;
                 }
             }
             debug!("Total downloads found: {}", downloads.len());
