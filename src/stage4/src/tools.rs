@@ -9,6 +9,7 @@ use crate::executors::flutter::Flutter;
 use crate::executors::github::GitHub;
 use crate::executors::go::Go;
 use crate::executors::gradle::Gradle;
+use crate::executors::grok::Grok;
 use crate::executors::java::Java;
 use crate::executors::jbang::JBangExecutor;
 use crate::executors::maven::Maven;
@@ -331,6 +332,18 @@ pub static TOOL_REGISTRY: LazyLock<HashMap<&'static str, ToolInfo>> = LazyLock::
                     }),
                 }))
             },
+        },
+        ToolInfo {
+            name: "grok",
+            aliases: vec!["grok-build"],
+            description: "Grok Build - xAI's coding agent for your terminal",
+            category: ToolCategory::Utility,
+            tags: vec![],
+            example: Some("gg grok --version"),
+            // Direct native-binary download (same source as x.ai/cli/install.sh),
+            // not the @xai-official/grok npm wrapper — grok is self-contained, so
+            // there's no reason to provision Node just to shell out to npm.
+            factory: |cmd| Some(Box::new(Grok { executor_cmd: cmd })),
         },
         ToolInfo {
             name: "kimi",
