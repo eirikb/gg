@@ -299,6 +299,8 @@ jobs:
 
       - name: Run!
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -x
           sh gg.cmd -v ${{ matrix.cmd }}
@@ -344,6 +346,8 @@ jobs:
 
       - name: Run!
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -x
           sh gg.cmd -v ${{ matrix.cmd }}
@@ -390,6 +394,8 @@ jobs:
 
       - name: Run!
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -x
           sh gg.cmd -v ${{ matrix.cmd }}
@@ -426,6 +432,8 @@ jobs:
 
       - name: Run!
         shell: cmd
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           .\gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
@@ -474,14 +482,16 @@ jobs:
           chmod +x "$HOME/.cache/gg/gg-dev/stage4"
 
       - name: Run!
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -x
 
-          # This is required for nodejs to run - not gg.cmd! 
+          # This is required for nodejs to run - not gg.cmd!
           if [ "${{ matrix.container }}" == "alpine" ]; then
             apk add libstdc++
           fi
-          
+
           sh gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
           sh gg.cmd -v ${{ matrix.cmd }}

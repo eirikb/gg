@@ -312,7 +312,9 @@ pub async fn prep(
     let executor_cmd = &executor.get_executor_cmd();
     let version_req = if let Some(ver) = &executor_cmd.version {
         Some(ver.to_version_req())
-    } else { executor.get_version_req() };
+    } else {
+        executor.get_version_req()
+    };
     let version_req_str = &version_req
         .as_ref()
         .map(|v| v.to_string())
@@ -376,11 +378,18 @@ pub async fn prep(
 
     pb.set_message("Fetching versions".to_string());
 
+    // Drop stale errors from earlier runs, or they get blamed on this tool
+    let _ = crate::github_utils::take_github_errors();
     let urls = executor.get_download_urls(input).await;
     pb.set_message(format!("{} versions", &urls.len()));
     debug!("{:?}", urls);
 
     if urls.is_empty() {
+        // Clear the bar first, or it eats the message
+        pb.finish_and_clear();
+        for reason in crate::github_utils::take_github_errors() {
+            eprintln!("{reason}");
+        }
         panic!("Did not find any download URL!");
     }
 
@@ -469,11 +478,7 @@ fn score_filename_match(filename: &str, tool_name: &str, version_re: &Regex) -> 
     }
 }
 
-fn get_url_matches(
-    urls: &[Download],
-    input: &AppInput,
-    executor: &dyn Executor,
-) -> Vec<Download> {
+fn get_url_matches(urls: &[Download], input: &AppInput, executor: &dyn Executor) -> Vec<Download> {
     let mut urls_match = urls
         .iter()
         .filter(|u| {
