@@ -6,7 +6,9 @@ use crate::executor::{
     find_jar_file, AppInput, AppPath, BinPattern, Download, Executor, ExecutorCmd, ExecutorDep,
     GgVersion,
 };
-use crate::github_utils::{create_github_client, detect_arch_from_name, detect_os_from_name};
+use crate::github_utils::{
+    create_github_client, detect_arch_from_name, detect_os_from_name, record_github_error,
+};
 use crate::target::Os::Windows;
 use crate::target::{Arch, Os, Variant};
 use log::debug;
@@ -67,7 +69,11 @@ impl GitHub {
     async fn detect_language_and_deps(&self) -> Vec<ExecutorDep> {
         let octocrab = create_github_client().unwrap();
 
-        if let Ok(repo_info) = octocrab.repos(&self.owner, &self.repo).get().await {
+        let repo_result = octocrab.repos(&self.owner, &self.repo).get().await;
+        if let Err(err) = &repo_result {
+            record_github_error(&format!("{}/{}", self.owner, self.repo), err);
+        }
+        if let Ok(repo_info) = repo_result {
             if let Some(language) = repo_info.language {
                 let language_str = language.as_str().unwrap_or("").to_lowercase();
                 return match language_str.as_str() {
@@ -205,7 +211,6 @@ impl Executor for GitHub {
 
         Box::pin(async move {
             let mut downloads: Vec<Download> = vec![];
-            // Shh don't tell anyone
             let octocrab = create_github_client().expect("Failed to create GitHub API client");
 
             let mut page: u32 = 1;
@@ -246,12 +251,13 @@ impl Executor for GitHub {
                                         asset.browser_download_url, os, arch
                                     );
                                     let is_musl = asset.name.to_lowercase().contains("musl")
-                                    && !matches!(os, Some(Os::Windows) | Some(Os::Mac));
-                                let variant = if is_musl {
-                                    Some(Variant::Musl)
-                                } else {
-                                    Some(Variant::Any)
-                                };downloads.push(Download {
+                                        && !matches!(os, Some(Os::Windows) | Some(Os::Mac));
+                                    let variant = if is_musl {
+                                        Some(Variant::Musl)
+                                    } else {
+                                        Some(Variant::Any)
+                                    };
+                                    downloads.push(Download {
                                         download_url: asset.browser_download_url.to_string(),
                                         version: GgVersion::new(release.tag_name.as_str()),
                                         os: os.or(Some(Os::Any)),
@@ -269,7 +275,7 @@ impl Executor for GitHub {
                         page += 1;
                     }
                     Err(err) => {
-                        debug!("Error: {err}");
+                        record_github_error(&format!("{owner}/{repo}"), &err);
                         break;
                     }
                 }
@@ -473,7 +479,10 @@ mod tests {
         let downloads = vec![dl("tool-linux-x64-musl.tar.gz", Variant::Musl, "1.0.0")];
         let result = prefer_libc_variant(downloads, false);
         assert_eq!(
-            result.iter().map(|d| d.download_url.clone()).collect::<Vec<_>>(),
+            result
+                .iter()
+                .map(|d| d.download_url.clone())
+                .collect::<Vec<_>>(),
             vec!["tool-linux-x64-musl.tar.gz"]
         );
         // Re-tagged Any so the shared matcher won't hard-drop the fallback.
@@ -511,7 +520,9 @@ mod tests {
         assert!(!GitHub::is_likely_binary(
             "deno-x86_64-unknown-linux-gnu.sha256sum"
         ));
-        assert!(!GitHub::is_likely_binary("deno-x86_64-pc-windows-msvc.sha256sum"));
+        assert!(!GitHub::is_likely_binary(
+            "deno-x86_64-pc-windows-msvc.sha256sum"
+        ));
         assert!(!GitHub::is_likely_binary("tool-linux-x64.zip.sha256"));
         assert!(!GitHub::is_likely_binary("tool-darwin-arm64.tar.gz.sig"));
         assert!(!GitHub::is_likely_binary("tool-windows-x64.zip.asc"));
@@ -522,7 +533,9 @@ mod tests {
         assert!(!GitHub::is_likely_binary("tool-linux-x64.zip.md5"));
 
         // ...but the actual archives still pass
-        assert!(GitHub::is_likely_binary("deno-x86_64-unknown-linux-gnu.zip"));
+        assert!(GitHub::is_likely_binary(
+            "deno-x86_64-unknown-linux-gnu.zip"
+        ));
         assert!(GitHub::is_likely_binary("deno-x86_64-pc-windows-msvc.zip"));
     }
 }

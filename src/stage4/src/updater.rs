@@ -5,6 +5,7 @@ use log::{info, warn};
 
 use crate::barus::create_barus;
 use crate::bloody_indiana_jones::BloodyIndianaJones;
+use crate::github_utils::{create_github_client, explain_github_error};
 
 async fn download_to_temp(temp_path: &str) -> Result<(), String> {
     let url = "https://github.com/eirikb/gg/releases/latest/download/gg.cmd";
@@ -152,11 +153,7 @@ fn move_temp_to_final(temp_path: &str, final_path: &str) -> Result<(), String> {
 }
 
 pub async fn check_gg_update(ver: &str) {
-    let octocrab = octocrab::Octocrab::builder()
-        .base_uri("https://ghapi.ggcmd.io/")
-        .unwrap()
-        .build()
-        .expect("Failed to create GitHub API client");
+    let octocrab = create_github_client().expect("Failed to create GitHub API client");
 
     match octocrab.repos("eirikb", "gg").releases().get_latest().await {
         Ok(release) => {
@@ -174,18 +171,15 @@ pub async fn check_gg_update(ver: &str) {
                 );
             }
         }
-        Err(_) => {
+        Err(err) => {
             println!("gg: Unable to check for updates");
+            println!("{}", explain_github_error(&err));
         }
     }
 }
 
 pub async fn perform_update(ver: &str, force: bool) {
-    let octocrab = octocrab::Octocrab::builder()
-        .base_uri("https://ghapi.ggcmd.io/")
-        .unwrap()
-        .build()
-        .expect("Failed to create GitHub API client");
+    let octocrab = create_github_client().expect("Failed to create GitHub API client");
 
     if !force {
         match octocrab.repos("eirikb", "gg").releases().get_latest().await {
@@ -199,8 +193,9 @@ pub async fn perform_update(ver: &str, force: bool) {
 
                 println!("Updating gg to version {}...", latest_version);
             }
-            Err(_) => {
+            Err(err) => {
                 println!("Failed to check for updates. Proceeding with download...");
+                println!("{}", explain_github_error(&err));
             }
         }
     } else {
