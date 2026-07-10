@@ -186,6 +186,15 @@ pub fn take_github_errors() -> Vec<String> {
 
 pub fn detect_os_from_name(name: &str) -> Option<Os> {
     let name_lower = name.to_lowercase();
+    // Android assets carry "linux" too (bun-linux-x64-android-*), and we don't
+    // target Android. Delimited token only, or we'd drop desktop tools that
+    // just have "android" somewhere in the name.
+    if name_lower
+        .split(|c: char| c == '-' || c == '_' || c == '.')
+        .any(|part| part == "android")
+    {
+        return None;
+    }
     if name_lower.contains("darwin") || name_lower.contains("macos") || name_lower.contains("apple")
     {
         Some(Os::Mac)
@@ -260,6 +269,31 @@ mod tests {
         assert_eq!(
             normalize_base_url(Some("https://ghapi.ggcmd.io//".to_string())),
             "https://ghapi.ggcmd.io"
+        );
+    }
+
+    #[test]
+    fn test_detect_os_rejects_android() {
+        // darwin/windows too, not just linux - guard beats every OS keyword
+        assert_eq!(
+            detect_os_from_name("bun-linux-x64-android-baseline-profile.zip"),
+            None
+        );
+        assert_eq!(detect_os_from_name("bun-darwin-x64-android.zip"), None);
+        assert_eq!(detect_os_from_name("bun-windows-x64-android.zip"), None);
+    }
+
+    #[test]
+    fn test_detect_os_keeps_desktop_linux() {
+        assert_eq!(detect_os_from_name("bun-linux-x64.zip"), Some(Os::Linux));
+        assert_eq!(
+            detect_os_from_name("bun-linux-x64-baseline.zip"),
+            Some(Os::Linux)
+        );
+        // "android" fused into a bigger token shouldn't trip the guard
+        assert_eq!(
+            detect_os_from_name("mytool-linux-x64-noandroidhere.zip"),
+            Some(Os::Linux)
         );
     }
 
