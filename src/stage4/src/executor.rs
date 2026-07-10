@@ -478,6 +478,19 @@ fn score_filename_match(filename: &str, tool_name: &str, version_re: &Regex) -> 
     }
 }
 
+/// Non-default build flavors (profiling, debug, older-CPU baseline) we only
+/// want when nothing plainer is on offer. A tiebreaker, so `tool-linux-x64.zip`
+/// beats `tool-linux-x64-baseline-profile.zip` when both fit the target.
+fn variant_noise(filename: &str) -> usize {
+    let tokens: Vec<&str> = filename
+        .split(|c: char| c == '-' || c == '_' || c == '.')
+        .collect();
+    ["profile", "debug", "baseline"]
+        .iter()
+        .filter(|flavor| tokens.contains(flavor))
+        .count()
+}
+
 fn get_url_matches(urls: &[Download], input: &AppInput, executor: &dyn Executor) -> Vec<Download> {
     let mut urls_match = urls
         .iter()
@@ -590,6 +603,12 @@ fn get_url_matches(urls: &[Download], input: &AppInput, executor: &dyn Executor)
             .cmp(&a.version.clone().map(|v| v.to_version()));
 
         match version_cmp {
+            std::cmp::Ordering::Equal => {}
+            other => return other,
+        }
+
+        let noise_cmp = variant_noise(&a_filename).cmp(&variant_noise(&b_filename));
+        match noise_cmp {
             std::cmp::Ordering::Equal => {}
             other => return other,
         }
@@ -948,6 +967,12 @@ mod tests {
                 other => return other,
             }
 
+            let noise_cmp = variant_noise(&a_filename).cmp(&variant_noise(&b_filename));
+            match noise_cmp {
+                std::cmp::Ordering::Equal => {}
+                other => return other,
+            }
+
             let a_specific = a.os != Some(Os::Any) || a.arch != Some(Arch::Any);
             let b_specific = b.os != Some(Os::Any) || b.arch != Some(Arch::Any);
 
@@ -998,6 +1023,27 @@ mod tests {
         assert_eq!(
             select_best_download(&downloads, "sccache", Os::Linux, Arch::Arm64),
             Some("sccache-v0.12.0-aarch64-unknown-linux-musl.tar.gz".to_string())
+        );
+    }
+
+    #[test]
+    fn test_bun_prefers_plain_over_profile_and_baseline() {
+        // bun ships profiling/baseline flavors next to the plain binary; when
+        // they all fit the target the plainest one should win, not whatever
+        // GitHub happens to list first.
+        let release_text = r#"
+            bun-linux-x64-baseline-profile.zip
+            bun-linux-x64-baseline.zip
+            bun-linux-x64-profile.zip
+            bun-linux-x64.zip
+        "#;
+
+        let filenames = parse_release_assets(release_text);
+        let downloads = create_downloads(&filenames);
+
+        assert_eq!(
+            select_best_download(&downloads, "bun", Os::Linux, Arch::X86_64),
+            Some("bun-linux-x64.zip".to_string())
         );
     }
 
