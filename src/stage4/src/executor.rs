@@ -16,6 +16,7 @@ use log::{debug, info};
 use regex::Regex;
 use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
 use which::{which_in, which_re_in};
 
 #[derive(PartialEq, Debug, Clone)]
@@ -40,14 +41,31 @@ impl std::fmt::Display for GgVersion {
     }
 }
 
+/// Find the version in a release tag, dropping any product or `v` prefix:
+/// "bun-v1.3.14" -> "1.3.14", "v18" -> "18". Anchors on a dotted `X.Y` version
+/// so a digit in the product name ("log4j2-v2.20.0") isn't taken for the
+/// version, and only falls back to a bare `[v]N` tag when there's no dotted one.
+pub fn find_version(tag: &str) -> Option<&str> {
+    static DOTTED: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"\d+\.\d+(?:\.\d+)*(?:[-+][0-9A-Za-z][0-9A-Za-z.-]*)?").unwrap()
+    });
+    static BARE_INT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[vV]?(\d+)$").unwrap());
+
+    if let Some(m) = DOTTED.find(tag) {
+        return Some(&tag[m.start()..m.end()]);
+    }
+    BARE_INT.captures(tag).map(|c| c.get(1).unwrap().as_str())
+}
+
 impl GgVersion {
     pub fn to_version(&self) -> Version {
         Version::parse(&self.0).unwrap()
     }
 
     pub fn new(version: &str) -> Option<Self> {
-        let version = version.replace("v", "");
-        let version = version.as_str();
+        // find_version drops the product/`v` prefix (bun ships "bun-v1.3.14")
+        // without a digit in the name corrupting the parse (#293)
+        let version = find_version(version)?;
         let parts: Vec<&str> = version.split('.').collect();
 
         let version = match parts.len() {
@@ -75,17 +93,14 @@ impl GgVersionReq {
     }
 
     pub fn new(version_req: &str) -> Option<Self> {
-        let version_req_with_prefix = if version_req.matches('.').count() == 2
-            && !version_req.starts_with('^')
-            && !version_req.starts_with('=')
-            && !version_req.starts_with('~')
-        {
+        // A bare version pins it (= exact, ~ for a partial); anything that
+        // already carries an operator is left alone. `<`/`>` count too, or
+        // ">=18.0.0" gets an extra "=" glued on and stops parsing.
+        let has_op = version_req.starts_with(['^', '~', '=', '<', '>']);
+        let dots = version_req.matches('.').count();
+        let version_req_with_prefix = if !has_op && dots == 2 {
             format!("={}", version_req)
-        } else if version_req.matches('.').count() == 1
-            && !version_req.starts_with('^')
-            && !version_req.starts_with('=')
-            && !version_req.starts_with('~')
-        {
+        } else if !has_op && dots == 1 {
             format!("~{}", version_req)
         } else {
             version_req.to_string()
@@ -827,6 +842,46 @@ mod tests {
     }
 
     #[test]
+    fn test_version_parses_product_prefixed_tag() {
+        // The "bun-v" prefix used to make GgVersion return None, so pinning
+        // fell back to latest (#293)
+        let v = GgVersion::new("bun-v1.3.14").expect("prefixed tag should parse");
+        assert_eq!("1.3.14", v.to_string());
+
+        // A pinned "=1.2.0" must match the bun-v1.2.0 release and nothing else.
+        let req = GgVersionReq::new("1.2.0").unwrap();
+        let matching = GgVersion::new("bun-v1.2.0").unwrap();
+        let other = GgVersion::new("bun-v1.3.14").unwrap();
+        assert!(req.to_version_req().matches(&matching.to_version()));
+        assert!(!req.to_version_req().matches(&other.to_version()));
+    }
+
+    #[test]
+    fn test_version_prefix_variants() {
+        // Bare "v", generic product prefix, and no prefix all normalise the same.
+        assert_eq!("1.2.0", GgVersion::new("v1.2.0").unwrap().to_string());
+        assert_eq!("1.2.0", GgVersion::new("1.2.0").unwrap().to_string());
+        assert_eq!("2.3.4", GgVersion::new("cli-v2.3.4").unwrap().to_string());
+        // Partial and bare-integer tags keep working.
+        assert_eq!("22.11.0", GgVersion::new("22.11").unwrap().to_string());
+        assert_eq!("18.0.0", GgVersion::new("v18").unwrap().to_string());
+        // No digit at all -> no version.
+        assert!(GgVersion::new("nightly").is_none());
+    }
+
+    #[test]
+    fn test_version_ignores_digits_in_product_name() {
+        // A digit in the product name must not be taken for the version -
+        // "log4j2-v2.20.0" is 2.20.0, "tool2-v1.2.3" is 1.2.3
+        assert_eq!(
+            "2.20.0",
+            GgVersion::new("log4j2-v2.20.0").unwrap().to_string()
+        );
+        assert_eq!("1.2.3", GgVersion::new("tool2-v1.2.3").unwrap().to_string());
+        assert_eq!("5.0.0", GgVersion::new("v2ray-5.0.0").unwrap().to_string());
+    }
+
+    #[test]
     fn test_version_req_partial_semver_compatibility() {
         let version_req = GgVersionReq::new("22.11").unwrap();
 
@@ -849,6 +904,23 @@ mod tests {
 
         let version_req_eq = GgVersionReq::new("=22.11.0").unwrap();
         assert_eq!("=22.11.0", version_req_eq.to_string());
+    }
+
+    #[test]
+    fn test_version_req_with_comparators() {
+        // >= / < must pass through untouched, not get an extra "=" glued on
+        // that breaks parsing (#293).
+        let ge = GgVersionReq::new(">=18.0.0").unwrap();
+        assert_eq!(">=18.0.0", ge.to_string());
+        let m = |v: &str| ge.to_version_req().matches(&GgVersion::new(v).unwrap().to_version());
+        assert!(m("18.0.0"));
+        assert!(m("19.2.0"));
+        assert!(!m("17.0.0"));
+
+        let lt = GgVersionReq::new("<2.0.0").unwrap();
+        assert_eq!("<2.0.0", lt.to_string());
+        assert!(lt.to_version_req().matches(&GgVersion::new("1.9.0").unwrap().to_version()));
+        assert!(!lt.to_version_req().matches(&GgVersion::new("2.0.0").unwrap().to_version()));
     }
 
     fn parse_release_assets(text: &str) -> Vec<String> {
