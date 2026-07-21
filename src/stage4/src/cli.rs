@@ -1,4 +1,5 @@
 use crate::config::GgConfig;
+use crate::executor::GgVersion;
 use crate::tools::get_tool_info;
 use clap::{ArgAction, Parser, Subcommand};
 use regex::{Match, Regex};
@@ -312,6 +313,19 @@ impl Cli {
     }
 }
 
+/// Strip a leading product or `v` prefix off a version ("v1.2.0",
+/// "bun-v1.2.0" -> "1.2.0"), leaving range operators (`^ ~ = > <`) and
+/// already-bare versions untouched so partial-range and requirement semantics
+/// survive.
+fn strip_version_prefix(version: &str) -> String {
+    if version.starts_with(|c: char| c.is_ascii_alphabetic()) {
+        if let Some(i) = version.find(|c: char| c.is_ascii_digit()) {
+            return version[i..].to_string();
+        }
+    }
+    version.to_string()
+}
+
 fn parse_command_string(cmd_string: &str, config: &GgConfig) -> Vec<ClapCmd> {
     cmd_string
         .split(":")
@@ -365,19 +379,25 @@ fn parse_command_string(cmd_string: &str, config: &GgConfig) -> Vec<ClapCmd> {
                 let version_dist_part = alles[0..version_dist_end].to_string();
 
                 if let Some(dash_pos) = version_dist_part.find('-') {
-                    let version_str = version_dist_part[0..dash_pos].to_string();
-                    version = if version_str.is_empty() {
-                        None
+                    let before = version_dist_part[0..dash_pos].to_string();
+                    let after = version_dist_part[dash_pos + 1..].to_string();
+                    if !before.is_empty() && GgVersion::new(&before).is_none() {
+                        // Not "version-distribution" (e.g. "17-temurin") but a
+                        // raw release tag whose product prefix carries a dash,
+                        // like bun's "bun-v1.2.0". The whole thing names a
+                        // version - strip the prefix so it matches the parsed
+                        // release tag instead of pinning nothing (#293).
+                        version = Some(strip_version_prefix(&version_dist_part));
                     } else {
-                        Some(version_str)
-                    };
-                    distribution = Some(version_dist_part[dash_pos + 1..].to_string());
-                } else {
-                    version = if version_dist_part.is_empty() {
-                        None
-                    } else {
-                        Some(version_dist_part)
-                    };
+                        version = if before.is_empty() {
+                            None
+                        } else {
+                            Some(strip_version_prefix(&before))
+                        };
+                        distribution = Some(after);
+                    }
+                } else if !version_dist_part.is_empty() {
+                    version = Some(strip_version_prefix(&version_dist_part));
                 }
 
                 if version_dist_end < alles.len() {
@@ -653,6 +673,48 @@ mod tests {
         assert!(cmds[0].include_tags.contains("lts"));
         assert!(cmds[0].exclude_tags.contains("ea"));
         assert_eq!(app_args, vec!["hello"]);
+    }
+
+    #[test]
+    fn test_github_full_tag_version_pinning() {
+        // bun tags releases like "bun-v1.3.14"; pasting the full tag must pin
+        // the version, not be misread as version "bun" + distribution
+        // "v1.2.0" and silently fall back to latest (#293).
+        let cli = parse_test_args(vec!["gh/oven-sh/bun@bun-v1.2.0", "--version"]);
+        let config = GgConfig::default();
+        let (cmds, _) = cli.parse_args(&config);
+        assert_eq!(cmds[0].version.as_deref(), Some("1.2.0"));
+        assert_eq!(cmds[0].distribution, None);
+    }
+
+    #[test]
+    fn test_v_prefixed_version_is_normalised() {
+        // A leading "v" must be stripped so the requirement matches the tag.
+        let cli = parse_test_args(vec!["gh/oven-sh/bun@v1.2.0", "--version"]);
+        let config = GgConfig::default();
+        let (cmds, _) = cli.parse_args(&config);
+        assert_eq!(cmds[0].version.as_deref(), Some("1.2.0"));
+        assert_eq!(cmds[0].distribution, None);
+    }
+
+    #[test]
+    fn test_partial_and_operator_versions_are_kept() {
+        // Disambiguation must not touch partial versions (range semantics) or
+        // requirement operators.
+        let config = GgConfig::default();
+        let (partial, _) = parse_test_args(vec!["node@1.2", "x"]).parse_args(&config);
+        assert_eq!(partial[0].version.as_deref(), Some("1.2"));
+        let (caret, _) = parse_test_args(vec!["node@^18", "x"]).parse_args(&config);
+        assert_eq!(caret[0].version.as_deref(), Some("^18"));
+    }
+
+    #[test]
+    fn test_distribution_only_still_parses() {
+        let cli = parse_test_args(vec!["java@-temurin", "x"]);
+        let config = GgConfig::default();
+        let (cmds, _) = cli.parse_args(&config);
+        assert_eq!(cmds[0].version, None);
+        assert_eq!(cmds[0].distribution.as_deref(), Some("temurin"));
     }
 
     #[test]
