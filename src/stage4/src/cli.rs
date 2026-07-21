@@ -1,5 +1,5 @@
 use crate::config::GgConfig;
-use crate::executor::GgVersion;
+use crate::executor::find_version;
 use crate::tools::get_tool_info;
 use clap::{ArgAction, Parser, Subcommand};
 use regex::{Match, Regex};
@@ -313,17 +313,27 @@ impl Cli {
     }
 }
 
-/// Strip a leading product or `v` prefix off a version ("v1.2.0",
-/// "bun-v1.2.0" -> "1.2.0"), leaving range operators (`^ ~ = > <`) and
-/// already-bare versions untouched so partial-range and requirement semantics
-/// survive.
+/// Strip a product or `v` prefix off a version, preserving a leading range
+/// operator and any partial form: "v1.2.0" -> "1.2.0", "bun-v1.2.0" -> "1.2.0",
+/// "=v1.2.0" -> "=1.2.0", "^18" -> "^18", "1.2" -> "1.2". Anything without a
+/// version token is left untouched.
 fn strip_version_prefix(version: &str) -> String {
-    if version.starts_with(|c: char| c.is_ascii_alphabetic()) {
-        if let Some(i) = version.find(|c: char| c.is_ascii_digit()) {
-            return version[i..].to_string();
-        }
+    let op_end = version
+        .find(|c: char| !matches!(c, '^' | '~' | '=' | '<' | '>'))
+        .unwrap_or(version.len());
+    let (op, rest) = version.split_at(op_end);
+    match find_version(rest) {
+        Some(v) => format!("{op}{v}"),
+        None => version.to_string(),
     }
-    version.to_string()
+}
+
+/// True when `s` begins a version - an optional `v` then a digit - so it is the
+/// version half of `version-distribution` (17, v17, 1.2.3) rather than a
+/// product prefix (bun, log4j2) that names a raw release tag.
+fn starts_like_version(s: &str) -> bool {
+    let s = s.strip_prefix(['v', 'V']).unwrap_or(s);
+    s.starts_with(|c: char| c.is_ascii_digit())
 }
 
 fn parse_command_string(cmd_string: &str, config: &GgConfig) -> Vec<ClapCmd> {
@@ -381,12 +391,13 @@ fn parse_command_string(cmd_string: &str, config: &GgConfig) -> Vec<ClapCmd> {
                 if let Some(dash_pos) = version_dist_part.find('-') {
                     let before = version_dist_part[0..dash_pos].to_string();
                     let after = version_dist_part[dash_pos + 1..].to_string();
-                    if !before.is_empty() && GgVersion::new(&before).is_none() {
+                    if !before.is_empty() && !starts_like_version(&before) {
                         // Not "version-distribution" (e.g. "17-temurin") but a
                         // raw release tag whose product prefix carries a dash,
-                        // like bun's "bun-v1.2.0". The whole thing names a
-                        // version - strip the prefix so it matches the parsed
-                        // release tag instead of pinning nothing (#293).
+                        // like bun's "bun-v1.2.0" or "log4j2-v2.20.0". The whole
+                        // thing names a version - strip the prefix so it matches
+                        // the parsed release tag instead of pinning nothing, and
+                        // don't read "bun"/"log4j2" as the version (#293).
                         version = Some(strip_version_prefix(&version_dist_part));
                     } else {
                         version = if before.is_empty() {
@@ -714,6 +725,44 @@ mod tests {
         let config = GgConfig::default();
         let (cmds, _) = cli.parse_args(&config);
         assert_eq!(cmds[0].version, None);
+        assert_eq!(cmds[0].distribution.as_deref(), Some("temurin"));
+    }
+
+    #[test]
+    fn test_full_tag_with_digit_in_product_name() {
+        // A digit in the product name must not be read as the version:
+        // "log4j2-v2.20.0" pins 2.20.0, not "log4j2" or "2".
+        let config = GgConfig::default();
+        let (a, _) = parse_test_args(vec!["gh/apache/logging-log4j2@log4j2-v2.20.0", "x"])
+            .parse_args(&config);
+        assert_eq!(a[0].version.as_deref(), Some("2.20.0"));
+        assert_eq!(a[0].distribution, None);
+        let (b, _) = parse_test_args(vec!["gh/x/tool2@tool2-v1.2.3", "x"]).parse_args(&config);
+        assert_eq!(b[0].version.as_deref(), Some("1.2.3"));
+        assert_eq!(b[0].distribution, None);
+    }
+
+    #[test]
+    fn test_operator_prefixes_are_normalised() {
+        // A range operator must survive prefix stripping, otherwise the
+        // requirement fails to parse and silently falls back to latest.
+        let config = GgConfig::default();
+        let (eq, _) = parse_test_args(vec!["gh/oven-sh/bun@=v1.2.0", "x"]).parse_args(&config);
+        assert_eq!(eq[0].version.as_deref(), Some("=1.2.0"));
+        let (caret, _) = parse_test_args(vec!["gh/oven-sh/bun@^v1.2.0", "x"]).parse_args(&config);
+        assert_eq!(caret[0].version.as_deref(), Some("^1.2.0"));
+        let (full, _) = parse_test_args(vec!["gh/oven-sh/bun@=bun-v1.2.0", "x"]).parse_args(&config);
+        assert_eq!(full[0].version.as_deref(), Some("=1.2.0"));
+    }
+
+    #[test]
+    fn test_distribution_kept_when_version_malformed() {
+        // A malformed version half must not make the parser discard the
+        // distribution by mistaking the whole string for a raw tag.
+        let cli = parse_test_args(vec!["java@1.2.3.4-temurin", "x"]);
+        let config = GgConfig::default();
+        let (cmds, _) = cli.parse_args(&config);
+        assert_eq!(cmds[0].version.as_deref(), Some("1.2.3.4"));
         assert_eq!(cmds[0].distribution.as_deref(), Some("temurin"));
     }
 
