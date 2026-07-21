@@ -327,9 +327,12 @@ fn strip_version_prefix(version: &str) -> String {
     }
 }
 
-/// True when `s` starts like a version (optional `v` then a digit), so it's the
-/// version half of `version-distribution` and not a product prefix like "bun".
+/// True when `s` starts like a version (optional range operator, optional `v`,
+/// then a digit), so it's the version half of `version-distribution` and not a
+/// product prefix like "bun". The operator has to be skipped too, or
+/// "^17-temurin" reads as a raw tag and loses the distribution.
 fn starts_like_version(s: &str) -> bool {
+    let s = s.trim_start_matches(['^', '~', '=', '<', '>']);
     let s = s.strip_prefix(['v', 'V']).unwrap_or(s);
     s.starts_with(|c: char| c.is_ascii_digit())
 }
@@ -758,6 +761,19 @@ mod tests {
         let (cmds, _) = cli.parse_args(&config);
         assert_eq!(cmds[0].version.as_deref(), Some("1.2.3.4"));
         assert_eq!(cmds[0].distribution.as_deref(), Some("temurin"));
+    }
+
+    #[test]
+    fn test_operator_version_keeps_distribution() {
+        // A range operator on the version half must not send it down the
+        // raw-tag path and drop the distribution.
+        let config = GgConfig::default();
+        let (caret, _) = parse_test_args(vec!["java@^17-temurin", "x"]).parse_args(&config);
+        assert_eq!(caret[0].version.as_deref(), Some("^17"));
+        assert_eq!(caret[0].distribution.as_deref(), Some("temurin"));
+        let (eq, _) = parse_test_args(vec!["java@=1.2.0-temurin", "x"]).parse_args(&config);
+        assert_eq!(eq[0].version.as_deref(), Some("=1.2.0"));
+        assert_eq!(eq[0].distribution.as_deref(), Some("temurin"));
     }
 
     #[test]
