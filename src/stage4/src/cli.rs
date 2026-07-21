@@ -327,10 +327,9 @@ fn strip_version_prefix(version: &str) -> String {
     }
 }
 
-/// True when `s` starts like a version (optional range operator, optional `v`,
-/// then a digit), so it's the version half of `version-distribution` and not a
-/// product prefix like "bun". The operator has to be skipped too, or
-/// "^17-temurin" reads as a raw tag and loses the distribution.
+/// True when `s` starts like a version (optional operator, optional `v`, then a
+/// digit), so it's the version half of `version-distribution`, not a product
+/// prefix. Skip the operator too, or "^17-temurin" loses its distribution.
 fn starts_like_version(s: &str) -> bool {
     let s = s.trim_start_matches(['^', '~', '=', '<', '>']);
     let s = s.strip_prefix(['v', 'V']).unwrap_or(s);
@@ -765,8 +764,7 @@ mod tests {
 
     #[test]
     fn test_operator_version_keeps_distribution() {
-        // A range operator on the version half must not send it down the
-        // raw-tag path and drop the distribution.
+        // An operator on the version must not drop the distribution
         let config = GgConfig::default();
         let (caret, _) = parse_test_args(vec!["java@^17-temurin", "x"]).parse_args(&config);
         assert_eq!(caret[0].version.as_deref(), Some("^17"));

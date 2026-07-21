@@ -93,17 +93,14 @@ impl GgVersionReq {
     }
 
     pub fn new(version_req: &str) -> Option<Self> {
-        let version_req_with_prefix = if version_req.matches('.').count() == 2
-            && !version_req.starts_with('^')
-            && !version_req.starts_with('=')
-            && !version_req.starts_with('~')
-        {
+        // A bare version pins it (= exact, ~ for a partial); anything that
+        // already carries an operator is left alone. `<`/`>` count too, or
+        // ">=18.0.0" gets an extra "=" glued on and stops parsing.
+        let has_op = version_req.starts_with(['^', '~', '=', '<', '>']);
+        let dots = version_req.matches('.').count();
+        let version_req_with_prefix = if !has_op && dots == 2 {
             format!("={}", version_req)
-        } else if version_req.matches('.').count() == 1
-            && !version_req.starts_with('^')
-            && !version_req.starts_with('=')
-            && !version_req.starts_with('~')
-        {
+        } else if !has_op && dots == 1 {
             format!("~{}", version_req)
         } else {
             version_req.to_string()
@@ -907,6 +904,23 @@ mod tests {
 
         let version_req_eq = GgVersionReq::new("=22.11.0").unwrap();
         assert_eq!("=22.11.0", version_req_eq.to_string());
+    }
+
+    #[test]
+    fn test_version_req_with_comparators() {
+        // >= / < must pass through untouched, not get an extra "=" glued on
+        // that breaks parsing (#293).
+        let ge = GgVersionReq::new(">=18.0.0").unwrap();
+        assert_eq!(">=18.0.0", ge.to_string());
+        let m = |v: &str| ge.to_version_req().matches(&GgVersion::new(v).unwrap().to_version());
+        assert!(m("18.0.0"));
+        assert!(m("19.2.0"));
+        assert!(!m("17.0.0"));
+
+        let lt = GgVersionReq::new("<2.0.0").unwrap();
+        assert_eq!("<2.0.0", lt.to_string());
+        assert!(lt.to_version_req().matches(&GgVersion::new("1.9.0").unwrap().to_version()));
+        assert!(!lt.to_version_req().matches(&GgVersion::new("2.0.0").unwrap().to_version()));
     }
 
     fn parse_release_assets(text: &str) -> Vec<String> {
