@@ -1,5 +1,8 @@
-if command -v realpath >/dev/null 2>&1; then
-  export GG_CMD_PATH="$(realpath -s "$0" 2>/dev/null || readlink -f "$0" 2>/dev/null || echo "$0")"
+# Keep the name we were invoked as - a symlink like node.cmd -> gg.cmd is the
+# applet, so don't resolve it. realpath -s is GNU-only and readlink -f resolves
+# the link, so cd/pwd + basename instead, same on macOS and Linux (#289).
+if GG_CMD_PATH="$(cd "$(dirname "$0")" 2>/dev/null && pwd)"; then
+  export GG_CMD_PATH="$GG_CMD_PATH/$(basename "$0")"
 else
   export GG_CMD_PATH="$0"
 fi
