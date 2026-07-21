@@ -46,8 +46,14 @@ impl GgVersion {
     }
 
     pub fn new(version: &str) -> Option<Self> {
-        let version = version.replace("v", "");
-        let version = version.as_str();
+        // Release tags carry all sorts of prefixes: a bare "v1.2.0", or a
+        // product prefix like bun's "bun-v1.3.14". Trim everything up to the
+        // first digit so the prefix (and its stray 'v's) can't corrupt the
+        // parse - a global replace("v", "") mangled both.
+        let version = match version.find(|c: char| c.is_ascii_digit()) {
+            Some(i) => &version[i..],
+            None => return None,
+        };
         let parts: Vec<&str> = version.split('.').collect();
 
         let version = match parts.len() {
@@ -824,6 +830,35 @@ mod tests {
 
         let v3 = GgVersion::new("22.15.0").unwrap();
         assert!(!version_req.to_version_req().matches(&v3.to_version()));
+    }
+
+    #[test]
+    fn test_version_parses_product_prefixed_tag() {
+        // bun tags releases "bun-v1.3.14"; the prefix used to make GgVersion
+        // return None, so every release got a null version and pinning a
+        // version silently fell back to latest (issue #293).
+        let v = GgVersion::new("bun-v1.3.14").expect("prefixed tag should parse");
+        assert_eq!("1.3.14", v.to_string());
+
+        // A pinned "=1.2.0" must match the bun-v1.2.0 release and nothing else.
+        let req = GgVersionReq::new("1.2.0").unwrap();
+        let matching = GgVersion::new("bun-v1.2.0").unwrap();
+        let other = GgVersion::new("bun-v1.3.14").unwrap();
+        assert!(req.to_version_req().matches(&matching.to_version()));
+        assert!(!req.to_version_req().matches(&other.to_version()));
+    }
+
+    #[test]
+    fn test_version_prefix_variants() {
+        // Bare "v", generic product prefix, and no prefix all normalise the same.
+        assert_eq!("1.2.0", GgVersion::new("v1.2.0").unwrap().to_string());
+        assert_eq!("1.2.0", GgVersion::new("1.2.0").unwrap().to_string());
+        assert_eq!("2.3.4", GgVersion::new("cli-v2.3.4").unwrap().to_string());
+        // Partial and bare-integer tags keep working.
+        assert_eq!("22.11.0", GgVersion::new("22.11").unwrap().to_string());
+        assert_eq!("18.0.0", GgVersion::new("v18").unwrap().to_string());
+        // No digit at all -> no version.
+        assert!(GgVersion::new("nightly").is_none());
     }
 
     #[test]
