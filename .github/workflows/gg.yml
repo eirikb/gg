@@ -344,6 +344,20 @@ jobs:
           cp stage4 "$HOME/.cache/gg/gg-dev/stage4"
           chmod +x "$HOME/.cache/gg/gg-dev/stage4"
 
+      - name: Renamed symlink dispatches to the applet (#289)
+        if: matrix.cmd == 'node -v'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -x
+          ln -sf gg.cmd node.cmd
+          out=$(sh ./node.cmd --version 2>&1)
+          echo "$out"
+          # node prints "vX.Y.Z"; if gg ran itself it prints a bare version - so
+          # a v-prefixed semver proves the symlink name reached applet dispatch.
+          echo "$out" | grep -Eq '^v[0-9]+\.[0-9]' || { echo "#289: node.cmd ran gg, not node"; exit 1; }
+
       - name: Run!
         shell: bash
         env:
