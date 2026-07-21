@@ -15,8 +15,8 @@ use indicatif::ProgressBar;
 use log::{debug, info};
 use regex::Regex;
 use semver::{Version, VersionReq};
-use std::sync::LazyLock;
 use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
 use which::{which_in, which_re_in};
 
 #[derive(PartialEq, Debug, Clone)]
@@ -41,15 +41,14 @@ impl std::fmt::Display for GgVersion {
     }
 }
 
-/// Locate the version token inside a release tag, dropping any product or `v`
-/// prefix: "bun-v1.3.14" -> "1.3.14", "v18" -> "18". It anchors on a dotted
-/// `X.Y` version, so a digit buried in the product name ("log4j2-v2.20.0" ->
-/// "2.20.0", not "4j2...") can't be mistaken for the version; only when there
-/// is no dotted version does it fall back to a bare `[v]N` integer tag.
-/// Returns None when nothing version-like is present.
+/// Find the version in a release tag, dropping any product or `v` prefix:
+/// "bun-v1.3.14" -> "1.3.14", "v18" -> "18". Anchors on a dotted `X.Y` version
+/// so a digit in the product name ("log4j2-v2.20.0") isn't taken for the
+/// version, and only falls back to a bare `[v]N` tag when there's no dotted one.
 pub fn find_version(tag: &str) -> Option<&str> {
-    static DOTTED: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r"\d+\.\d+(?:\.\d+)*(?:[-+][0-9A-Za-z][0-9A-Za-z.-]*)?").unwrap());
+    static DOTTED: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"\d+\.\d+(?:\.\d+)*(?:[-+][0-9A-Za-z][0-9A-Za-z.-]*)?").unwrap()
+    });
     static BARE_INT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[vV]?(\d+)$").unwrap());
 
     if let Some(m) = DOTTED.find(tag) {
@@ -64,10 +63,8 @@ impl GgVersion {
     }
 
     pub fn new(version: &str) -> Option<Self> {
-        // Pull the version out of the tag, dropping any product or `v` prefix
-        // (bun ships "bun-v1.3.14"). Anchoring on the version boundary instead
-        // of the first digit keeps a digit in the product name from corrupting
-        // the parse - a global replace("v", "") mangled both (#293).
+        // find_version drops the product/`v` prefix (bun ships "bun-v1.3.14")
+        // without a digit in the name corrupting the parse (#293)
         let version = find_version(version)?;
         let parts: Vec<&str> = version.split('.').collect();
 
@@ -849,9 +846,8 @@ mod tests {
 
     #[test]
     fn test_version_parses_product_prefixed_tag() {
-        // bun tags releases "bun-v1.3.14"; the prefix used to make GgVersion
-        // return None, so every release got a null version and pinning a
-        // version silently fell back to latest (issue #293).
+        // The "bun-v" prefix used to make GgVersion return None, so pinning
+        // fell back to latest (#293)
         let v = GgVersion::new("bun-v1.3.14").expect("prefixed tag should parse");
         assert_eq!("1.3.14", v.to_string());
 
@@ -878,11 +874,12 @@ mod tests {
 
     #[test]
     fn test_version_ignores_digits_in_product_name() {
-        // A digit inside the product name must not be taken for the version:
-        // anchoring on the first digit turned "log4j2-v2.20.0" into "4j2..."
-        // (no version) and "tool2-v1.2.3" into "2" (wrong version). Anchoring
-        // on the dotted version boundary fixes both.
-        assert_eq!("2.20.0", GgVersion::new("log4j2-v2.20.0").unwrap().to_string());
+        // A digit in the product name must not be taken for the version -
+        // "log4j2-v2.20.0" is 2.20.0, "tool2-v1.2.3" is 1.2.3
+        assert_eq!(
+            "2.20.0",
+            GgVersion::new("log4j2-v2.20.0").unwrap().to_string()
+        );
         assert_eq!("1.2.3", GgVersion::new("tool2-v1.2.3").unwrap().to_string());
         assert_eq!("5.0.0", GgVersion::new("v2ray-5.0.0").unwrap().to_string());
     }

@@ -313,10 +313,9 @@ impl Cli {
     }
 }
 
-/// Strip a product or `v` prefix off a version, preserving a leading range
-/// operator and any partial form: "v1.2.0" -> "1.2.0", "bun-v1.2.0" -> "1.2.0",
-/// "=v1.2.0" -> "=1.2.0", "^18" -> "^18", "1.2" -> "1.2". Anything without a
-/// version token is left untouched.
+/// Strip a product or `v` prefix off a version, keeping any leading range
+/// operator and partial form: "bun-v1.2.0" -> "1.2.0", "=v1.2.0" -> "=1.2.0",
+/// "^18" -> "^18". Left untouched if there's no version in it.
 fn strip_version_prefix(version: &str) -> String {
     let op_end = version
         .find(|c: char| !matches!(c, '^' | '~' | '=' | '<' | '>'))
@@ -328,9 +327,8 @@ fn strip_version_prefix(version: &str) -> String {
     }
 }
 
-/// True when `s` begins a version - an optional `v` then a digit - so it is the
-/// version half of `version-distribution` (17, v17, 1.2.3) rather than a
-/// product prefix (bun, log4j2) that names a raw release tag.
+/// True when `s` starts like a version (optional `v` then a digit), so it's the
+/// version half of `version-distribution` and not a product prefix like "bun".
 fn starts_like_version(s: &str) -> bool {
     let s = s.strip_prefix(['v', 'V']).unwrap_or(s);
     s.starts_with(|c: char| c.is_ascii_digit())
@@ -392,12 +390,9 @@ fn parse_command_string(cmd_string: &str, config: &GgConfig) -> Vec<ClapCmd> {
                     let before = version_dist_part[0..dash_pos].to_string();
                     let after = version_dist_part[dash_pos + 1..].to_string();
                     if !before.is_empty() && !starts_like_version(&before) {
-                        // Not "version-distribution" (e.g. "17-temurin") but a
-                        // raw release tag whose product prefix carries a dash,
-                        // like bun's "bun-v1.2.0" or "log4j2-v2.20.0". The whole
-                        // thing names a version - strip the prefix so it matches
-                        // the parsed release tag instead of pinning nothing, and
-                        // don't read "bun"/"log4j2" as the version (#293).
+                        // A raw release tag like "bun-v1.2.0", not
+                        // "version-distribution" - the whole thing is the
+                        // version, so strip the prefix and don't pin "bun" (#293)
                         version = Some(strip_version_prefix(&version_dist_part));
                     } else {
                         version = if before.is_empty() {
@@ -688,9 +683,8 @@ mod tests {
 
     #[test]
     fn test_github_full_tag_version_pinning() {
-        // bun tags releases like "bun-v1.3.14"; pasting the full tag must pin
-        // the version, not be misread as version "bun" + distribution
-        // "v1.2.0" and silently fall back to latest (#293).
+        // Pasting bun's full tag must pin the version, not read "bun" as the
+        // version and fall back to latest (#293)
         let cli = parse_test_args(vec!["gh/oven-sh/bun@bun-v1.2.0", "--version"]);
         let config = GgConfig::default();
         let (cmds, _) = cli.parse_args(&config);
@@ -710,8 +704,7 @@ mod tests {
 
     #[test]
     fn test_partial_and_operator_versions_are_kept() {
-        // Disambiguation must not touch partial versions (range semantics) or
-        // requirement operators.
+        // Must not touch partial versions (ranges) or range operators
         let config = GgConfig::default();
         let (partial, _) = parse_test_args(vec!["node@1.2", "x"]).parse_args(&config);
         assert_eq!(partial[0].version.as_deref(), Some("1.2"));
@@ -730,8 +723,8 @@ mod tests {
 
     #[test]
     fn test_full_tag_with_digit_in_product_name() {
-        // A digit in the product name must not be read as the version:
-        // "log4j2-v2.20.0" pins 2.20.0, not "log4j2" or "2".
+        // Digit in the product name must not be read as the version:
+        // "log4j2-v2.20.0" pins 2.20.0, not "log4j2" or "2"
         let config = GgConfig::default();
         let (a, _) = parse_test_args(vec!["gh/apache/logging-log4j2@log4j2-v2.20.0", "x"])
             .parse_args(&config);
@@ -744,21 +737,22 @@ mod tests {
 
     #[test]
     fn test_operator_prefixes_are_normalised() {
-        // A range operator must survive prefix stripping, otherwise the
-        // requirement fails to parse and silently falls back to latest.
+        // The operator must survive stripping, or the req fails to parse and
+        // falls back to latest
         let config = GgConfig::default();
         let (eq, _) = parse_test_args(vec!["gh/oven-sh/bun@=v1.2.0", "x"]).parse_args(&config);
         assert_eq!(eq[0].version.as_deref(), Some("=1.2.0"));
         let (caret, _) = parse_test_args(vec!["gh/oven-sh/bun@^v1.2.0", "x"]).parse_args(&config);
         assert_eq!(caret[0].version.as_deref(), Some("^1.2.0"));
-        let (full, _) = parse_test_args(vec!["gh/oven-sh/bun@=bun-v1.2.0", "x"]).parse_args(&config);
+        let (full, _) =
+            parse_test_args(vec!["gh/oven-sh/bun@=bun-v1.2.0", "x"]).parse_args(&config);
         assert_eq!(full[0].version.as_deref(), Some("=1.2.0"));
     }
 
     #[test]
     fn test_distribution_kept_when_version_malformed() {
-        // A malformed version half must not make the parser discard the
-        // distribution by mistaking the whole string for a raw tag.
+        // A malformed version must not make the parser drop the distribution
+        // by mistaking the whole thing for a raw tag
         let cli = parse_test_args(vec!["java@1.2.3.4-temurin", "x"]);
         let config = GgConfig::default();
         let (cmds, _) = cli.parse_args(&config);
