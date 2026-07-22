@@ -123,11 +123,27 @@ impl Executor for Bld {
         &'a self,
         input: &'a AppInput,
     ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
-        self.github.get_download_urls(input)
+        // Only the .zip has the wrapper we run (bld/lib/bld-wrapper.jar); the
+        // bare jars don't, so keep just the zip or selection lands on
+        // bld-x-javadoc.jar and fails.
+        Box::pin(async move {
+            self.github
+                .get_download_urls(input)
+                .await
+                .into_iter()
+                .filter(|d| d.download_url.ends_with(".zip"))
+                .collect()
+        })
     }
 
     fn get_bins(&self, _input: &AppInput) -> Vec<BinPattern> {
         vec![BinPattern::Exact("java".to_string())]
+    }
+
+    // Runs via `java` from a separate dep dir, so the cache check can't resolve
+    // a bin in our own dir - the wrapper jar being there is what makes it a hit.
+    fn cached_install_is_valid(&self, app_path: &AppPath) -> bool {
+        app_path.install_dir.join("lib/bld-wrapper.jar").is_file()
     }
 
     fn get_name(&self) -> &str {
@@ -323,5 +339,32 @@ mod tests {
         assert!(args.contains(&"compile".to_string()));
 
         let _ = std::fs::remove_file("bld");
+    }
+
+    #[test]
+    fn test_cached_install_is_valid() {
+        use crate::executor::{AppPath, Executor, ExecutorCmd};
+        use std::collections::HashSet;
+
+        let dir = tempfile::tempdir().unwrap();
+        let bld = super::Bld::new(ExecutorCmd {
+            cmd: "bld".to_string(),
+            version: None,
+            distribution: None,
+            include_tags: HashSet::new(),
+            exclude_tags: HashSet::new(),
+            gems: None,
+        });
+        let app_path = AppPath {
+            install_dir: dir.path().to_path_buf(),
+        };
+
+        // No wrapper jar -> re-download
+        assert!(!bld.cached_install_is_valid(&app_path));
+
+        // Wrapper jar present (the zip extracted) -> cache hit
+        std::fs::create_dir_all(dir.path().join("lib")).unwrap();
+        std::fs::File::create(dir.path().join("lib/bld-wrapper.jar")).unwrap();
+        assert!(bld.cached_install_is_valid(&app_path));
     }
 }
