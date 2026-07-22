@@ -304,16 +304,19 @@ pub fn java_deps<'a>() -> Pin<Box<dyn Future<Output = Vec<ExecutorDep>> + 'a>> {
 }
 
 pub fn find_jar_file(app_path: &AppPath) -> Option<String> {
-    if let Ok(entries) = std::fs::read_dir(&app_path.install_dir) {
-        for entry in entries.flatten() {
-            if let Some(name) = entry.file_name().to_str() {
-                if name.ends_with(".jar") {
-                    return Some(name.to_string());
-                }
-            }
-        }
-    }
-    None
+    let entries = std::fs::read_dir(&app_path.install_dir).ok()?;
+    let mut jars: Vec<String> = entries
+        .flatten()
+        .filter_map(|e| e.file_name().to_str().map(str::to_string))
+        .filter(|name| name.ends_with(".jar"))
+        // -javadoc/-sources are the non-runnable companions maven/gradle ship
+        // next to the real jar; never the one to run.
+        .filter(|name| !name.ends_with("-javadoc.jar") && !name.ends_with("-sources.jar"))
+        .collect();
+    // read_dir order is filesystem-dependent, so sort - or with several jars we
+    // could run a different one each time.
+    jars.sort();
+    jars.into_iter().next()
 }
 
 fn get_executor_app_path(
@@ -808,6 +811,55 @@ pub async fn try_run(
 mod tests {
     use super::*;
     use crate::github_utils::{detect_arch_from_name, detect_os_from_name};
+
+    #[test]
+    fn test_find_jar_file_skips_companions_and_is_deterministic() {
+        // The real jar wins over the -javadoc/-sources companions read_dir might
+        // hand back first (this used to run the sources jar).
+        let dir = tempfile::tempdir().unwrap();
+        for n in ["app.jar", "app-javadoc.jar", "app-sources.jar"] {
+            std::fs::File::create(dir.path().join(n)).unwrap();
+        }
+        let ap = AppPath {
+            install_dir: dir.path().to_path_buf(),
+        };
+        assert_eq!(find_jar_file(&ap), Some("app.jar".to_string()));
+
+        // Several real jars -> deterministic (sorted), not filesystem order.
+        let dir2 = tempfile::tempdir().unwrap();
+        for n in ["zeta.jar", "alpha.jar"] {
+            std::fs::File::create(dir2.path().join(n)).unwrap();
+        }
+        let ap2 = AppPath {
+            install_dir: dir2.path().to_path_buf(),
+        };
+        assert_eq!(find_jar_file(&ap2), Some("alpha.jar".to_string()));
+
+        // No runnable jar -> None.
+        let dir3 = tempfile::tempdir().unwrap();
+        let ap3 = AppPath {
+            install_dir: dir3.path().to_path_buf(),
+        };
+        assert_eq!(find_jar_file(&ap3), None);
+
+        // Single jar (RepoSense-style) is returned untouched - no regression.
+        let dir4 = tempfile::tempdir().unwrap();
+        std::fs::File::create(dir4.path().join("RepoSense.jar")).unwrap();
+        let ap4 = AppPath {
+            install_dir: dir4.path().to_path_buf(),
+        };
+        assert_eq!(find_jar_file(&ap4), Some("RepoSense.jar".to_string()));
+
+        // Only companions -> None, nothing runnable.
+        let dir5 = tempfile::tempdir().unwrap();
+        for n in ["x-javadoc.jar", "x-sources.jar"] {
+            std::fs::File::create(dir5.path().join(n)).unwrap();
+        }
+        let ap5 = AppPath {
+            install_dir: dir5.path().to_path_buf(),
+        };
+        assert_eq!(find_jar_file(&ap5), None);
+    }
 
     // npm-package layout (e.g. codex -> npm_home/bin/codex): a nested bin path,
     // searched via bin_dirs that include "." so base/./npm_home/bin resolves.
