@@ -212,18 +212,18 @@ pub fn detect_os_from_name(name: &str) -> Option<Os> {
 
 pub fn detect_arch_from_name(name: &str) -> Option<Arch> {
     let name_lower = name.to_lowercase();
-    // "64-bit"/"64bit" is the x86_64 label goreleaser-style names use
-    // (vale_..._Linux_64-bit.tar.gz). arm spells it "arm64", so that branch
-    // below still wins (#288)
-    if name_lower.contains("x86_64")
+    // arm64 first: the generic "64-bit"/"64bit" x86_64 label goreleaser uses
+    // (vale_..._Linux_64-bit.tar.gz) is also a substring of "arm64-bit", so an
+    // arm asset would look like x86_64 if we checked the label first (#288).
+    if name_lower.contains("arm64") || name_lower.contains("aarch64") {
+        Some(Arch::Arm64)
+    } else if name_lower.contains("x86_64")
         || name_lower.contains("amd64")
         || name_lower.contains("x64")
         || name_lower.contains("64-bit")
         || name_lower.contains("64bit")
     {
         Some(Arch::X86_64)
-    } else if name_lower.contains("arm64") || name_lower.contains("aarch64") {
-        Some(Arch::Arm64)
     } else if name_lower.contains("armv7") || name_lower.contains("arm") {
         Some(Arch::Armv7)
     } else if name_lower.contains("x86") {
@@ -331,6 +331,15 @@ mod tests {
         // arm64 must not be swallowed by the 64-bit branch
         assert_eq!(
             detect_arch_from_name("vale_3.15.1_Linux_arm64.tar.gz"),
+            Some(Arch::Arm64)
+        );
+        // even when the name embeds a 64-bit-ish token, arm wins
+        assert_eq!(
+            detect_arch_from_name("tool_Linux_arm64-bit.tar.gz"),
+            Some(Arch::Arm64)
+        );
+        assert_eq!(
+            detect_arch_from_name("tool_Linux_aarch64.tar.gz"),
             Some(Arch::Arm64)
         );
     }
