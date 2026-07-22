@@ -5,6 +5,7 @@ pub mod flutter;
 pub mod github;
 pub mod go;
 pub mod gradle;
+pub mod grok;
 pub mod gradle_properties;
 pub mod java;
 pub mod java_distributions;

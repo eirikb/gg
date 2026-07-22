@@ -52,7 +52,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     needs: version
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Prepare build
         shell: bash
@@ -168,7 +168,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Download stage4 hash
         uses: actions/download-artifact@v8
@@ -212,7 +212,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Download stage3 / stage4
         uses: actions/download-artifact@v8
@@ -262,7 +262,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-22.04, windows-2022 ]
-        cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fortio version", "fastlane --version", "gh/mozilla/sccache -V" ]
+        cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fortio version", "fastlane --version", "gh/mozilla/sccache -V", "python -V" ]
         include:
           - os: ubuntu-22.04
             stage4_target: x86_64-unknown-linux-musl
@@ -299,6 +299,8 @@ jobs:
 
       - name: Run!
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -x
           sh gg.cmd -v ${{ matrix.cmd }}
@@ -311,7 +313,7 @@ jobs:
     strategy:
       matrix:
         os: [ macos-14, macos-15-intel ]
-        cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "deno -V",  "jbang --version", "gh/cli/cli version", "gh version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fastlane --version" ]
+        cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "deno -V",  "jbang --version", "gh/cli/cli version", "gh version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fastlane --version", "python -V" ]
         include:
           - os: macos-14
             stage4_target: aarch64-apple-darwin
@@ -342,8 +344,24 @@ jobs:
           cp stage4 "$HOME/.cache/gg/gg-dev/stage4"
           chmod +x "$HOME/.cache/gg/gg-dev/stage4"
 
+      - name: Renamed symlink dispatches to the applet (#289)
+        if: matrix.cmd == 'node -v'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -x
+          ln -sf gg.cmd node.cmd
+          out=$(sh ./node.cmd --version 2>&1)
+          echo "$out"
+          # node prints "vX.Y.Z"; if gg ran itself it prints a bare version - so
+          # a v-prefixed semver proves the symlink name reached applet dispatch.
+          echo "$out" | grep -Eq '^v[0-9]+\.[0-9]' || { echo "#289: node.cmd ran gg, not node"; exit 1; }
+
       - name: Run!
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -x
           sh gg.cmd -v ${{ matrix.cmd }}
@@ -355,7 +373,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-22.04-arm, macos-14, macos-15-intel ]
-        cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "deno -V", "jbang --version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fastlane --version" ]
+        cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "deno -V", "jbang --version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fastlane --version", "python -V" ]
         include:
           - os: ubuntu-22.04-arm
             stage4_target: aarch64-unknown-linux-musl
@@ -390,6 +408,8 @@ jobs:
 
       - name: Run!
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -x
           sh gg.cmd -v ${{ matrix.cmd }}
@@ -426,6 +446,8 @@ jobs:
 
       - name: Run!
         shell: cmd
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           .\gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
@@ -445,7 +467,7 @@ jobs:
       fail-fast: false
       matrix:
         container: [ ubuntu, debian, alpine, archlinux ]
-        cmd: [ "node@14 -v", "java -version", "gradle -version", "openapi version", "run:java@14 java -version", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "just -V", "fortio version", "gh/mozilla/sccache -V" ]
+        cmd: [ "node@14 -v", "java -version", "gradle -version", "openapi version", "run:java@14 java -version", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "just -V", "fortio version", "gh/mozilla/sccache -V", "python -V" ]
 
     runs-on: ubuntu-latest
     # Docker Hub rate-limits anonymous pulls from shared GitHub runner IPs,
@@ -474,14 +496,16 @@ jobs:
           chmod +x "$HOME/.cache/gg/gg-dev/stage4"
 
       - name: Run!
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -x
 
-          # This is required for nodejs to run - not gg.cmd! 
+          # This is required for nodejs to run - not gg.cmd!
           if [ "${{ matrix.container }}" == "alpine" ]; then
             apk add libstdc++
           fi
-          
+
           sh gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
           sh gg.cmd -v ${{ matrix.cmd }}

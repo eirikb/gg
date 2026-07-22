@@ -5,7 +5,7 @@ use std::pin::Pin;
 use log::{debug, info};
 
 use crate::executor::{AppInput, AppPath, BinPattern, Download, Executor, ExecutorCmd, GgVersion};
-use crate::github_utils::{create_github_client, detect_arch_from_name};
+use crate::github_utils::{create_github_client, detect_arch_from_name, record_github_error};
 use crate::target::{Arch, Os, Variant};
 
 pub struct Ruby {
@@ -216,14 +216,17 @@ async fn get_truffleruby_urls(os: &Os) -> Vec<Download> {
 
     let octocrab = create_github_client().unwrap();
 
-    if let Ok(releases) = octocrab
+    let releases_result = octocrab
         .repos("ruby", "ruby-builder")
         .releases()
         .list()
         .per_page(50)
         .send()
-        .await
-    {
+        .await;
+    if let Err(err) = &releases_result {
+        record_github_error("ruby/ruby-builder", err);
+    }
+    if let Ok(releases) = releases_result {
         for release in releases.items {
             for asset in release.assets {
                 let name_lower = asset.name.to_lowercase();
@@ -282,14 +285,17 @@ async fn get_windows_ruby_urls() -> Vec<Download> {
 
     let octocrab = create_github_client().unwrap();
 
-    if let Ok(releases) = octocrab
+    let releases_result = octocrab
         .repos("oneclick", "rubyinstaller2")
         .releases()
         .list()
         .per_page(50)
         .send()
-        .await
-    {
+        .await;
+    if let Err(err) = &releases_result {
+        record_github_error("oneclick/rubyinstaller2", err);
+    }
+    if let Ok(releases) = releases_result {
         for release in releases.items {
             for asset in release.assets {
                 if !is_ruby_binary(&asset.name) {

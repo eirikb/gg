@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::pin::Pin;
 
+use log::debug;
 use serde::Deserialize;
 
 use crate::executor::{AppInput, BinPattern, Download, Executor, ExecutorCmd, GgVersion};
@@ -66,8 +67,13 @@ fn map_target(target: &Target) -> Option<(&'static str, &'static str, &'static s
 /// single new or reshaped entry must not take down all of Python. Parse the
 /// outer map as raw JSON, then skip any individual entry that doesn't fit.
 fn parse_entries(json: &str) -> Vec<PyEntry> {
-    let raw: HashMap<String, serde_json::Value> =
-        serde_json::from_str(json).expect("Python metadata was not valid JSON");
+    let raw: HashMap<String, serde_json::Value> = match serde_json::from_str(json) {
+        Ok(raw) => raw,
+        Err(e) => {
+            debug!("Python metadata was not valid JSON: {e}");
+            return vec![];
+        }
+    };
     raw.into_values()
         .filter_map(|v| serde_json::from_value::<PyEntry>(v).ok())
         .collect()
@@ -80,7 +86,7 @@ fn select_downloads(entries: Vec<PyEntry>, target: &Target) -> Vec<Download> {
         return vec![];
     };
 
-    entries
+    let mut downloads: Vec<Download> = entries
         .into_iter()
         .filter(|e| e.name == "cpython")
         .filter(|e| e.os == want_os)
@@ -110,24 +116,47 @@ fn select_downloads(entries: Vec<PyEntry>, target: &Target) -> Vec<Download> {
                 tags: HashSet::new(),
             })
         })
-        .collect()
+        .collect();
+
+    // PBS ships the same X.Y.Z across build dates and as plain + stripped, all
+    // the same CPython. Keep one per version so the pick is stable - prefer the
+    // smaller stripped build, then newest (date's in the url).
+    downloads.sort_by(|a, b| {
+        let stripped = |d: &Download| d.download_url.contains("install_only_stripped");
+        a.version
+            .as_ref()
+            .map(|v| v.to_string())
+            .cmp(&b.version.as_ref().map(|v| v.to_string()))
+            .then_with(|| stripped(b).cmp(&stripped(a)))
+            .then_with(|| b.download_url.cmp(&a.download_url))
+    });
+    downloads.dedup_by(|a, b| a.version == b.version);
+    downloads
 }
 
 async fn get_python_urls(target: &Target) -> Vec<Download> {
     if map_target(target).is_none() {
         return vec![];
     }
-    let json = reqwest::get(METADATA_URL)
-        .await
-        .expect("Failed to fetch Python metadata")
-        // Turn an HTTP 404/500 into a clear fetch error instead of feeding an
-        // error page into the JSON parser ("metadata not valid JSON").
-        .error_for_status()
-        .expect("Python metadata request failed")
-        .text()
-        .await
-        .expect("Failed to read Python metadata");
+    let Some(json) = fetch_metadata().await else {
+        return vec![];
+    };
     select_downloads(parse_entries(&json), target)
+}
+
+// uv's metadata is on their moving main branch - a rename or blip should leave
+// "no python found", not panic every gg python user.
+async fn fetch_metadata() -> Option<String> {
+    match reqwest::get(METADATA_URL)
+        .await
+        .and_then(|r| r.error_for_status())
+    {
+        Ok(resp) => resp.text().await.ok(),
+        Err(e) => {
+            debug!("Failed to fetch Python metadata: {e}");
+            None
+        }
+    }
 }
 
 impl Executor for Python {
@@ -158,11 +187,7 @@ impl Executor for Python {
 
     fn get_bin_dirs(&self) -> Vec<String> {
         // unix: bin/python3, bin/pip; windows: python.exe at root, Scripts/pip.exe
-        vec![
-            "bin".to_string(),
-            ".".to_string(),
-            "Scripts".to_string(),
-        ]
+        vec!["bin".to_string(), ".".to_string(), "Scripts".to_string()]
     }
 }
 
@@ -280,5 +305,19 @@ mod tests {
             .collect();
         assert!(versions.contains(&"3.12.3".to_string()));
         assert!(versions.contains(&"3.11.9".to_string()));
+    }
+
+    #[test]
+    fn test_select_dedups_same_version_prefers_stripped() {
+        // Same 3.12.3 as plain and stripped - only one Download should survive,
+        // and it should be the stripped one.
+        const DUP: &str = r#"{
+          "a": {"name":"cpython","os":"linux","libc":"gnu","arch":{"family":"x86_64","variant":null},"major":3,"minor":12,"patch":3,"prerelease":"","variant":null,"url":"https://example.com/20240101/cpython-3.12.3-x86_64-unknown-linux-gnu-install_only.tar.gz"},
+          "b": {"name":"cpython","os":"linux","libc":"gnu","arch":{"family":"x86_64","variant":null},"major":3,"minor":12,"patch":3,"prerelease":"","variant":null,"url":"https://example.com/20240202/cpython-3.12.3-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"}
+        }"#;
+        let downloads =
+            select_downloads(parse_entries(DUP), &target(Os::Linux, Arch::X86_64, None));
+        assert_eq!(downloads.len(), 1, "same version must collapse to one");
+        assert!(downloads[0].download_url.contains("install_only_stripped"));
     }
 }

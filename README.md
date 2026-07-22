@@ -16,13 +16,19 @@ Alpine and Ubuntu containers without curl/wget or updated CA certificates (all n
 functionality to gradlew (without need for JDK initially installed).
 
 Install with bash (wget):
-> wget ggcmd.io/gg.cmd
+> wget ggcmd.io/gg.cmd && chmod +x gg.cmd
 
 Install with bash (curl):
-> curl -L ggcmd.io > gg.cmd
+> curl -L ggcmd.io > gg.cmd && chmod +x gg.cmd
 
 Install with PowerShell:
 > wget ggcmd.io -OutFile gg.cmd
+
+> [!NOTE]
+> If installing via PowerShell, you still need to make `gg.cmd` executable if your project has contributors on Linux or macOS. You can do this with the following `git` command:
+> ```ps1
+> git update-index --chmod=+x
+> ```
 
 or
 
@@ -411,6 +417,23 @@ export GG_CACHE_DIR="/path/to/custom/cache"
 ```
 
 **Note**: When `GG_CACHE_DIR` is set, it takes precedence over both global and local cache modes.
+
+## GitHub API access
+
+Tools hosted on GitHub are resolved through the GitHub API. Unauthenticated access is limited to 60
+requests/hour, so gg looks for a token in this order:
+
+1. `GG_GITHUB_TOKEN`, `GITHUB_TOKEN` or `GH_TOKEN` environment variables
+2. The [GitHub CLI](https://cli.github.com/) (`gh auth token`), if installed and logged in
+3. Anonymous access
+
+If you hit the rate limit, either set a token or log in with `gh auth login`. The error message may
+also have a hint or two.
+
+`GG_GITHUB_API_URL` can point gg at any GitHub API-compatible endpoint (e.g. your own proxy on a
+corporate network). Only the gg-specific `GG_GITHUB_TOKEN` is ever sent to a custom endpoint;
+`GITHUB_TOKEN`, `GH_TOKEN` and tokens borrowed from the `gh` CLI are only ever sent to
+`api.github.com`.
 
 ## Contributing
 

@@ -6,7 +6,9 @@ use crate::executor::{
     find_jar_file, AppInput, AppPath, BinPattern, Download, Executor, ExecutorCmd, ExecutorDep,
     GgVersion,
 };
-use crate::github_utils::{create_github_client, detect_arch_from_name, detect_os_from_name};
+use crate::github_utils::{
+    create_github_client, detect_arch_from_name, detect_os_from_name, record_github_error,
+};
 use crate::target::Os::Windows;
 use crate::target::{Arch, Os, Variant};
 use log::debug;
@@ -67,7 +69,11 @@ impl GitHub {
     async fn detect_language_and_deps(&self) -> Vec<ExecutorDep> {
         let octocrab = create_github_client().unwrap();
 
-        if let Ok(repo_info) = octocrab.repos(&self.owner, &self.repo).get().await {
+        let repo_result = octocrab.repos(&self.owner, &self.repo).get().await;
+        if let Err(err) = &repo_result {
+            record_github_error(&format!("{}/{}", self.owner, self.repo), err);
+        }
+        if let Ok(repo_info) = repo_result {
             if let Some(language) = repo_info.language {
                 let language_str = language.as_str().unwrap_or("").to_lowercase();
                 return match language_str.as_str() {
@@ -164,6 +170,31 @@ impl GitHub {
     }
 }
 
+/// Prefer the host's libc variant, falling back to the other when it's the only
+/// one for a given os/arch/version (so a musl-only static build still resolves).
+fn prefer_libc_variant(downloads: Vec<Download>, prefer_musl: bool) -> Vec<Download> {
+    let key = |d: &Download| format!("{:?}|{:?}|{:?}", d.os, d.arch, d.version);
+    let mut has_preferred: HashSet<String> = HashSet::new();
+    for d in &downloads {
+        let is_musl = d.variant == Some(Variant::Musl);
+        if is_musl == prefer_musl {
+            has_preferred.insert(key(d));
+        }
+    }
+    downloads
+        .into_iter()
+        .filter(|d| {
+            let is_musl = d.variant == Some(Variant::Musl);
+            is_musl == prefer_musl || !has_preferred.contains(&key(d))
+        })
+        // Normalise to Any so the shared matcher doesn't re-drop a musl fallback.
+        .map(|mut d| {
+            d.variant = Some(Variant::Any);
+            d
+        })
+        .collect()
+}
+
 impl Executor for GitHub {
     fn get_executor_cmd(&self) -> &ExecutorCmd {
         &self.executor_cmd
@@ -171,15 +202,15 @@ impl Executor for GitHub {
 
     fn get_download_urls<'a>(
         &self,
-        _input: &'a AppInput,
+        input: &'a AppInput,
     ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
         let owner = self.owner.clone();
         let repo = self.repo.clone();
         let excluded_keywords = self.excluded_asset_keywords.clone();
+        let prefer_musl = input.target.variant == Some(Variant::Musl);
 
         Box::pin(async move {
             let mut downloads: Vec<Download> = vec![];
-            // Shh don't tell anyone
             let octocrab = create_github_client().expect("Failed to create GitHub API client");
 
             let mut page: u32 = 1;
@@ -193,53 +224,64 @@ impl Executor for GitHub {
                     .send()
                     .await;
 
-                if let Ok(releases) = releases_result {
-                    for release in releases.items {
-                        for asset in release.assets {
-                            if !Self::is_likely_binary(&asset.name) {
-                                continue;
-                            }
+                match releases_result {
+                    Ok(releases) => {
+                        for release in releases.items {
+                            for asset in release.assets {
+                                if !Self::is_likely_binary(&asset.name) {
+                                    continue;
+                                }
 
-                            if Self::is_excluded_asset(&asset.name, &excluded_keywords) {
-                                debug!("Skipping excluded asset: {}", asset.name);
-                                continue;
-                            }
+                                if Self::is_excluded_asset(&asset.name, &excluded_keywords) {
+                                    debug!("Skipping excluded asset: {}", asset.name);
+                                    continue;
+                                }
 
-                            let os = detect_os_from_name(&asset.name);
-                            let arch = detect_arch_from_name(&asset.name);
+                                let os = detect_os_from_name(&asset.name);
+                                let arch = detect_arch_from_name(&asset.name);
 
-                            debug!("Asset: {} -> OS: {:?}, Arch: {:?}", asset.name, os, arch);
+                                debug!("Asset: {} -> OS: {:?}, Arch: {:?}", asset.name, os, arch);
 
-                            if (os.is_some() && arch.is_some())
-                                || (os.is_none() && arch.is_none()
-                                    || (os == Some(Os::Windows) && arch.is_none()))
-                            {
-                                debug!(
-                                    "Adding download: {} with OS: {:?}, Arch: {:?}",
-                                    asset.browser_download_url, os, arch
-                                );
-                                downloads.push(Download {
-                                    download_url: asset.browser_download_url.to_string(),
-                                    version: GgVersion::new(release.tag_name.as_str()),
-                                    os: os.or(Some(Os::Any)),
-                                    arch: arch.or(Some(Arch::Any)),
-                                    tags: HashSet::new(),
-                                    variant: Some(Variant::Any),
-                                });
+                                if (os.is_some() && arch.is_some())
+                                    || (os.is_none() && arch.is_none()
+                                        || (os == Some(Os::Windows) && arch.is_none()))
+                                {
+                                    debug!(
+                                        "Adding download: {} with OS: {:?}, Arch: {:?}",
+                                        asset.browser_download_url, os, arch
+                                    );
+                                    let is_musl = asset.name.to_lowercase().contains("musl")
+                                        && !matches!(os, Some(Os::Windows) | Some(Os::Mac));
+                                    let variant = if is_musl {
+                                        Some(Variant::Musl)
+                                    } else {
+                                        Some(Variant::Any)
+                                    };
+                                    downloads.push(Download {
+                                        download_url: asset.browser_download_url.to_string(),
+                                        version: GgVersion::new(release.tag_name.as_str()),
+                                        os: os.or(Some(Os::Any)),
+                                        arch: arch.or(Some(Arch::Any)),
+                                        tags: HashSet::new(),
+                                        variant,
+                                    });
+                                }
                             }
                         }
-                    }
 
-                    if releases.next.is_none() {
+                        if releases.next.is_none() {
+                            break;
+                        }
+                        page += 1;
+                    }
+                    Err(err) => {
+                        record_github_error(&format!("{owner}/{repo}"), &err);
                         break;
                     }
-                    page += 1;
-                } else {
-                    break;
                 }
             }
             debug!("Total downloads found: {}", downloads.len());
-            downloads
+            prefer_libc_variant(downloads, prefer_musl)
         })
     }
 
@@ -403,6 +445,74 @@ mod tests {
         assert!(!GitHub::is_excluded_asset("anything.tar.gz", &[]));
     }
 
+    fn dl(url: &str, variant: Variant, version: &str) -> Download {
+        Download {
+            download_url: url.to_string(),
+            version: GgVersion::new(version),
+            os: Some(Os::Linux),
+            arch: Some(Arch::X86_64),
+            tags: HashSet::new(),
+            variant: Some(variant),
+        }
+    }
+
+    fn urls(downloads: Vec<Download>) -> Vec<String> {
+        let mut u: Vec<String> = downloads.into_iter().map(|d| d.download_url).collect();
+        u.sort();
+        u
+    }
+
+    #[test]
+    fn test_prefer_libc_glibc_host_drops_musl_when_glibc_exists() {
+        let downloads = vec![
+            dl("pnpm-linux-x64.tar.gz", Variant::Any, "11.9.0"),
+            dl("pnpm-linux-x64-musl.tar.gz", Variant::Musl, "11.9.0"),
+        ];
+        assert_eq!(
+            urls(prefer_libc_variant(downloads, false)),
+            vec!["pnpm-linux-x64.tar.gz"]
+        );
+    }
+
+    #[test]
+    fn test_prefer_libc_glibc_host_keeps_musl_only_build() {
+        let downloads = vec![dl("tool-linux-x64-musl.tar.gz", Variant::Musl, "1.0.0")];
+        let result = prefer_libc_variant(downloads, false);
+        assert_eq!(
+            result
+                .iter()
+                .map(|d| d.download_url.clone())
+                .collect::<Vec<_>>(),
+            vec!["tool-linux-x64-musl.tar.gz"]
+        );
+        // Re-tagged Any so the shared matcher won't hard-drop the fallback.
+        assert_eq!(result[0].variant, Some(Variant::Any));
+    }
+
+    #[test]
+    fn test_prefer_libc_musl_host_drops_glibc_when_musl_exists() {
+        let downloads = vec![
+            dl("pnpm-linux-x64.tar.gz", Variant::Any, "11.9.0"),
+            dl("pnpm-linux-x64-musl.tar.gz", Variant::Musl, "11.9.0"),
+        ];
+        assert_eq!(
+            urls(prefer_libc_variant(downloads, true)),
+            vec!["pnpm-linux-x64-musl.tar.gz"]
+        );
+    }
+
+    #[test]
+    fn test_prefer_libc_keeps_both_when_versions_differ() {
+        let downloads = vec![
+            dl("a-linux-x64.tar.gz", Variant::Any, "2.0.0"),
+            dl("b-linux-x64-musl.tar.gz", Variant::Musl, "1.0.0"),
+        ];
+        assert_eq!(
+            urls(prefer_libc_variant(downloads, false)),
+            vec!["a-linux-x64.tar.gz", "b-linux-x64-musl.tar.gz"]
+        );
+    }
+
     #[test]
     fn test_is_likely_binary_rejects_checksum_companions() {
         // Real-world: deno publishes these next to each platform zip,
@@ -410,7 +520,9 @@ mod tests {
         assert!(!GitHub::is_likely_binary(
             "deno-x86_64-unknown-linux-gnu.sha256sum"
         ));
-        assert!(!GitHub::is_likely_binary("deno-x86_64-pc-windows-msvc.sha256sum"));
+        assert!(!GitHub::is_likely_binary(
+            "deno-x86_64-pc-windows-msvc.sha256sum"
+        ));
         assert!(!GitHub::is_likely_binary("tool-linux-x64.zip.sha256"));
         assert!(!GitHub::is_likely_binary("tool-darwin-arm64.tar.gz.sig"));
         assert!(!GitHub::is_likely_binary("tool-windows-x64.zip.asc"));
@@ -421,7 +533,9 @@ mod tests {
         assert!(!GitHub::is_likely_binary("tool-linux-x64.zip.md5"));
 
         // ...but the actual archives still pass
-        assert!(GitHub::is_likely_binary("deno-x86_64-unknown-linux-gnu.zip"));
+        assert!(GitHub::is_likely_binary(
+            "deno-x86_64-unknown-linux-gnu.zip"
+        ));
         assert!(GitHub::is_likely_binary("deno-x86_64-pc-windows-msvc.zip"));
     }
 }
