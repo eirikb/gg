@@ -255,6 +255,16 @@ pub trait Executor {
         input: &'a AppInput,
     ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>>;
     fn get_bins(&self, input: &AppInput) -> Vec<BinPattern>;
+    // Same as get_bins, but the executor can look at what actually got extracted
+    // (e.g. a jar-only release picks `java` directly instead of guessing a bin).
+    fn get_bins_for_path(&self, input: &AppInput, _app_path: &AppPath) -> Vec<BinPattern> {
+        self.get_bins(input)
+    }
+    // A jar tool runs via `java` from a separate dependency dir the cache check
+    // can't see, so the jar being there is what makes the cached dir a hit.
+    fn cached_install_is_valid(&self, _app_path: &AppPath) -> bool {
+        false
+    }
     fn get_name(&self) -> &str;
     fn get_deps<'a>(
         &'a self,
@@ -377,7 +387,14 @@ pub async fn prep(
             let path_vars = bin_path_vars(executor, &app_path_ok);
             let sep = if cfg!(windows) { ";" } else { ":" };
             let all_paths = path_vars.join(sep);
-            if resolve_bin_path(&executor.get_bins(input), &path_vars, &all_paths).is_some() {
+            if resolve_bin_path(
+                &executor.get_bins_for_path(input, &app_path_ok),
+                &path_vars,
+                &all_paths,
+            )
+            .is_some()
+                || executor.cached_install_is_valid(&app_path_ok)
+            {
                 return Ok(app_path_ok);
             }
             info!(
@@ -739,7 +756,7 @@ pub async fn try_run(
         _ => ":",
     });
     info!("PATH: {all_paths}");
-    let bins = executor.get_bins(input);
+    let bins = executor.get_bins_for_path(input, &app_path);
     info!("Trying to find these bins: {:?}", bins);
     if let Some(bin_path) = resolve_bin_path(&bins, &path_vars, &all_paths) {
         info!("Executing: {:?}. With args:{:?}", bin_path, args);

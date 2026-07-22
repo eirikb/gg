@@ -168,6 +168,26 @@ impl GitHub {
 
         false
     }
+
+    // A jar-only release (RepoSense) runs via `java -jar`. A jar next to a real
+    // binary doesn't count - the binary wins, no forced java. #244
+    fn should_run_as_jar(&self, app_path: &AppPath) -> bool {
+        if self.predefined_bins.is_some() || find_jar_file(app_path).is_none() {
+            return false;
+        }
+        let names = [
+            self.repo.clone(),
+            self.repo.to_lowercase(),
+            format!("{}.exe", self.repo),
+            format!("{}.exe", self.repo.to_lowercase()),
+        ];
+        let has_native_binary = ["bin", "."].iter().any(|sub| {
+            names
+                .iter()
+                .any(|n| app_path.install_dir.join(sub).join(n).is_file())
+        });
+        !has_native_binary
+    }
 }
 
 /// Prefer the host's libc variant, falling back to the other when it's the only
@@ -318,16 +338,32 @@ impl Executor for GitHub {
         patterns
     }
 
+    fn get_bins_for_path(&self, input: &AppInput, app_path: &AppPath) -> Vec<BinPattern> {
+        // For a jar run, resolve `java` directly - the generic patterns match a
+        // JDK helper (jimage, jabswitch, jar, ...) from the java dep's bin dir
+        // before java. #244
+        if self.should_run_as_jar(app_path) {
+            return vec![BinPattern::Exact("java".to_string())];
+        }
+        self.get_bins(input)
+    }
+
+    fn cached_install_is_valid(&self, app_path: &AppPath) -> bool {
+        self.should_run_as_jar(app_path)
+    }
+
     fn get_name(&self) -> &str {
         &self.repo
     }
 
     fn customize_args(&self, input: &AppInput, app_path: &AppPath) -> Vec<String> {
-        if let Some(jar_name) = find_jar_file(app_path) {
-            if let Some(jar_path) = app_path.install_dir.join(&jar_name).to_str() {
-                let mut args = vec!["-jar".to_string(), jar_path.to_string()];
-                args.extend_from_slice(&input.app_args);
-                return args;
+        if self.should_run_as_jar(app_path) {
+            if let Some(jar_name) = find_jar_file(app_path) {
+                if let Some(jar_path) = app_path.install_dir.join(&jar_name).to_str() {
+                    let mut args = vec!["-jar".to_string(), jar_path.to_string()];
+                    args.extend_from_slice(&input.app_args);
+                    return args;
+                }
             }
         }
         input.app_args.clone()
@@ -537,5 +573,34 @@ mod tests {
             "deno-x86_64-unknown-linux-gnu.zip"
         ));
         assert!(GitHub::is_likely_binary("deno-x86_64-pc-windows-msvc.zip"));
+    }
+
+    #[test]
+    fn test_should_run_as_jar() {
+        use std::fs::File;
+        let dir = tempfile::tempdir().unwrap();
+        let cmd = ExecutorCmd {
+            cmd: "gh/reposense/RepoSense".to_string(),
+            version: None,
+            distribution: None,
+            include_tags: std::collections::HashSet::new(),
+            exclude_tags: std::collections::HashSet::new(),
+            gems: None,
+        };
+        let gh = GitHub::new(cmd, "reposense".to_string(), "RepoSense".to_string());
+        let app_path = AppPath {
+            install_dir: dir.path().to_path_buf(),
+        };
+
+        // No jar -> not a jar run
+        assert!(!gh.should_run_as_jar(&app_path));
+
+        // Jar and no native binary -> run via java
+        File::create(dir.path().join("RepoSense.jar")).unwrap();
+        assert!(gh.should_run_as_jar(&app_path));
+
+        // A native binary next to the jar -> binary wins, no forced java
+        File::create(dir.path().join("RepoSense")).unwrap();
+        assert!(!gh.should_run_as_jar(&app_path));
     }
 }
