@@ -262,7 +262,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-22.04, windows-2022 ]
-        cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fortio version", "fastlane --version", "gh/mozilla/sccache -V" ]
+        cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "run:java@14 java -version", "deno -V", "caddy -v", "jbang --version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fortio version", "fastlane --version", "gh/mozilla/sccache -V", "python -V" ]
         include:
           - os: ubuntu-22.04
             stage4_target: x86_64-unknown-linux-musl
@@ -313,7 +313,7 @@ jobs:
     strategy:
       matrix:
         os: [ macos-14, macos-15-intel ]
-        cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "deno -V",  "jbang --version", "gh/cli/cli version", "gh version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fastlane --version" ]
+        cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "deno -V",  "jbang --version", "gh/cli/cli version", "gh version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fastlane --version", "python -V" ]
         include:
           - os: macos-14
             stage4_target: aarch64-apple-darwin
@@ -373,7 +373,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-22.04-arm, macos-14, macos-15-intel ]
-        cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "deno -V", "jbang --version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fastlane --version" ]
+        cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "deno -V", "jbang --version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fastlane --version", "python -V" ]
         include:
           - os: ubuntu-22.04-arm
             stage4_target: aarch64-unknown-linux-musl
@@ -467,7 +467,7 @@ jobs:
       fail-fast: false
       matrix:
         container: [ ubuntu, debian, alpine, archlinux ]
-        cmd: [ "node@14 -v", "java -version", "gradle -version", "openapi version", "run:java@14 java -version", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "just -V", "fortio version", "gh/mozilla/sccache -V" ]
+        cmd: [ "node@14 -v", "java -version", "gradle -version", "openapi version", "run:java@14 java -version", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "just -V", "fortio version", "gh/mozilla/sccache -V", "python -V" ]
 
     runs-on: ubuntu-latest
     # Docker Hub rate-limits anonymous pulls from shared GitHub runner IPs,

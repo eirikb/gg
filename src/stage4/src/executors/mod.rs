@@ -13,5 +13,6 @@ pub mod jbang;
 pub mod maven;
 pub mod node;
 pub mod openapigenerator;
+pub mod python;
 pub mod rat;
 pub mod ruby;
