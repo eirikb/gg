@@ -29,6 +29,15 @@ impl Executor for OpenAPIGenerator {
         vec![BinPattern::Exact("java".to_string())]
     }
 
+    // Runs via `java` from a separate dep dir, so the cache check can't resolve
+    // a bin in our own dir - the jar being there is what makes it a hit (#244)
+    fn cached_install_is_valid(&self, app_path: &AppPath) -> bool {
+        app_path
+            .install_dir
+            .join("openapi-generator-cli.jar")
+            .is_file()
+    }
+
     fn get_name(&self) -> &str {
         "openapi"
     }
