@@ -212,7 +212,15 @@ pub fn detect_os_from_name(name: &str) -> Option<Os> {
 
 pub fn detect_arch_from_name(name: &str) -> Option<Arch> {
     let name_lower = name.to_lowercase();
-    if name_lower.contains("x86_64") || name_lower.contains("amd64") || name_lower.contains("x64") {
+    // "64-bit"/"64bit" is the x86_64 label goreleaser-style names use
+    // (vale_..._Linux_64-bit.tar.gz). arm spells it "arm64", so that branch
+    // below still wins (#288)
+    if name_lower.contains("x86_64")
+        || name_lower.contains("amd64")
+        || name_lower.contains("x64")
+        || name_lower.contains("64-bit")
+        || name_lower.contains("64bit")
+    {
         Some(Arch::X86_64)
     } else if name_lower.contains("arm64") || name_lower.contains("aarch64") {
         Some(Arch::Arm64)
@@ -306,5 +314,40 @@ mod tests {
             "https://api.github.com/".to_string()
         ))));
         assert!(!is_default_github_host("https://ghapi.ggcmd.io"));
+    }
+
+    #[test]
+    fn test_detect_arch_64bit_label() {
+        // vale (and other goreleaser tools) label x86_64 as "64-bit" (#288)
+        assert_eq!(
+            detect_arch_from_name("vale_3.15.1_Linux_64-bit.tar.gz"),
+            Some(Arch::X86_64)
+        );
+        assert_eq!(
+            detect_arch_from_name("vale_3.15.1_Windows_64-bit.zip"),
+            Some(Arch::X86_64)
+        );
+        assert_eq!(detect_arch_from_name("tool_64bit.zip"), Some(Arch::X86_64));
+        // arm64 must not be swallowed by the 64-bit branch
+        assert_eq!(
+            detect_arch_from_name("vale_3.15.1_Linux_arm64.tar.gz"),
+            Some(Arch::Arm64)
+        );
+    }
+
+    #[test]
+    fn test_detect_os_vale_labels() {
+        assert_eq!(
+            detect_os_from_name("vale_3.15.1_Linux_64-bit.tar.gz"),
+            Some(Os::Linux)
+        );
+        assert_eq!(
+            detect_os_from_name("vale_3.15.1_macOS_arm64.tar.gz"),
+            Some(Os::Mac)
+        );
+        assert_eq!(
+            detect_os_from_name("vale_3.15.1_Windows_64-bit.zip"),
+            Some(Os::Windows)
+        );
     }
 }
