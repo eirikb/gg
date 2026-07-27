@@ -316,7 +316,7 @@ impl Cli {
 /// Strip a product or `v` prefix off a version, keeping any leading range
 /// operator and partial form: "bun-v1.2.0" -> "1.2.0", "=v1.2.0" -> "=1.2.0",
 /// "^18" -> "^18". Left untouched if there's no version in it.
-fn strip_version_prefix(version: &str) -> String {
+pub(crate) fn strip_version_prefix(version: &str) -> String {
     let op_end = version
         .find(|c: char| !matches!(c, '^' | '~' | '=' | '<' | '>'))
         .unwrap_or(version.len());
@@ -330,7 +330,7 @@ fn strip_version_prefix(version: &str) -> String {
 /// True when `s` starts like a version (optional operator, optional `v`, then a
 /// digit), so it's the version half of `version-distribution`, not a product
 /// prefix. Skip the operator too, or "^17-temurin" loses its distribution.
-fn starts_like_version(s: &str) -> bool {
+pub(crate) fn starts_like_version(s: &str) -> bool {
     let s = s.trim_start_matches(['^', '~', '=', '<', '>']);
     let s = s.strip_prefix(['v', 'V']).unwrap_or(s);
     s.starts_with(|c: char| c.is_ascii_digit())

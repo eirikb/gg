@@ -29,7 +29,7 @@ mod target;
 mod tools;
 mod updater;
 
-use crate::tools::{get_all_tools, get_tool_info, ToolCategory};
+use crate::tools::{canonical_name, get_all_tools, get_tool_info, registry_name, ToolCategory};
 
 fn print_help(ver: &str) {
     println!(
@@ -190,6 +190,21 @@ fn print_tool_info(tool: &tools::ToolInfo) {
     }
 }
 
+/// Is this dependency already covered? Registry names on both sides: gh
+/// depends on "git" but a built git executor calls itself "portable-git", so
+/// comparing those raw built a second executor over the same cache dir and
+/// prepped both at once.
+fn dep_satisfied(
+    executors: &[Box<dyn Executor>],
+    to_add: &[Box<dyn Executor>],
+    processed: &std::collections::HashSet<String>,
+    dep_name: &str,
+) -> bool {
+    executors.iter().any(|e| registry_name(&**e) == dep_name)
+        || to_add.iter().any(|e| registry_name(&**e) == dep_name)
+        || processed.contains(dep_name)
+}
+
 #[tokio::main]
 async fn main() -> ExitCode {
     let ver = option_env!("VERSION").unwrap_or("dev");
@@ -315,7 +330,7 @@ async fn main() -> ExitCode {
                         }
                     }
                     Some(tool) => {
-                        checker::check_or_update_tool(
+                        return checker::check_or_update_tool(
                             input,
                             tool,
                             should_update,
@@ -409,21 +424,15 @@ async fn main() -> ExitCode {
             for x in &executors {
                 let deps = x.get_deps(input).await;
                 for dep in deps {
-                    if !executors
-                        .iter()
-                        .any(|e| e.get_name() == dep.name)
-                        && !to_add
-                            .iter()
-                            .any(|e| e.get_name() == dep.name)
-                        && !processed_deps.contains(&dep.name)
-                    {
+                    let dep_name = canonical_name(&dep.name);
+                    if !dep_satisfied(&executors, &to_add, &processed_deps, &dep_name) {
                         if dep.optional {
                             if which::which(&dep.name).is_ok() {
                                 info!(
                                     "Optional dependency '{}' found in PATH, using system version",
                                     dep.name
                                 );
-                                processed_deps.insert(dep.name.clone());
+                                processed_deps.insert(dep_name.clone());
                                 continue;
                             } else {
                                 info!(
@@ -442,7 +451,7 @@ async fn main() -> ExitCode {
                             gems: None,
                         }) {
                             look_for_deps = true;
-                            processed_deps.insert(dep.name.clone());
+                            processed_deps.insert(dep_name.clone());
                             to_add.push(e);
                         }
                     }
@@ -523,5 +532,42 @@ async fn main() -> ExitCode {
     } else {
         print_help(ver);
         ExitCode::from(0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ex(name: &str) -> Box<dyn Executor> {
+        <dyn Executor>::new(ExecutorCmd {
+            cmd: name.to_string(),
+            version: None,
+            distribution: None,
+            include_tags: Default::default(),
+            exclude_tags: Default::default(),
+            gems: None,
+        })
+        .unwrap()
+    }
+
+    #[test]
+    fn test_dep_satisfied_matches_on_registry_name() {
+        let git = vec![ex("git")];
+        let empty: Vec<Box<dyn Executor>> = vec![];
+        let none = std::collections::HashSet::new();
+
+        // The gh -> git case, the one that used to build a second executor
+        assert!(dep_satisfied(&git, &empty, &none, "git"));
+        assert!(dep_satisfied(&empty, &git, &none, "git"));
+
+        // ...without swallowing a dep that really is missing
+        assert!(!dep_satisfied(&git, &empty, &none, "java"));
+        assert!(!dep_satisfied(&empty, &empty, &none, "git"));
+
+        // an optional dep taken from PATH is recorded here, canonically
+        let mut done = std::collections::HashSet::new();
+        done.insert("java".to_string());
+        assert!(dep_satisfied(&empty, &empty, &done, "java"));
     }
 }
