@@ -184,18 +184,29 @@ pub fn take_github_errors() -> Vec<String> {
     std::mem::take(&mut *GITHUB_ERRORS.lock().unwrap())
 }
 
+fn has_token(name_lower: &str, token: &str) -> bool {
+    name_lower.split(['-', '_', '.']).any(|part| part == token)
+}
+
 pub fn detect_os_from_name(name: &str) -> Option<Os> {
     let name_lower = name.to_lowercase();
     // Android assets carry "linux" too (bun-linux-x64-android-*), and we don't
     // target Android. Delimited token only, or we'd drop desktop tools that
     // just have "android" somewhere in the name.
-    if name_lower
-        .split(|c: char| c == '-' || c == '_' || c == '.')
-        .any(|part| part == "android")
-    {
+    if has_token(&name_lower, "android") {
         return None;
     }
-    if name_lower.contains("darwin") || name_lower.contains("macos") || name_lower.contains("apple")
+    // "mac" as a delimited token only (agy_cli_mac_arm64.tar.gz): a bare
+    // substring check would claim anything with "machine" or "macro" in it.
+    // And it loses to an explicit linux/windows token, or a project that just
+    // happens to be called mac-something would outrank the real platform.
+    let mac_token = has_token(&name_lower, "mac")
+        && !has_token(&name_lower, "linux")
+        && !has_token(&name_lower, "windows");
+    if name_lower.contains("darwin")
+        || name_lower.contains("macos")
+        || name_lower.contains("apple")
+        || mac_token
     {
         Some(Os::Mac)
     } else if name_lower.contains("windows")
@@ -357,6 +368,58 @@ mod tests {
         assert_eq!(
             detect_os_from_name("vale_3.15.1_Windows_64-bit.zip"),
             Some(Os::Windows)
+        );
+    }
+
+    #[test]
+    fn test_detect_os_antigravity_assets() {
+        // all six real assets, arm64 included - #288/#301 was exactly the
+        // arm64 variant slipping through
+        assert_eq!(detect_os_from_name("agy_cli_mac_x64.tar.gz"), Some(Os::Mac));
+        assert_eq!(
+            detect_os_from_name("agy_cli_mac_arm64.tar.gz"),
+            Some(Os::Mac)
+        );
+        assert_eq!(
+            detect_os_from_name("agy_cli_linux_x64.tar.gz"),
+            Some(Os::Linux)
+        );
+        assert_eq!(
+            detect_os_from_name("agy_cli_linux_arm64.tar.gz"),
+            Some(Os::Linux)
+        );
+        assert_eq!(
+            detect_os_from_name("agy_cli_windows_x64.zip"),
+            Some(Os::Windows)
+        );
+        assert_eq!(
+            detect_os_from_name("agy_cli_windows_arm64.zip"),
+            Some(Os::Windows)
+        );
+    }
+
+    #[test]
+    fn test_detect_os_mac_token_boundaries() {
+        // "mac" fused into a bigger word is not macOS
+        assert_eq!(
+            detect_os_from_name("macro-tool-linux-x64.tar.gz"),
+            Some(Os::Linux)
+        );
+        assert_eq!(detect_os_from_name("machine-agent_1.2.zip"), None);
+        // a project literally named "mac-something" must not outrank the
+        // real platform token
+        assert_eq!(
+            detect_os_from_name("mac-tool-linux-x64.tar.gz"),
+            Some(Os::Linux)
+        );
+        assert_eq!(
+            detect_os_from_name("mac-utils_windows_amd64.zip"),
+            Some(Os::Windows)
+        );
+        // ...but an explicit darwin/macos label still wins outright
+        assert_eq!(
+            detect_os_from_name("tool_darwin_arm64.tar.gz"),
+            Some(Os::Mac)
         );
     }
 }

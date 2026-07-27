@@ -304,6 +304,25 @@ pub static TOOL_REGISTRY: LazyLock<HashMap<&'static str, ToolInfo>> = LazyLock::
             },
         },
         ToolInfo {
+            name: "antigravity",
+            aliases: vec!["antigravity-cli", "agy"],
+            description: "Antigravity CLI - Google's coding agent for your terminal",
+            category: ToolCategory::Utility,
+            tags: vec![],
+            example: Some("gg antigravity --version"),
+            // GitHub releases, not npm: unlike gemini-cli this ships as a
+            // self-contained native binary, one per os/arch.
+            factory: |cmd| {
+                Some(create_github_executor(
+                    cmd,
+                    "google-antigravity",
+                    "antigravity-cli",
+                    vec![],
+                    vec!["antigravity", "antigravity.exe"],
+                ))
+            },
+        },
+        ToolInfo {
             name: "codex",
             aliases: vec![],
             description: "OpenAI Codex CLI - coding agent for your terminal",
