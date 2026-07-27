@@ -480,6 +480,25 @@ pub fn get_tool_info(name: &str) -> Option<&'static ToolInfo> {
     TOOL_REGISTRY.get(name)
 }
 
+/// The registry name an executor answers to - what the user types.
+/// get_name() is the repo for github tools (gh -> cli, git -> portable-git)
+/// and the invoked alias for ruby, so comparing against it misses. Going via
+/// the cmd also folds aliases (claude-code -> claude). Falls back to
+/// get_name() for anything not in the registry, like a raw gh/owner/repo.
+pub fn registry_name(executor: &dyn Executor) -> String {
+    get_tool_info(&executor.get_executor_cmd().cmd)
+        .map(|info| info.name.to_string())
+        .unwrap_or_else(|| executor.get_name().to_string())
+}
+
+/// The registry name for a name the user typed, unchanged if it is not a
+/// registered tool (raw gh/owner/repo, or not a tool at all).
+pub fn canonical_name(name: &str) -> String {
+    get_tool_info(name)
+        .map(|info| info.name.to_string())
+        .unwrap_or_else(|| name.to_string())
+}
+
 pub fn get_all_tools() -> Vec<&'static ToolInfo> {
     let mut tools: Vec<_> = TOOL_REGISTRY
         .values()
