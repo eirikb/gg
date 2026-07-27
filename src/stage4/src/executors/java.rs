@@ -8,7 +8,7 @@ use serde::Deserialize;
 
 use crate::executor::{AppInput, AppPath, BinPattern, Download, ExecutorCmd};
 use crate::executors::gradle_properties::GradleAndWrapperProperties;
-use crate::executors::java_distributions::JavaDistributions;
+use crate::executors::java_distributions::{JavaDistributions, FALLBACK_DISTRIBUTION};
 use crate::target::Os;
 use crate::Executor;
 
@@ -19,6 +19,15 @@ struct SdkmanRc {
 
 pub struct Java {
     pub executor_cmd: ExecutorCmd,
+}
+
+fn has_matching_version(downloads: &[Download], version_req: &VersionReq) -> bool {
+    downloads.iter().any(|download| {
+        download
+            .version
+            .as_ref()
+            .is_some_and(|version| version_req.matches(&version.to_version()))
+    })
 }
 
 fn get_jdk_version() -> Option<String> {
@@ -80,7 +89,29 @@ impl Executor for Java {
     ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
         Box::pin(async move {
             let distribution = self.get_distribution();
-            (distribution.handler)(&input.target).await
+            let downloads = (distribution.handler)(&input.target).await;
+
+            // An explicit -azul/-tem is the user's call, so never second-guess it.
+            if self.executor_cmd.distribution.is_some() {
+                return downloads;
+            }
+
+            // Same precedence as the download filtering in executor.rs, so .sdkmanrc and
+            // gradle.properties versions get the fallback too, not just an explicit @14.
+            let version_req = match &self.executor_cmd.version {
+                Some(version_req) => Some(version_req.to_version_req()),
+                None => self.get_version_req(),
+            };
+
+            match version_req {
+                Some(version_req) if !has_matching_version(&downloads, &version_req) => {
+                    match JavaDistributions::get_by_name(FALLBACK_DISTRIBUTION) {
+                        Some(fallback) => (fallback.handler)(&input.target).await,
+                        None => downloads,
+                    }
+                }
+                _ => downloads,
+            }
         })
     }
 
