@@ -103,15 +103,21 @@ impl Executor for Java {
                 None => self.get_version_req(),
             };
 
-            match version_req {
-                Some(version_req) if !has_matching_version(&downloads, &version_req) => {
-                    match JavaDistributions::get_by_name(FALLBACK_DISTRIBUTION) {
-                        Some(fallback) => (fallback.handler)(&input.target).await,
-                        None => downloads,
-                    }
+            // An unreachable Adoptium comes back as an empty list rather than an error, so
+            // treat that as unsatisfiable too - otherwise a bare `java` (no version to
+            // check against) would be left with nothing while Azul was sitting right there.
+            let needs_fallback = match &version_req {
+                Some(version_req) => !has_matching_version(&downloads, version_req),
+                None => downloads.is_empty(),
+            };
+
+            if needs_fallback {
+                if let Some(fallback) = JavaDistributions::get_by_name(FALLBACK_DISTRIBUTION) {
+                    return (fallback.handler)(&input.target).await;
                 }
-                _ => downloads,
             }
+
+            downloads
         })
     }
 
@@ -160,6 +166,54 @@ mod tests {
     // one test delete another's dir mid-flight.)
     fn create_isolated_test_dir() -> TempDir {
         tempfile::tempdir().unwrap()
+    }
+
+    fn downloads_for(versions: &[&str]) -> Vec<Download> {
+        versions
+            .iter()
+            .map(|version| Download::new(format!("http://x/{version}"), version, None))
+            .collect()
+    }
+
+    fn version_req(req: &str) -> VersionReq {
+        crate::executor::GgVersionReq::new(req).unwrap().to_version_req()
+    }
+
+    #[test]
+    fn test_default_distribution_is_temurin() {
+        assert_eq!(JavaDistributions::get_default().name, "temurin");
+    }
+
+    #[test]
+    fn test_fallback_distribution_is_registered() {
+        // The fallback is looked up by name at runtime, so a rename would
+        // otherwise only surface as a silently missing fallback.
+        assert!(JavaDistributions::get_by_name(FALLBACK_DISTRIBUTION).is_some());
+    }
+
+    #[test]
+    fn test_has_matching_version_finds_requested_release() {
+        let downloads = downloads_for(&["17.0.9", "21.0.1"]);
+        assert!(has_matching_version(&downloads, &version_req("21")));
+    }
+
+    #[test]
+    fn test_has_matching_version_misses_release_adoptium_lacks() {
+        // java@14 404s on Adoptium, which is what sends us to Azul.
+        let downloads = downloads_for(&["8.0.392", "17.0.9", "21.0.1"]);
+        assert!(!has_matching_version(&downloads, &version_req("14")));
+    }
+
+    #[test]
+    fn test_has_matching_version_on_empty_downloads() {
+        // An unreachable Adoptium looks like this, not like an error.
+        assert!(!has_matching_version(&[], &version_req("21")));
+    }
+
+    #[test]
+    fn test_has_matching_version_ignores_versionless_downloads() {
+        let downloads = vec![Download::new("http://x/nightly".to_string(), "nightly", None)];
+        assert!(!has_matching_version(&downloads, &version_req("21")));
     }
 
     #[test]
