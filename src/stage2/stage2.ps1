@@ -97,7 +97,20 @@ if ($hash)
             # stage3, so verify ourselves. Catches a tampered blob as well as
             # the boring case: a truncated-but-non-empty download. -ne is
             # case-insensitive, so uppercase vs lowercase hex is fine.
-            $actualHash = (Get-FileHash $tempFile -Algorithm SHA512).Hash
+            # Hash via .NET, not Get-FileHash: that one lives in a script module
+            # which PowerShell 7 shadows with its Core-only copy, so a child
+            # Windows PowerShell can't load it and the cmdlet vanishes (#292).
+            $sha512 = [System.Security.Cryptography.SHA512]::Create()
+            $stream = [System.IO.File]::OpenRead($tempFile)
+            try
+            {
+                $actualHash = [BitConverter]::ToString($sha512.ComputeHash($stream)).Replace('-', '')
+            }
+            finally
+            {
+                $stream.Dispose()
+                $sha512.Dispose()
+            }
             if ($actualHash -ne $hash)
             {
                 Write-Host "Hash mismatch: expected $hash, got $actualHash"
