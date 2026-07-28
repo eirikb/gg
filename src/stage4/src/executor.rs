@@ -368,6 +368,14 @@ pub async fn prep(
                 .map(|t| format!("e{t}"))
                 .collect::<Vec<String>>()
                 .join("_")
+                .as_str()
+            // Or java@17-azul and java@17-temurin share a dir - and so do java and
+            // java@-jdk, where the "distribution" is really a dropped tag
+            + executor_cmd
+                .distribution
+                .as_ref()
+                .map(|d| format!("d{d}"))
+                .unwrap_or_default()
                 .as_str(),
     );
     let path = path_path.to_str().unwrap();

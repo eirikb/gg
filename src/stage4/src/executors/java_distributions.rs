@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::future::Future;
 use std::pin::Pin;
 
+use log::debug;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -20,20 +21,26 @@ pub struct DistributionConfig {
 
 pub struct JavaDistributions;
 
+const DEFAULT_DISTRIBUTION: &str = "temurin";
+
+/// Adoptium only publishes the current LTS and recent feature releases, so `java@14` and
+/// friends 404 there. Azul still carries them, so it backs up the default.
+pub const FALLBACK_DISTRIBUTION: &str = "azul";
+
 impl JavaDistributions {
     pub fn get_all() -> Vec<DistributionConfig> {
         vec![
-            DistributionConfig {
-                name: "azul",
-                short_name: "azul",
-                default_tags: vec!["jdk", "ga"],
-                handler: get_azul_downloads,
-            },
             DistributionConfig {
                 name: "temurin",
                 short_name: "tem",
                 default_tags: vec!["jdk", "ga"],
                 handler: get_temurin_downloads,
+            },
+            DistributionConfig {
+                name: "azul",
+                short_name: "azul",
+                default_tags: vec!["jdk", "ga"],
+                handler: get_azul_downloads,
             },
         ]
     }
@@ -45,7 +52,7 @@ impl JavaDistributions {
     }
 
     pub fn get_default() -> DistributionConfig {
-        Self::get_all().into_iter().next().unwrap()
+        Self::get_by_name(DEFAULT_DISTRIBUTION).expect("default distribution must be registered")
     }
 }
 
@@ -82,9 +89,27 @@ struct AzulBundle {
 fn get_azul_downloads(target: &Target) -> Pin<Box<dyn Future<Output = Vec<Download>> + Send>> {
     let target = *target;
     Box::pin(async move {
-        let json = reqwest::get("https://www.azul.com/wp-admin/admin-ajax.php?action=bundles&endpoint=community&use_stage=false&include_fields=java_version,release_status,abi,arch,bundle_type,cpu_gen,ext,features,hw_bitness,javafx,latest,os,support_term").await.unwrap().text().await.unwrap();
-        let bundles: Vec<AzulBundle> =
-            serde_json::from_str(json.as_str()).expect("JSON was not well-formatted");
+        // Azul backs the default now, not just an explicit -azul, so a bad day at
+        // admin-ajax.php (it likes answering with HTML) must not panic the whole run
+        let bundles: Vec<AzulBundle> = match reqwest::get("https://www.azul.com/wp-admin/admin-ajax.php?action=bundles&endpoint=community&use_stage=false&include_fields=java_version,release_status,abi,arch,bundle_type,cpu_gen,ext,features,hw_bitness,javafx,latest,os,support_term").await {
+            Ok(response) => match response.text().await {
+                Ok(text) => match serde_json::from_str(text.as_str()) {
+                    Ok(bundles) => bundles,
+                    Err(e) => {
+                        debug!("Azul returned something that was not bundle JSON: {e}");
+                        return vec![];
+                    }
+                },
+                Err(e) => {
+                    debug!("Could not read the Azul response: {e}");
+                    return vec![];
+                }
+            },
+            Err(e) => {
+                debug!("Could not reach Azul: {e}");
+                return vec![];
+            }
+        };
 
         bundles
             .iter()
@@ -193,115 +218,134 @@ struct TemurinVersionData {
     pub semver: String,
 }
 
-fn get_temurin_downloads(target: &Target) -> Pin<Box<dyn Future<Output = Vec<Download>> + Send>> {
-    let target = *target;
-    Box::pin(async move {
-        let mut downloads = Vec::new();
+/// Used when api.adoptium.net/v3/info/available_releases can't be reached or parsed.
+const TEMURIN_FALLBACK_VERSIONS: [u32; 5] = [8, 11, 17, 21, 25];
 
-        let available_releases_url = "https://api.adoptium.net/v3/info/available_releases";
-        let versions_to_fetch = match reqwest::get(available_releases_url).await {
-            Ok(response) => match response.text().await {
-                Ok(text) => match serde_json::from_str::<TemurinAvailableReleases>(&text) {
-                    Ok(available) => {
-                        let mut versions = available.available_lts_releases;
-                        if !versions.contains(&available.most_recent_feature_release) {
-                            versions.push(available.most_recent_feature_release);
+async fn get_temurin_available_releases() -> Option<TemurinAvailableReleases> {
+    let text = reqwest::get("https://api.adoptium.net/v3/info/available_releases")
+        .await
+        .ok()?
+        .text()
+        .await
+        .ok()?;
+    serde_json::from_str(&text).ok()
+}
+
+async fn get_temurin_version_downloads(target: Target, version: u32, lts: bool) -> Vec<Download> {
+    let url = format!(
+        "https://api.adoptium.net/v3/assets/feature_releases/{}/ga?page_size=20&page=0&jvm_impl=hotspot&vendor=eclipse",
+        version
+    );
+
+    let mut downloads = Vec::new();
+
+    if let Ok(response) = reqwest::get(&url).await {
+        if let Ok(text) = response.text().await {
+            if let Ok(releases) = serde_json::from_str::<Vec<TemurinRelease>>(&text) {
+                for release in releases {
+                    for binary in release.binaries {
+                        // Adoptium also ships sbom/testimage/debugimage/sources/staticlibs,
+                        // which nobody can run. jre stays - image_type becomes a tag, so
+                        // java@-jdk+jre can ask for it
+                        if binary.image_type != "jdk" && binary.image_type != "jre" {
+                            continue;
                         }
-                        versions
-                    }
-                    Err(_) => vec![8, 11, 17, 21],
-                },
-                Err(_) => vec![8, 11, 17, 21],
-            },
-            Err(_) => vec![8, 11, 17, 21],
-        };
 
-        for version in versions_to_fetch {
-            let url = format!(
-                "https://api.adoptium.net/v3/assets/feature_releases/{}/ga?page_size=20&page=0&jvm_impl=hotspot&vendor=eclipse",
-                version
-            );
+                        let os_match = match (&target.os, binary.os.as_str()) {
+                            (Os::Windows, "windows") => true,
+                            (Os::Linux, "linux") => target.variant != Some(Variant::Musl),
+                            (Os::Linux, "alpine-linux") => target.variant == Some(Variant::Musl),
+                            (Os::Mac, "mac") => true,
+                            (Os::Any, _) => true,
+                            _ => false,
+                        };
 
-            if let Ok(response) = reqwest::get(&url).await {
-                if let Ok(text) = response.text().await {
-                    if let Ok(releases) = serde_json::from_str::<Vec<TemurinRelease>>(&text) {
-                        for release in releases {
-                            for binary in release.binaries {
-                                if binary.image_type != "jdk" {
-                                    continue;
-                                }
+                        let arch_match = matches!(
+                            (&target.arch, binary.architecture.as_str()),
+                            (Arch::X86_64, "x64")
+                                | (Arch::X86_64, "x86_64")
+                                | (Arch::Arm64, "aarch64")
+                                | (Arch::Arm64, "arm64")
+                                | (Arch::Armv7, "arm")
+                                | (Arch::Any, _)
+                        );
 
-                                let os_match = match (&target.os, binary.os.as_str()) {
-                                    (Os::Windows, "windows") => true,
-                                    (Os::Linux, "linux") => target.variant != Some(Variant::Musl),
-                                    (Os::Linux, "alpine-linux") => {
-                                        target.variant == Some(Variant::Musl)
-                                    }
-                                    (Os::Mac, "mac") => true,
-                                    (Os::Any, _) => true,
-                                    _ => false,
-                                };
+                        if os_match && arch_match {
+                            let mut tags = HashSet::new();
+                            tags.insert(binary.image_type.clone());
+                            tags.insert(release.release_type.clone());
+                            tags.insert(binary.heap_size.clone());
+                            tags.insert(binary.jvm_impl.clone());
+                            tags.insert(format!("java{}", version));
 
-                                let arch_match = matches!(
-                                    (&target.arch, binary.architecture.as_str()),
-                                    (Arch::X86_64, "x64")
-                                        | (Arch::X86_64, "x86_64")
-                                        | (Arch::Arm64, "aarch64")
-                                        | (Arch::Arm64, "arm64")
-                                        | (Arch::Armv7, "arm")
-                                        | (Arch::Any, _)
-                                );
-
-                                if os_match && arch_match {
-                                    let mut tags = HashSet::new();
-                                    tags.insert(binary.image_type.clone());
-                                    tags.insert(release.release_type.clone());
-                                    tags.insert(binary.heap_size.clone());
-                                    tags.insert(binary.jvm_impl.clone());
-                                    tags.insert(format!("java{}", version));
-
-                                    if [8, 11, 17, 21].contains(&version) {
-                                        tags.insert("lts".to_string());
-                                    }
-
-                                    let os = match binary.os.as_str() {
-                                        "windows" => Some(Os::Windows),
-                                        "linux" => Some(Os::Linux),
-                                        "alpine-linux" => Some(Os::Linux),
-                                        "mac" => Some(Os::Mac),
-                                        _ => None,
-                                    };
-
-                                    let arch = match binary.architecture.as_str() {
-                                        "x64" | "x86_64" => Some(Arch::X86_64),
-                                        "aarch64" | "arm64" => Some(Arch::Arm64),
-                                        "arm" => Some(Arch::Armv7),
-                                        "x86" | "x32" => None,
-                                        _ => None,
-                                    };
-
-                                    let variant = if binary.os == "alpine-linux" {
-                                        Some(Variant::Musl)
-                                    } else {
-                                        target.variant
-                                    };
-
-                                    downloads.push(Download {
-                                        download_url: binary.package.link,
-                                        version: GgVersion::new(&release.version_data.semver),
-                                        os,
-                                        arch,
-                                        variant,
-                                        tags,
-                                    });
-                                }
+                            if lts {
+                                tags.insert("lts".to_string());
                             }
+
+                            let os = match binary.os.as_str() {
+                                "windows" => Some(Os::Windows),
+                                "linux" => Some(Os::Linux),
+                                "alpine-linux" => Some(Os::Linux),
+                                "mac" => Some(Os::Mac),
+                                _ => None,
+                            };
+
+                            let arch = match binary.architecture.as_str() {
+                                "x64" | "x86_64" => Some(Arch::X86_64),
+                                "aarch64" | "arm64" => Some(Arch::Arm64),
+                                "arm" => Some(Arch::Armv7),
+                                "x86" | "x32" => None,
+                                _ => None,
+                            };
+
+                            let variant = if binary.os == "alpine-linux" {
+                                Some(Variant::Musl)
+                            } else {
+                                target.variant
+                            };
+
+                            downloads.push(Download {
+                                download_url: binary.package.link,
+                                version: GgVersion::new(&release.version_data.semver),
+                                os,
+                                arch,
+                                variant,
+                                tags,
+                            });
                         }
                     }
                 }
             }
         }
+    }
 
-        downloads
+    downloads
+}
+
+fn get_temurin_downloads(target: &Target) -> Pin<Box<dyn Future<Output = Vec<Download>> + Send>> {
+    let target = *target;
+    Box::pin(async move {
+        let (versions, lts_versions) = match get_temurin_available_releases().await {
+            Some(available) => {
+                let mut versions = available.available_releases;
+                if !versions.contains(&available.most_recent_feature_release) {
+                    versions.push(available.most_recent_feature_release);
+                }
+                (versions, available.available_lts_releases)
+            }
+            None => (
+                TEMURIN_FALLBACK_VERSIONS.to_vec(),
+                TEMURIN_FALLBACK_VERSIONS.to_vec(),
+            ),
+        };
+
+        // One request per feature release, so fan them out instead of paying for them in sequence.
+        futures_util::future::join_all(versions.into_iter().map(|version| {
+            get_temurin_version_downloads(target, version, lts_versions.contains(&version))
+        }))
+        .await
+        .into_iter()
+        .flatten()
+        .collect()
     })
 }
