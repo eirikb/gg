@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::future::Future;
 use std::pin::Pin;
 
+use log::debug;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -88,9 +89,27 @@ struct AzulBundle {
 fn get_azul_downloads(target: &Target) -> Pin<Box<dyn Future<Output = Vec<Download>> + Send>> {
     let target = *target;
     Box::pin(async move {
-        let json = reqwest::get("https://www.azul.com/wp-admin/admin-ajax.php?action=bundles&endpoint=community&use_stage=false&include_fields=java_version,release_status,abi,arch,bundle_type,cpu_gen,ext,features,hw_bitness,javafx,latest,os,support_term").await.unwrap().text().await.unwrap();
-        let bundles: Vec<AzulBundle> =
-            serde_json::from_str(json.as_str()).expect("JSON was not well-formatted");
+        // Azul backs the default now, not just an explicit -azul, so a bad day at
+        // admin-ajax.php (it likes answering with HTML) must not panic the whole run
+        let bundles: Vec<AzulBundle> = match reqwest::get("https://www.azul.com/wp-admin/admin-ajax.php?action=bundles&endpoint=community&use_stage=false&include_fields=java_version,release_status,abi,arch,bundle_type,cpu_gen,ext,features,hw_bitness,javafx,latest,os,support_term").await {
+            Ok(response) => match response.text().await {
+                Ok(text) => match serde_json::from_str(text.as_str()) {
+                    Ok(bundles) => bundles,
+                    Err(e) => {
+                        debug!("Azul returned something that was not bundle JSON: {e}");
+                        return vec![];
+                    }
+                },
+                Err(e) => {
+                    debug!("Could not read the Azul response: {e}");
+                    return vec![];
+                }
+            },
+            Err(e) => {
+                debug!("Could not reach Azul: {e}");
+                return vec![];
+            }
+        };
 
         bundles
             .iter()
@@ -225,7 +244,10 @@ async fn get_temurin_version_downloads(target: Target, version: u32, lts: bool) 
             if let Ok(releases) = serde_json::from_str::<Vec<TemurinRelease>>(&text) {
                 for release in releases {
                     for binary in release.binaries {
-                        if binary.image_type != "jdk" {
+                        // Adoptium also ships sbom/testimage/debugimage/sources/staticlibs,
+                        // which nobody can run. jre stays - image_type becomes a tag, so
+                        // java@-jdk+jre can ask for it
+                        if binary.image_type != "jdk" && binary.image_type != "jre" {
                             continue;
                         }
 
