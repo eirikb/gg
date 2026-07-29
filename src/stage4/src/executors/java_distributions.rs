@@ -2,11 +2,11 @@ use std::collections::HashSet;
 use std::future::Future;
 use std::pin::Pin;
 
-use log::debug;
 use serde::Deserialize;
 use serde::Serialize;
 
 use crate::executor::{Download, GgVersion};
+use crate::fetch::fetch_json;
 use crate::target::{Arch, Os, Target, Variant};
 
 type DistributionHandler = fn(&Target) -> Pin<Box<dyn Future<Output = Vec<Download>> + Send>>;
@@ -91,24 +91,9 @@ fn get_azul_downloads(target: &Target) -> Pin<Box<dyn Future<Output = Vec<Downlo
     Box::pin(async move {
         // Azul backs the default now, not just an explicit -azul, so a bad day at
         // admin-ajax.php (it likes answering with HTML) must not panic the whole run
-        let bundles: Vec<AzulBundle> = match reqwest::get("https://www.azul.com/wp-admin/admin-ajax.php?action=bundles&endpoint=community&use_stage=false&include_fields=java_version,release_status,abi,arch,bundle_type,cpu_gen,ext,features,hw_bitness,javafx,latest,os,support_term").await {
-            Ok(response) => match response.text().await {
-                Ok(text) => match serde_json::from_str(text.as_str()) {
-                    Ok(bundles) => bundles,
-                    Err(e) => {
-                        debug!("Azul returned something that was not bundle JSON: {e}");
-                        return vec![];
-                    }
-                },
-                Err(e) => {
-                    debug!("Could not read the Azul response: {e}");
-                    return vec![];
-                }
-            },
-            Err(e) => {
-                debug!("Could not reach Azul: {e}");
-                return vec![];
-            }
+        let bundles: Vec<AzulBundle> = match fetch_json("https://www.azul.com/wp-admin/admin-ajax.php?action=bundles&endpoint=community&use_stage=false&include_fields=java_version,release_status,abi,arch,bundle_type,cpu_gen,ext,features,hw_bitness,javafx,latest,os,support_term").await {
+            Some(bundles) => bundles,
+            None => return vec![],
         };
 
         bundles

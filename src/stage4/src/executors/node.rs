@@ -11,6 +11,7 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::executor::{AppInput, BinPattern, Download, Executor, ExecutorCmd, GgVersion};
+use crate::fetch::fetch_json;
 use crate::target::{Arch, Os, Target, Variant};
 
 type Root = Vec<Root2>;
@@ -223,13 +224,13 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
         (Os::Mac, Arch::Arm64, _) => "osx-arm64-tar",
         _ => "linux-x64",
     };
-    let json = reqwest::get(format!("https://{host}/download/release/index.json"))
-        .await
-        .unwrap()
-        .text()
-        .await
-        .unwrap();
-    let root: Root = serde_json::from_str(json.as_str()).expect("JSON was not well-formatted");
+    // The musl builds only live on unofficial-builds.nodejs.org, a community box
+    // that goes away now and then
+    let url = format!("https://{host}/download/release/index.json");
+    let root: Root = match fetch_json(&url).await {
+        Some(root) => root,
+        None => return vec![],
+    };
 
     root.iter().filter(|r|
         r.files.contains(&file.to_string())

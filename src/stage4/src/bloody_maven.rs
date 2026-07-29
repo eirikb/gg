@@ -2,10 +2,12 @@ use std::collections::HashSet;
 use std::future::Future;
 use std::pin::Pin;
 
+use log::warn;
 use serde::{Deserialize, Serialize};
 use serde_xml_rs::from_str;
 
 use crate::executor::{Download, GgVersion};
+use crate::fetch::fetch_text;
 use crate::target::{Arch, Os, Variant};
 
 #[derive(Serialize, Deserialize)]
@@ -45,10 +47,17 @@ pub fn get_download_urls_from_maven<'a>(group: &'a str, artifact: &'a str) -> Pi
     Box::pin(async move {
         let root_url = format!("https://repo1.maven.org/maven2/org/{group}/{artifact}");
         let metadata_url = format!("{root_url}/maven-metadata.xml");
-        let body = reqwest::get(metadata_url.clone()).await
-            .expect("Unable to connect to archive.apache.org").text().await
-            .expect("Unable to download maven metadata xml");
-        let root: Metadata = from_str(body.as_str()).expect("XML was not well-formatted");
+        let body = match fetch_text(&metadata_url).await {
+            Some(body) => body,
+            None => return vec![],
+        };
+        let root: Metadata = match from_str(body.as_str()) {
+            Ok(root) => root,
+            Err(e) => {
+                warn!("{metadata_url} did not answer with the maven metadata we expected: {e}");
+                return vec![];
+            }
+        };
 
         root.versioning.versions.version.into_iter().map(|ver| {
             let mut tags = HashSet::new();

@@ -433,7 +433,12 @@ pub async fn prep(
         for reason in crate::github_utils::take_github_errors() {
             eprintln!("{reason}");
         }
-        panic!("Did not find any download URL!");
+        // Someone else's site being down is not a bug in gg (#272). Any warning from
+        // fetch.rs is right above this with the real reason.
+        return Err(format!(
+            "Did not find any download URL for {}. The version list may be unreachable - run with -v for details.",
+            executor.get_name()
+        ));
     }
 
     let urls_match = get_url_matches(&urls, input, executor);
@@ -819,6 +824,58 @@ pub async fn try_run(
 mod tests {
     use super::*;
     use crate::github_utils::{detect_arch_from_name, detect_os_from_name};
+
+    /// An executor whose index is down: no URLs, no explanation.
+    struct NoUrls {
+        cmd: ExecutorCmd,
+    }
+
+    impl Executor for NoUrls {
+        fn get_executor_cmd(&self) -> &ExecutorCmd {
+            &self.cmd
+        }
+        fn get_download_urls<'a>(
+            &'a self,
+            _input: &'a AppInput,
+        ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
+            Box::pin(async { vec![] })
+        }
+        fn get_bins(&self, _input: &AppInput) -> Vec<BinPattern> {
+            vec![BinPattern::Exact("nope".to_string())]
+        }
+        fn get_name(&self) -> &str {
+            "nope"
+        }
+    }
+
+    // Used to be panic!("Did not find any download URL!") - that is #272
+    #[tokio::test]
+    async fn test_prep_errors_instead_of_panicking_when_there_are_no_urls() {
+        let executor = NoUrls {
+            cmd: ExecutorCmd {
+                cmd: "nope".to_string(),
+                version: None,
+                distribution: None,
+                include_tags: Default::default(),
+                exclude_tags: Default::default(),
+                gems: None,
+            },
+        };
+        let input = AppInput {
+            target: Target {
+                arch: Arch::X86_64,
+                os: Os::Linux,
+                variant: None,
+            },
+            app_args: vec![],
+        };
+        let result = prep(&executor, &input, &ProgressBar::hidden()).await;
+        let message = result.err().expect("empty url list must not be Ok");
+        assert!(
+            message.contains("nope"),
+            "the tool should be named: {message}"
+        );
+    }
 
     #[test]
     fn test_find_jar_file_skips_companions_and_is_deterministic() {
