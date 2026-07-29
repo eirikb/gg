@@ -9,6 +9,7 @@ use sha256::try_digest;
 
 use crate::executor::{java_deps, AppInput, BinPattern, Download, ExecutorCmd, ExecutorDep};
 use crate::executors::gradle_properties::GradleAndWrapperProperties;
+use crate::fetch::fetch_text;
 use crate::target::Variant;
 use crate::{target, Executor};
 
@@ -53,12 +54,10 @@ impl Executor for Gradle {
                 }
             }
 
-            let body = reqwest::get("https://gradle.org/releases")
-                .await
-                .expect("Unable to connect to services.gradle.org")
-                .text()
-                .await
-                .expect("Unable to download gradle list of versions");
+            let body = match fetch_text("https://gradle.org/releases").await {
+                Some(body) => body,
+                None => return vec![],
+            };
 
             let document = Html::parse_document(body.as_str());
             document

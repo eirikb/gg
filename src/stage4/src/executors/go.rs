@@ -4,6 +4,7 @@ use std::future::Future;
 use std::pin::Pin;
 
 use crate::executor::{AppInput, BinPattern, Download, Executor, ExecutorCmd, GgVersion};
+use crate::fetch::fetch_text;
 use crate::target::Arch::{Arm64, X86_64};
 use crate::target::Os::{Linux, Mac, Windows};
 use crate::target::Variant::Any;
@@ -67,12 +68,10 @@ impl Executor for Go {
     ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
         Box::pin(async move {
             // let mut downloads: Vec<Download> = vec!();
-            let body = reqwest::get("https://go.dev/dl/")
-                .await
-                .expect("Unable to connect to go.dev")
-                .text()
-                .await
-                .expect("Unable to download gradle list of versions");
+            let body = match fetch_text("https://go.dev/dl/").await {
+                Some(body) => body,
+                None => return vec![],
+            };
 
             let document = Html::parse_document(body.as_str());
             let downloads: Vec<Download> = document

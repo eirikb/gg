@@ -107,11 +107,13 @@ fn matches_requested_tool(executor: &dyn Executor, tool_name: &str, requested_na
         || executor.get_executor_cmd().cmd == tool_name
 }
 
+/// `Err` is "could not read the version list", not "nothing newer" - calling a tool up
+/// to date because the index was down tells someone their old build is the current one.
 async fn check_tool_update(
     meta: GgMeta,
     path: std::path::PathBuf,
     input: &AppInput,
-) -> Option<UpdateInfo> {
+) -> Result<Option<UpdateInfo>, String> {
     info!(
         "Checking tool update for cmd: {:?} with version: {:?}",
         meta.cmd.cmd, meta.cmd.version
@@ -129,6 +131,12 @@ async fn check_tool_update(
             executor.get_name(),
             meta.cmd.cmd
         );
+        if urls.is_empty() {
+            return Err(format!(
+                "{}: could not read the version list",
+                registry_name(&*executor)
+            ));
+        }
         let urls_matches = executor.get_url_matches(&urls, input);
         info!(
             "Got {} url matches for {}",
@@ -155,7 +163,7 @@ async fn check_tool_update(
 
             let version_selector = meta.cmd.to_version_selector();
 
-            return Some(UpdateInfo {
+            return Ok(Some(UpdateInfo {
                 tool_name: registry_name(&*executor),
                 version_selector,
                 current_version: current_version.map(|v| v.to_string()),
@@ -164,10 +172,10 @@ async fn check_tool_update(
                 is_major_update,
                 path,
                 executor,
-            });
+            }));
         }
     }
-    None
+    Ok(None)
 }
 
 fn should_include_update(update_info: &UpdateInfo, allow_major: bool) -> bool {
@@ -208,7 +216,7 @@ pub async fn check_or_update_all_including_gg(
     should_update: bool,
     allow_major: bool,
     force: bool,
-) {
+) -> ExitCode {
     if should_update {
         updater::perform_update(gg_version, force).await;
     } else {
@@ -216,7 +224,7 @@ pub async fn check_or_update_all_including_gg(
     }
     println!();
 
-    check_or_update_all(input, should_update, allow_major, force).await;
+    check_or_update_all(input, should_update, allow_major, force).await
 }
 
 pub async fn check_or_update_all(
@@ -224,12 +232,13 @@ pub async fn check_or_update_all(
     should_update: bool,
     allow_major: bool,
     force: bool,
-) {
+) -> ExitCode {
+    let mut update_failed = false;
     let metas = get_all_tool_metas().await;
 
     if metas.is_empty() {
         println!("No cached tools found.");
-        return;
+        return ExitCode::from(0);
     }
 
     println!("Checking for updates...");
@@ -276,9 +285,11 @@ pub async fn check_or_update_all(
                 let spinner_key = path.to_string_lossy().to_string();
                 let result = check_tool_update(meta, path, input).await;
 
-                if result.is_some() {
-                    if let Some(pb) = tool_spinners.get(&spinner_key) {
-                        pb.finish_with_message("done");
+                if let Some(pb) = tool_spinners.get(&spinner_key) {
+                    match &result {
+                        Ok(Some(_)) => pb.finish_with_message("done"),
+                        Ok(None) => pb.finish_and_clear(),
+                        Err(_) => pb.finish_with_message("could not check"),
                     }
                 }
 
@@ -287,7 +298,15 @@ pub async fn check_or_update_all(
         })
         .collect();
 
-    let update_infos: Vec<UpdateInfo> = join_all(check_tasks).await.into_iter().flatten().collect();
+    let mut check_failures: Vec<String> = Vec::new();
+    let mut update_infos: Vec<UpdateInfo> = Vec::new();
+    for result in join_all(check_tasks).await {
+        match result {
+            Ok(Some(info)) => update_infos.push(info),
+            Ok(None) => {}
+            Err(reason) => check_failures.push(reason),
+        }
+    }
 
     m.clear().unwrap();
 
@@ -337,9 +356,20 @@ pub async fn check_or_update_all(
         }
     }
 
+    if !check_failures.is_empty() {
+        eprintln!();
+        for reason in &check_failures {
+            eprintln!("Could not check for updates - {reason}");
+        }
+    }
+
     if filtered_updates.is_empty() {
-        println!("\nAll tools are up to date!");
-        return;
+        if check_failures.is_empty() {
+            println!("\nAll tools are up to date!");
+            return ExitCode::from(0);
+        }
+        println!("\nEverything we could check is up to date.");
+        return ExitCode::from(1);
     }
 
     if !should_update {
@@ -359,15 +389,29 @@ pub async fn check_or_update_all(
             if let Some(parent) = info.path.parent() {
                 if fs::remove_dir_all(parent).is_ok() {
                     let pb = create_barus();
-                    let _ = prep(&*info.executor, input, &pb).await;
-                    println!("Successfully updated {}", info.tool_name);
+                    // Cache dir is already gone, so swallowing this loses the tool
+                    match prep(&*info.executor, input, &pb).await {
+                        Ok(_) => println!("Successfully updated {}", info.tool_name),
+                        Err(e) => {
+                            eprintln!("Failed to update {}: {}", info.tool_name, e);
+                            update_failed = true;
+                        }
+                    }
                 } else {
-                    println!("Unable to update {}", info.tool_name);
+                    eprintln!("Unable to update {}", info.tool_name);
+                    update_failed = true;
                 }
             } else {
-                println!("Unable to update {}", info.tool_name);
+                eprintln!("Unable to update {}", info.tool_name);
+                update_failed = true;
             }
         }
+    }
+
+    if update_failed {
+        ExitCode::from(1)
+    } else {
+        ExitCode::from(0)
     }
 }
 
@@ -453,7 +497,16 @@ pub async fn check_or_update_tool(
     let mut update_failed = false;
 
     for (meta, path) in matching_metas {
-        if let Some(info) = check_tool_update(meta, path, input).await {
+        let checked = match check_tool_update(meta, path, input).await {
+            Ok(checked) => checked,
+            Err(reason) => {
+                // Keep going - another cached copy of the same tool may check fine
+                eprintln!("Could not check for updates - {reason}");
+                update_failed = true;
+                continue;
+            }
+        };
+        if let Some(info) = checked {
             let display_name = if info.version_selector.is_empty() {
                 info.tool_name.clone()
             } else {

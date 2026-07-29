@@ -23,6 +23,7 @@ mod cli;
 mod config;
 mod executor;
 mod executors;
+mod fetch;
 mod gem_utils;
 mod github_utils;
 mod target;
@@ -313,7 +314,7 @@ async fn main() -> ExitCode {
 
                 match tool_name.as_deref() {
                     None => {
-                        checker::check_or_update_all_including_gg(
+                        return checker::check_or_update_all_including_gg(
                             input,
                             ver,
                             should_update,

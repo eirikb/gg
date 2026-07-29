@@ -6,6 +6,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::pin::Pin;
 
 use crate::executor::{AppInput, BinPattern, Download, Executor, ExecutorCmd, GgVersion};
+use crate::fetch::fetch_json;
 use crate::target::{Arch, Os, Variant};
 
 pub struct Rat {
@@ -23,12 +24,10 @@ impl Executor for Rat {
     ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
         Box::pin(async move {
             let versions: Vec<String> =
-                reqwest::get("https://ratbinsa.z1.web.core.windows.net/list.json")
-                    .await
-                    .unwrap()
-                    .json()
-                    .await
-                    .unwrap();
+                match fetch_json("https://ratbinsa.z1.web.core.windows.net/list.json").await {
+                    Some(versions) => versions,
+                    None => return vec![],
+                };
             versions
                 .into_iter()
                 .map(|name| {
