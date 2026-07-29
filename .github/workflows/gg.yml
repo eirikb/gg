@@ -462,11 +462,9 @@ jobs:
   # gg.cmd ends up in cmd.exe whatever you start it from, and inherits that shell's
   # PATH and PSModulePath - that is how #291 (Git's GNU tar ahead of the System32
   # one) and #292 (pwsh shadows the module Get-FileHash lives in) got out, since
-  # test-batch starts from cmd and test-OS1 says `sh gg.cmd`. Only the first run
-  # downloads stage2, and only a run with the secret has a stage4 blob to fetch.
+  # test-batch starts from cmd and test-OS1 says `sh gg.cmd`.
   test-parent-shells:
     needs: [ stage1, hash ]
-    if: needs.hash.outputs.has_secret == 'true'
     strategy:
       fail-fast: false
       matrix:
@@ -481,27 +479,50 @@ jobs:
         with:
           name: gg.cmd
 
-      - name: Wipe the cache, or this is not a first run
+      # Without the secret there is no uploaded blob for stage2 to fetch, so seed
+      # stage4 the way the other jobs do rather than skipping the job. stage1
+      # still unpacks - which is where #291 lives - only the download is skipped
+      - name: Download stage4
+        if: needs.hash.outputs.has_secret != 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: stage4_x86_64-pc-windows-msvc
+
+      - name: Pre-populate cache with stage4
+        if: needs.hash.outputs.has_secret != 'true'
         shell: bash
-        # Both roots, since the bat branch reads %UserProfile% and the sh branch
-        # $HOME. Fresh VM every time, so this is belt and braces
         run: |
-          rm -rf "$USERPROFILE/.cache/gg"
-          rm -rf "$HOME/.cache/gg"
+          mkdir -p "$USERPROFILE/.cache/gg/gg-dev"
+          echo "x86_64-pc-windows-msvc" > "$USERPROFILE/.cache/gg/gg-dev/system"
+          cp stage4 "$USERPROFILE/.cache/gg/gg-dev/stage4.exe"
+
+      # stage1.bat only unpacks when it finds no stage2.ps1, so an inherited
+      # cache would skip the very thing this job exists to run
+      - name: No cached stage2, or the unpack never happens
+        shell: bash
+        run: |
+          rm -rf "$USERPROFILE/.cache/gg/gg-dev/stage2.ps1"
+          [ ! -e "$USERPROFILE/.cache/gg/gg-dev/stage2.ps1" ] || { echo "still cached, not a first run"; exit 1; }
 
       - name: Run from pwsh
         if: matrix.parent == 'pwsh'
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        # Twice, like the other test jobs - the second run takes the cached
-        # branch in stage1.bat, which nothing else here covers. pwsh keeps going
-        # after a failed native command, so check before the warm run hides it
+        # Twice, like the other jobs - the second run takes the cached branch in
+        # stage1.bat. pwsh does not stop on a failed native command, and
+        # stage2.ps1 defaults $exitCode to 0 when Start-Process made no process,
+        # so check the code and what node actually printed
         run: |
-          .\gg.cmd -v node -v
+          $out = (.\gg.cmd -v node -v 2>&1 | Out-String)
+          Write-Host $out
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          echo "Nice, let's try again"
-          .\gg.cmd -v node -v
+          if ($out -notmatch '(?m)^v[0-9]+\.[0-9]') { Write-Host "gg exited 0 but node never printed a version"; exit 1 }
+          Write-Host "Nice, let's try again"
+          $out = (.\gg.cmd -v node -v 2>&1 | Out-String)
+          Write-Host $out
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($out -notmatch '(?m)^v[0-9]+\.[0-9]') { Write-Host "gg exited 0 but node never printed a version"; exit 1 }
 
       # ./gg.cmd, not `sh gg.cmd` - MSYS hands a .cmd to cmd.exe by extension,
       # which is the point. `sh` would take the other branch and prove nothing
@@ -511,9 +532,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
-          ./gg.cmd -v node -v
+          out=$(./gg.cmd -v node -v 2>&1)
+          echo "$out"
+          echo "$out" | grep -Eq '^v[0-9]+\.[0-9]' || { echo "gg exited 0 but node never printed a version"; exit 1; }
           echo "Nice, let's try again"
-          ./gg.cmd -v node -v
+          out=$(./gg.cmd -v node -v 2>&1)
+          echo "$out"
+          echo "$out" | grep -Eq '^v[0-9]+\.[0-9]' || { echo "gg exited 0 but node never printed a version"; exit 1; }
 
   test-container:
     needs: [ stage1, hash ]
@@ -592,10 +617,8 @@ jobs:
           echo "test-container: ${{ needs.test-container.result }}"
           if [ "${{ needs.test-container.result }}" != "success" ]; then FAILED=1; fi
 
-          # Skipped is fine here and only here - without the secret there is no
-          # stage4 blob to bootstrap from, so the job cannot run at all
           echo "test-parent-shells: ${{ needs.test-parent-shells.result }}"
-          if [ "${{ needs.test-parent-shells.result }}" != "success" ] && [ "${{ needs.test-parent-shells.result }}" != "skipped" ]; then FAILED=1; fi
+          if [ "${{ needs.test-parent-shells.result }}" != "success" ]; then FAILED=1; fi
 
           if [ $FAILED -eq 1 ]; then
             echo "::error::One or more test jobs failed or were skipped"
