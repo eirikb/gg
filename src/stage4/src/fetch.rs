@@ -83,12 +83,18 @@ mod tests {
         let addr = listener.local_addr().unwrap();
         tokio::spawn(async move {
             if let Ok((mut socket, _)) = listener.accept().await {
-                use tokio::io::AsyncWriteExt;
+                use tokio::io::{AsyncReadExt, AsyncWriteExt};
+                // Read the request off the socket before answering. Closing with
+                // bytes still unread gets us an RST on Windows, and the response
+                // we just wrote is thrown away with it
+                let mut request = [0u8; 2048];
+                let _ = socket.read(&mut request).await;
                 let response = format!(
                     "HTTP/1.1 {status_line}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
                     body.len()
                 );
                 let _ = socket.write_all(response.as_bytes()).await;
+                let _ = socket.flush().await;
                 let _ = socket.shutdown().await;
             }
         });
