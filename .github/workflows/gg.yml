@@ -458,7 +458,52 @@ jobs:
         run: |
           .\gg.cmd -V
           echo Exit code was %errorlevel%
-  
+
+  # gg.cmd ends up in cmd.exe whatever you start it from, and inherits that shell's
+  # PATH and PSModulePath - that is how #291 (Git's GNU tar ahead of the System32
+  # one) and #292 (pwsh shadows the module Get-FileHash lives in) got out, since
+  # test-batch starts from cmd and test-OS1 says `sh gg.cmd`. Only the first run
+  # downloads stage2, and only a run with the secret has a stage4 blob to fetch.
+  test-parent-shells:
+    needs: [ stage1, hash ]
+    if: needs.hash.outputs.has_secret == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        # `shell:` takes no expressions, so this only picks which step is live -
+        # still one job per parent shell, so a break says which shell broke
+        parent: [ pwsh, bash ]
+
+    runs-on: windows-2022
+    steps:
+      - name: Download gg
+        uses: actions/download-artifact@v8
+        with:
+          name: gg.cmd
+
+      - name: Wipe the cache, or this is not a first run
+        shell: bash
+        # Both, since the bat branch keys off %UserProfile% and the sh branch off
+        # $HOME, and those are not the same place on a runner
+        run: |
+          rm -rf "$USERPROFILE/.cache/gg"
+          rm -rf "$HOME/.cache/gg"
+
+      - name: Run from pwsh
+        if: matrix.parent == 'pwsh'
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: .\gg.cmd -v node -v
+
+      # ./gg.cmd, not `sh gg.cmd` - bash hands a .cmd to cmd.exe, which is the
+      # whole point. `sh` would take the other branch and prove nothing here
+      - name: Run from git bash
+        if: matrix.parent == 'bash'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./gg.cmd -v node -v
 
   test-container:
     needs: [ stage1, hash ]
@@ -512,7 +557,7 @@ jobs:
 
   # GitHub Actions hate me :/
   gatekeeper:
-    needs: [ test-OS1, test-OS2, test-OS3, test-batch, test-container ]
+    needs: [ test-OS1, test-OS2, test-OS3, test-batch, test-parent-shells, test-container ]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -536,6 +581,11 @@ jobs:
 
           echo "test-container: ${{ needs.test-container.result }}"
           if [ "${{ needs.test-container.result }}" != "success" ]; then FAILED=1; fi
+
+          # Skipped is fine here and only here - without the secret there is no
+          # stage4 blob to bootstrap from, so the job cannot run at all
+          echo "test-parent-shells: ${{ needs.test-parent-shells.result }}"
+          if [ "${{ needs.test-parent-shells.result }}" != "success" ] && [ "${{ needs.test-parent-shells.result }}" != "skipped" ]; then FAILED=1; fi
 
           if [ $FAILED -eq 1 ]; then
             echo "::error::One or more test jobs failed or were skipped"
