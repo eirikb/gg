@@ -7,6 +7,9 @@ use serde::Serialize;
 
 use crate::executor::{Download, GgVersion};
 use crate::fetch::fetch_json;
+use crate::github_utils::{
+    create_github_client, detect_arch_from_name, detect_os_from_name, record_github_error,
+};
 use crate::target::{Arch, Os, Target, Variant};
 
 type DistributionHandler = fn(&Target) -> Pin<Box<dyn Future<Output = Vec<Download>> + Send>>;
@@ -41,6 +44,12 @@ impl JavaDistributions {
                 short_name: "azul",
                 default_tags: vec!["jdk", "ga"],
                 handler: get_azul_downloads,
+            },
+            DistributionConfig {
+                name: "graalvm",
+                short_name: "graal",
+                default_tags: vec!["jdk", "ga"],
+                handler: get_graalvm_downloads,
             },
         ]
     }
@@ -333,4 +342,350 @@ fn get_temurin_downloads(target: &Target) -> Pin<Box<dyn Future<Output = Vec<Dow
         .flatten()
         .collect()
     })
+}
+
+/// `graalvm-community-jdk-<version>_<os>-<arch>_bin.tar.gz`, `.zip` on Windows.
+///
+/// The version has to come from the asset and not the release tag: the newest ones
+/// are tagged `graal-25.2.4`, which says nothing about the JDK inside (25.0.4).
+fn graalvm_download(asset_name: &str, download_url: &str) -> Option<Download> {
+    if !asset_name.ends_with("_bin.tar.gz") && !asset_name.ends_with("_bin.zip") {
+        return None;
+    }
+
+    let (version_part, _) = asset_name
+        .strip_prefix("graalvm-community-jdk-")?
+        .split_once('_')?;
+    // find_version already picks 25.0.4 out of 25i2-25.0.4. Don't split on the dash
+    // first, that would throw away a future 24.0.1-b01 instead of reading it
+    let version = GgVersion::new(version_part)?;
+
+    let os = detect_os_from_name(asset_name)?;
+    let arch = detect_arch_from_name(asset_name)?;
+
+    // jdk and ga are required defaults - without both, executor.rs drops everything
+    let tags = HashSet::from([
+        "jdk".to_string(),
+        "ga".to_string(),
+        "graalvm".to_string(),
+        format!("java{}", version.to_version().major),
+    ]);
+
+    Some(Download {
+        download_url: download_url.to_string(),
+        version: Some(version),
+        os: Some(os),
+        arch: Some(arch),
+        // CE has no musl build, so alpine gets the glibc one and finds out at runtime
+        variant: Some(Variant::Any),
+        tags,
+    })
+}
+
+/// Prereleases and drafts have to go before the assets pick up the `ga` tag below,
+/// or an EA build ends up claiming to be a GA one.
+fn graalvm_release_downloads<'a>(
+    prerelease: bool,
+    draft: bool,
+    assets: impl IntoIterator<Item = (&'a str, &'a str)>,
+    target: &Target,
+) -> Vec<Download> {
+    if prerelease || draft {
+        return vec![];
+    }
+
+    assets
+        .into_iter()
+        .filter_map(|(name, url)| graalvm_download(name, url))
+        .filter(|download| download.os == Some(target.os) && download.arch == Some(target.arch))
+        .collect()
+}
+
+/// No install step needed - `native-image` is bundled in every asset we accept. The
+/// `gu` era ended with the `graalvm-community-jdk-*` naming at 17.0.7, not at 21.
+fn get_graalvm_downloads(target: &Target) -> Pin<Box<dyn Future<Output = Vec<Download>> + Send>> {
+    let target = *target;
+    Box::pin(async move {
+        let mut downloads: Vec<Download> = vec![];
+
+        let octocrab = match create_github_client() {
+            Ok(octocrab) => octocrab,
+            Err(err) => {
+                // Silence here reads as "no build for your platform" further down
+                record_github_error("graalvm/graalvm-ce-builds", &err);
+                return downloads;
+            }
+        };
+
+        let mut page: u32 = 1;
+        loop {
+            let releases_result = octocrab
+                .repos("graalvm", "graalvm-ce-builds")
+                .releases()
+                .list()
+                .page(page)
+                .per_page(100)
+                .send()
+                .await;
+
+            match releases_result {
+                Ok(releases) => {
+                    for release in releases.items {
+                        downloads.extend(graalvm_release_downloads(
+                            release.prerelease,
+                            release.draft,
+                            release
+                                .assets
+                                .iter()
+                                .map(|a| (a.name.as_str(), a.browser_download_url.as_str())),
+                            &target,
+                        ));
+                    }
+
+                    if releases.next.is_none() {
+                        break;
+                    }
+                    page += 1;
+                }
+                Err(err) => {
+                    record_github_error("graalvm/graalvm-ce-builds", &err);
+                    break;
+                }
+            }
+        }
+
+        downloads
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn download_for(asset_name: &str) -> Option<Download> {
+        graalvm_download(asset_name, &format!("http://x/{asset_name}"))
+    }
+
+    fn version_of(asset_name: &str) -> String {
+        download_for(asset_name)
+            .unwrap()
+            .version
+            .unwrap()
+            .to_version()
+            .to_string()
+    }
+
+    #[test]
+    fn test_graalvm_is_registered_under_both_names() {
+        assert_eq!(
+            JavaDistributions::get_by_name("graalvm").map(|d| d.name),
+            Some("graalvm")
+        );
+        // java@21-graal
+        assert_eq!(
+            JavaDistributions::get_by_name("graal").map(|d| d.name),
+            Some("graalvm")
+        );
+    }
+
+    #[test]
+    fn test_graalvm_version_comes_from_the_asset_not_the_tag() {
+        assert_eq!(
+            version_of("graalvm-community-jdk-25.0.2_linux-x64_bin.tar.gz"),
+            "25.0.2"
+        );
+        // Tagged graal-25.2.4, so the tag alone would say 25.2.4 and java@25.0.4-graal
+        // would miss the newest build there is
+        assert_eq!(
+            version_of("graalvm-community-jdk-25i2-25.0.4_linux-x64_bin.tar.gz"),
+            "25.0.4"
+        );
+        assert_eq!(
+            version_of("graalvm-community-jdk-25i1-25.0.3_linux-x64_bin.tar.gz"),
+            "25.0.3"
+        );
+    }
+
+    #[test]
+    fn test_graalvm_interim_build_outranks_the_older_plain_release() {
+        let interim = download_for("graalvm-community-jdk-25i2-25.0.4_linux-x64_bin.tar.gz")
+            .unwrap()
+            .version
+            .unwrap()
+            .to_version();
+        let plain = download_for("graalvm-community-jdk-25.0.2_linux-x64_bin.tar.gz")
+            .unwrap()
+            .version
+            .unwrap()
+            .to_version();
+        assert!(interim > plain, "{} should sort above {}", interim, plain);
+    }
+
+    #[test]
+    fn test_graalvm_asset_names_resolve_to_a_platform() {
+        let cases = [
+            (
+                "graalvm-community-jdk-25.0.2_linux-x64_bin.tar.gz",
+                Os::Linux,
+                Arch::X86_64,
+            ),
+            (
+                "graalvm-community-jdk-25.0.2_linux-aarch64_bin.tar.gz",
+                Os::Linux,
+                Arch::Arm64,
+            ),
+            (
+                "graalvm-community-jdk-25.0.2_macos-aarch64_bin.tar.gz",
+                Os::Mac,
+                Arch::Arm64,
+            ),
+            // dropped at 25.0.2, but older releases still carry it
+            (
+                "graalvm-community-jdk-24.0.2_macos-x64_bin.tar.gz",
+                Os::Mac,
+                Arch::X86_64,
+            ),
+            (
+                "graalvm-community-jdk-25.0.2_windows-x64_bin.zip",
+                Os::Windows,
+                Arch::X86_64,
+            ),
+        ];
+
+        for (name, os, arch) in cases {
+            let download = download_for(name).unwrap_or_else(|| panic!("no download for {}", name));
+            assert_eq!(download.os, Some(os), "os for {}", name);
+            assert_eq!(download.arch, Some(arch), "arch for {}", name);
+            assert_eq!(download.variant, Some(Variant::Any), "variant for {}", name);
+        }
+    }
+
+    #[test]
+    fn test_graalvm_carries_the_required_default_tags() {
+        let tags = download_for("graalvm-community-jdk-25i2-25.0.4_linux-x64_bin.tar.gz")
+            .unwrap()
+            .tags;
+        assert!(tags.contains("jdk"));
+        assert!(tags.contains("ga"));
+        assert!(tags.contains("graalvm"));
+        assert!(tags.contains("java25"));
+    }
+
+    fn target_for(os: Os, arch: Arch) -> Target {
+        Target {
+            os,
+            arch,
+            variant: None,
+        }
+    }
+
+    /// One real release page: four platforms, one JDK.
+    const RELEASE_ASSETS: [(&str, &str); 4] = [
+        (
+            "graalvm-community-jdk-25i2-25.0.4_linux-x64_bin.tar.gz",
+            "http://x/linux-x64",
+        ),
+        (
+            "graalvm-community-jdk-25i2-25.0.4_linux-aarch64_bin.tar.gz",
+            "http://x/linux-aarch64",
+        ),
+        (
+            "graalvm-community-jdk-25i2-25.0.4_macos-aarch64_bin.tar.gz",
+            "http://x/macos-aarch64",
+        ),
+        (
+            "graalvm-community-jdk-25i2-25.0.4_windows-x64_bin.zip",
+            "http://x/windows-x64",
+        ),
+    ];
+
+    #[test]
+    fn test_graalvm_release_keeps_only_the_running_platform() {
+        let downloads = graalvm_release_downloads(
+            false,
+            false,
+            RELEASE_ASSETS.iter().copied(),
+            &target_for(Os::Linux, Arch::X86_64),
+        );
+
+        assert_eq!(downloads.len(), 1, "one asset per platform per release");
+        assert_eq!(downloads[0].download_url, "http://x/linux-x64");
+        // the JDK version, not the graal-25.2.4 tag the release carries
+        assert_eq!(
+            downloads[0]
+                .version
+                .as_ref()
+                .unwrap()
+                .to_version()
+                .to_string(),
+            "25.0.4"
+        );
+    }
+
+    #[test]
+    fn test_graalvm_release_has_nothing_for_a_platform_ce_skips() {
+        // CE publishes no windows-aarch64, and 25.0.2 onward no macos-x64 either
+        let downloads = graalvm_release_downloads(
+            false,
+            false,
+            RELEASE_ASSETS.iter().copied(),
+            &target_for(Os::Windows, Arch::Arm64),
+        );
+        assert!(downloads.is_empty());
+    }
+
+    #[test]
+    fn test_graalvm_release_skips_prereleases_and_drafts() {
+        let linux = target_for(Os::Linux, Arch::X86_64);
+        assert!(
+            graalvm_release_downloads(true, false, RELEASE_ASSETS.iter().copied(), &linux)
+                .is_empty(),
+            "prerelease"
+        );
+        assert!(
+            graalvm_release_downloads(false, true, RELEASE_ASSETS.iter().copied(), &linux)
+                .is_empty(),
+            "draft"
+        );
+        assert_eq!(
+            graalvm_release_downloads(false, false, RELEASE_ASSETS.iter().copied(), &linux).len(),
+            1,
+            "the same page is kept when the release is stable"
+        );
+    }
+
+    #[test]
+    fn test_graalvm_release_drops_sidecars_without_dropping_the_release() {
+        let assets = [
+            (
+                "graalvm-community-jdk-25.0.2_linux-x64_bin.tar.gz.sha256",
+                "http://x/sha",
+            ),
+            (
+                "graalvm-community-jdk-25.0.2_linux-x64_bin.tar.gz",
+                "http://x/real",
+            ),
+        ];
+        let downloads = graalvm_release_downloads(
+            false,
+            false,
+            assets.iter().copied(),
+            &target_for(Os::Linux, Arch::X86_64),
+        );
+
+        assert_eq!(downloads.len(), 1);
+        assert_eq!(downloads[0].download_url, "http://x/real");
+    }
+
+    #[test]
+    fn test_graalvm_skips_what_it_cannot_run() {
+        // checksum sidecar sits right next to the real asset
+        assert!(download_for("graalvm-community-jdk-25.0.2_linux-x64_bin.tar.gz.sha256").is_none());
+        // the pre-2023 naming
+        assert!(download_for("graalvm-ce-java17-linux-amd64-22.3.0.tar.gz").is_none());
+        // not ours at all
+        assert!(download_for("OpenJDK21U-jdk_x64_linux_hotspot_21.0.2_13.tar.gz").is_none());
+        // Oracle GraalVM, same suffix and shape as CE but a different license
+        assert!(download_for("graalvm-jdk-25.0.2_linux-x64_bin.tar.gz").is_none());
+    }
 }

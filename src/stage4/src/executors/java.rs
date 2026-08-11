@@ -60,8 +60,7 @@ fn get_jdk_version_from_path(base_path: &str) -> Option<String> {
 impl Java {
     fn get_distribution(&self) -> crate::executors::java_distributions::DistributionConfig {
         if let Some(ref dist_name) = self.executor_cmd.distribution {
-            JavaDistributions::get_by_name(dist_name)
-                .unwrap_or_else(JavaDistributions::get_default)
+            JavaDistributions::get_by_name(dist_name).unwrap_or_else(JavaDistributions::get_default)
         } else {
             JavaDistributions::get_default()
         }
@@ -179,13 +178,15 @@ impl Executor for Java {
     }
 
     fn get_env(&self, app_path: &AppPath) -> HashMap<String, String> {
-        [(
-            String::from("JAVA_HOME"),
-            app_path.install_dir.to_str().unwrap().to_string(),
-        )]
-        .iter()
-        .cloned()
-        .collect()
+        let home = app_path.install_dir.to_str().unwrap().to_string();
+        let mut env = HashMap::from([(String::from("JAVA_HOME"), home.clone())]);
+
+        // the build tools look for GRAALVM_HOME, not JAVA_HOME
+        if self.get_distribution().name == "graalvm" {
+            env.insert(String::from("GRAALVM_HOME"), home);
+        }
+
+        env
     }
 }
 
@@ -266,6 +267,37 @@ mod tests {
         let include = java_with(None, &[], &["jdk"]).get_default_include_tags();
         assert!(!include.contains("jdk"));
         assert!(include.contains("ga"));
+    }
+
+    #[test]
+    fn test_graalvm_also_gets_graalvm_home() {
+        let app_path = AppPath {
+            install_dir: std::path::PathBuf::from("/somewhere/graalvm"),
+        };
+        // java@21-graal is what people type
+        for distribution in ["graalvm", "graal"] {
+            let env = java_with(Some(distribution), &[], &[]).get_env(&app_path);
+            assert_eq!(
+                env.get("JAVA_HOME").map(String::as_str),
+                Some("/somewhere/graalvm"),
+                "JAVA_HOME for {distribution}"
+            );
+            assert_eq!(
+                env.get("GRAALVM_HOME").map(String::as_str),
+                Some("/somewhere/graalvm"),
+                "GRAALVM_HOME for {distribution}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_other_distributions_have_no_graalvm_home() {
+        let app_path = AppPath {
+            install_dir: std::path::PathBuf::from("/somewhere/temurin"),
+        };
+        let env = java_with(Some("temurin"), &[], &[]).get_env(&app_path);
+        assert!(env.contains_key("JAVA_HOME"));
+        assert!(!env.contains_key("GRAALVM_HOME"));
     }
 
     #[test]
