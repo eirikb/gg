@@ -8,7 +8,6 @@ use log::debug;
 use crate::target::{Arch, Os};
 
 const DEFAULT_GITHUB_API_URL: &str = "https://api.github.com";
-const PUBLIC_PROXY_URL: &str = "https://ghapi.ggcmd.io";
 
 fn first_nonempty(values: impl IntoIterator<Item = Option<String>>) -> Option<String> {
     values
@@ -67,26 +66,8 @@ fn is_default_github_host(base_url: &str) -> bool {
     base_url.eq_ignore_ascii_case(DEFAULT_GITHUB_API_URL)
 }
 
-fn hack_enabled() -> bool {
-    // Shh don't tell anyone (routes via the public proxy - on purpose only
-    // the rate-limit hint mentions it, keep it out of the README)
-    env::var("GG_GITHUB_API_HACK").is_ok_and(|v| {
-        matches!(
-            v.trim().to_lowercase().as_str(),
-            "1" | "true" | "yes" | "on"
-        )
-    })
-}
-
 pub fn github_api_base_url() -> String {
-    // An explicit GG_GITHUB_API_URL always wins over the hack switch.
-    if let Some(url) = first_nonempty([env::var("GG_GITHUB_API_URL").ok()]) {
-        return normalize_base_url(Some(url));
-    }
-    if hack_enabled() {
-        return PUBLIC_PROXY_URL.to_string();
-    }
-    DEFAULT_GITHUB_API_URL.to_string()
+    normalize_base_url(env::var("GG_GITHUB_API_URL").ok())
 }
 
 pub fn create_github_client() -> Result<octocrab::Octocrab, octocrab::Error> {
@@ -131,8 +112,7 @@ pub fn explain_github_error(err: &octocrab::Error) -> String {
                         "GitHub API rate limit exceeded ({base_url}).\n\
                          To fix, either:\n\
                          \x20 - set GITHUB_TOKEN (or GG_GITHUB_TOKEN / GH_TOKEN)\n\
-                         \x20 - log in with the GitHub CLI: gh auth login\n\
-                         \x20 - ...or, between you and me: GG_GITHUB_API_HACK=1 ;)"
+                         \x20 - log in with the GitHub CLI: gh auth login"
                     )
                 } else {
                     // Only GG_GITHUB_TOKEN goes to a custom endpoint, no
@@ -141,8 +121,8 @@ pub fn explain_github_error(err: &octocrab::Error) -> String {
                         "GitHub API rate limit exceeded ({base_url}).\n\
                          To fix, either:\n\
                          \x20 - set GG_GITHUB_TOKEN (the only token sent to a custom endpoint)\n\
-                         \x20 - unset GG_GITHUB_API_URL / GG_GITHUB_API_HACK to use api.github.com\n\
-                         \x20   with GITHUB_TOKEN or gh auth login"
+                         \x20 - unset GG_GITHUB_API_URL to use api.github.com with\n\
+                         \x20   GITHUB_TOKEN or gh auth login"
                     )
                 }
             } else if status == 401 {
@@ -286,8 +266,8 @@ mod tests {
             "https://api.github.com"
         );
         assert_eq!(
-            normalize_base_url(Some("https://ghapi.ggcmd.io//".to_string())),
-            "https://ghapi.ggcmd.io"
+            normalize_base_url(Some("https://github.example.com/api/v3//".to_string())),
+            "https://github.example.com/api/v3"
         );
     }
 
@@ -324,7 +304,7 @@ mod tests {
         assert!(is_default_github_host(&normalize_base_url(Some(
             "https://api.github.com/".to_string()
         ))));
-        assert!(!is_default_github_host("https://ghapi.ggcmd.io"));
+        assert!(!is_default_github_host("https://github.example.com/api/v3"));
     }
 
     #[test]

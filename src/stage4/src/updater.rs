@@ -14,7 +14,7 @@ async fn download_to_temp(temp_path: &str) -> Result<(), String> {
     info!("Downloading to temp file: {}", temp_path);
     let bloody_indiana_jones =
         BloodyIndianaJones::new_with_file_name(url.to_string(), temp_path.to_string(), pb.clone());
-    bloody_indiana_jones.download().await;
+    bloody_indiana_jones.download().await?;
 
     if std::path::Path::new(&bloody_indiana_jones.file_path).exists() {
         fs::copy(&bloody_indiana_jones.file_path, temp_path)

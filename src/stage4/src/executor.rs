@@ -459,6 +459,12 @@ pub async fn prep(
         ));
         &url.download_url
     } else {
+        // A half-answered listing lands here, not in the is_empty branch, so drain
+        // here too - or a rate limit reads as "your platform is not supported" (#272)
+        pb.finish_and_clear();
+        for reason in crate::github_utils::take_github_errors() {
+            eprintln!("{reason}");
+        }
         return Err(format!(
             "No matching download found for OS: {:?}, Arch: {:?}",
             input.target.os, input.target.arch
@@ -475,7 +481,7 @@ pub async fn prep(
         &cache_base_dir,
         pb.clone(),
     );
-    bloody_indiana_jones.download().await;
+    bloody_indiana_jones.download().await?;
     if !executor.post_download(bloody_indiana_jones.file_path.clone()) {
         return Err("Post download failed".to_string());
     }
@@ -1046,15 +1052,22 @@ mod tests {
         // that breaks parsing (#293).
         let ge = GgVersionReq::new(">=18.0.0").unwrap();
         assert_eq!(">=18.0.0", ge.to_string());
-        let m = |v: &str| ge.to_version_req().matches(&GgVersion::new(v).unwrap().to_version());
+        let m = |v: &str| {
+            ge.to_version_req()
+                .matches(&GgVersion::new(v).unwrap().to_version())
+        };
         assert!(m("18.0.0"));
         assert!(m("19.2.0"));
         assert!(!m("17.0.0"));
 
         let lt = GgVersionReq::new("<2.0.0").unwrap();
         assert_eq!("<2.0.0", lt.to_string());
-        assert!(lt.to_version_req().matches(&GgVersion::new("1.9.0").unwrap().to_version()));
-        assert!(!lt.to_version_req().matches(&GgVersion::new("2.0.0").unwrap().to_version()));
+        assert!(lt
+            .to_version_req()
+            .matches(&GgVersion::new("1.9.0").unwrap().to_version()));
+        assert!(!lt
+            .to_version_req()
+            .matches(&GgVersion::new("2.0.0").unwrap().to_version()));
     }
 
     fn parse_release_assets(text: &str) -> Vec<String> {

@@ -76,7 +76,9 @@ impl BloodyIndianaJones {
         }
     }
 
-    pub async fn download(&self) {
+    /// Err instead of a panic - a dead connection is somebody's network,
+    /// not a bug worth a backtrace (#272)
+    pub async fn download(&self) -> Result<(), String> {
         info!("Downloading {}", &self.url);
         self.pb.reset();
         self.pb.set_message("Preparing");
@@ -95,7 +97,7 @@ impl BloodyIndianaJones {
             match self.try_download(&client).await {
                 Ok(()) => {
                     info!("Downloaded {} to {}", &self.url, &self.file_path);
-                    return;
+                    return Ok(());
                 }
                 Err((reason, retryable)) if retryable && attempt < max_attempts => {
                     let backoff = std::time::Duration::from_secs(attempt as u64);
@@ -109,10 +111,14 @@ impl BloodyIndianaJones {
                     last_error = reason;
                     tokio::time::sleep(backoff).await;
                 }
-                Err((reason, _)) => panic!("Failed to download {}: {}", &self.url, reason),
+                Err((reason, _)) => {
+                    self.pb.finish_and_clear();
+                    return Err(format!("Failed to download {}: {}", &self.url, reason));
+                }
             }
         }
-        panic!("Failed to download {}: {}", &self.url, last_error);
+        self.pb.finish_and_clear();
+        Err(format!("Failed to download {}: {}", &self.url, last_error))
     }
 
     /// One download attempt. Err carries (reason, retryable).
@@ -130,14 +136,24 @@ impl BloodyIndianaJones {
             return Err((format!("server returned HTTP {status}"), retryable));
         }
 
-        let total_size = res
-            .content_length()
-            .unwrap_or_else(|| panic!("Failed to get content length from {}", &self.url));
+        // No Content-Length on a chunked body, or when a proxy re-encodes it.
+        // Not a failure, we just don't know how far along we are
+        let total_size = res.content_length();
         debug!("Total size {:?}", total_size);
-        self.pb.set_length(total_size);
+        if let Some(total_size) = total_size {
+            self.pb.set_length(total_size);
+        }
 
-        let mut file = File::create(&self.file_path)
-            .unwrap_or_else(|_| panic!("Failed to create file '{}'", &self.file_path));
+        // A read-only dir or a full disk won't fix itself in 5s
+        let mut file = match File::create(&self.file_path) {
+            Ok(file) => file,
+            Err(e) => {
+                return Err((
+                    format!("could not create '{}': {e}", &self.file_path),
+                    false,
+                ))
+            }
+        };
         let mut downloaded: u64 = 0;
         let mut stream = res.bytes_stream();
 
@@ -146,10 +162,18 @@ impl BloodyIndianaJones {
                 Ok(chunk) => chunk,
                 Err(e) => return Err((format!("connection dropped: {e}"), true)),
             };
-            file.write_all(&chunk).expect("Error while writing to file");
-            let new = min(downloaded + (chunk.len() as u64), total_size);
-            downloaded = new;
-            self.pb.set_position(new);
+            if let Err(e) = file.write_all(&chunk) {
+                return Err((
+                    format!("could not write to '{}': {e}", &self.file_path),
+                    false,
+                ));
+            }
+            downloaded += chunk.len() as u64;
+            match total_size {
+                Some(total_size) => downloaded = min(downloaded, total_size),
+                None => self.pb.set_length(downloaded),
+            }
+            self.pb.set_position(downloaded);
         }
 
         Ok(())
@@ -225,7 +249,10 @@ impl BloodyIndianaJones {
                     create_dir_all(&path_string).expect("Unable to create download dir");
                     let target_dir = PathBuf::from(&path_string);
                     let file = File::open(file_path_string).unwrap();
-                    zip::ZipArchive::new(file).unwrap().extract(&target_dir).unwrap();
+                    zip::ZipArchive::new(file)
+                        .unwrap()
+                        .extract(&target_dir)
+                        .unwrap();
                 })
                 .await
                 .expect("Unable to unzip");
@@ -254,8 +281,9 @@ impl BloodyIndianaJones {
                 info!("Untar {}", &self.file_path);
                 self.pb.set_message("Untar");
                 create_dir_all(&self.path).expect("Unable to create download dir");
-                let mut archive =
-                    tar::Archive::new(std::io::BufReader::new(File::open(&self.file_path).unwrap()));
+                let mut archive = tar::Archive::new(std::io::BufReader::new(
+                    File::open(&self.file_path).unwrap(),
+                ));
                 archive.unpack(&self.path).expect("Unable to extract");
             }
             Some("gem") => {
@@ -301,15 +329,12 @@ impl BloodyIndianaJones {
                 if entries.len() == 1 {
                     for entry in entries.into_iter().flatten() {
                         if entry.path().is_dir() {
-                            debug!(
-                                "Extracted files are contained in sub-folder. Moving them up"
-                            );
+                            debug!("Extracted files are contained in sub-folder. Moving them up");
                             let parent = entry.path();
                             if let Ok(entries) = read_dir(&parent) {
                                 for entry in entries.flatten() {
                                     let path = entry.path();
-                                    let new_path =
-                                        parent_path.join(path.file_name().unwrap());
+                                    let new_path = parent_path.join(path.file_name().unwrap());
                                     rename(&path, new_path).unwrap();
                                 }
                                 remove_dir(parent).ok();
@@ -489,7 +514,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "server returned HTTP 403")]
     async fn test_download_rejects_permanent_status() {
         // A 4xx (e.g. forbidden) is permanent: fail immediately with a clear
         // message, not stream the error body and panic later as "invalid gzip".
@@ -498,7 +522,8 @@ mod tests {
         ])
         .await;
         let target = tempdir().unwrap();
-        bij_for(port, &target).download().await;
+        let err = bij_for(port, &target).download().await.unwrap_err();
+        assert!(err.contains("server returned HTTP 403"), "{}", err);
     }
 
     #[tokio::test]
@@ -511,7 +536,33 @@ mod tests {
         .await;
         let target = tempdir().unwrap();
         let bij = bij_for(port, &target);
-        bij.download().await;
+        bij.download().await.unwrap();
         assert_eq!(std::fs::read_to_string(&bij.file_path).unwrap(), "good");
+    }
+
+    #[tokio::test]
+    async fn test_download_without_content_length() {
+        // No Content-Length, body until EOF - used to panic before writing a byte
+        let port = serve_seq(vec![b"HTTP/1.1 200 OK\r\nConnection: close\r\n\r\ngood"]).await;
+        let target = tempdir().unwrap();
+        let bij = bij_for(port, &target);
+        bij.download().await.unwrap();
+        assert_eq!(std::fs::read_to_string(&bij.file_path).unwrap(), "good");
+    }
+
+    #[tokio::test]
+    async fn test_download_reports_unwritable_target() {
+        // Read-only dir, quota, ENOSPC: an Err, not a panic under a live bar
+        let port = serve_seq(vec![b"HTTP/1.1 200 OK\r\nContent-Length: 4\r\n\r\ngood"]).await;
+        let target = tempdir().unwrap();
+        let mut bij = bij_for(port, &target);
+        bij.file_path = target
+            .path()
+            .join("no-such-dir")
+            .join("out")
+            .to_string_lossy()
+            .to_string();
+        let err = bij.download().await.unwrap_err();
+        assert!(err.contains("could not create"), "{}", err);
     }
 }

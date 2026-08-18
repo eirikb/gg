@@ -41,6 +41,10 @@ or
 - run: gg.cmd gradle build
 ```
 
+The action passes the workflow token to gg as `GG_GITHUB_TOKEN` so tool lookups don't hit the
+anonymous GitHub API limit. Override it with `github-token:`, or set it to an empty string to opt
+out.
+
 **Install?**  
 The concept involves placing a copy of `gg.cmd` in the root directory of your project.  
 This is similar to what you would do with `gradlew` or `mvnw`, except this method is applicable to multiple tools.  
@@ -429,6 +433,14 @@ requests/hour, so gg looks for a token in this order:
 
 If you hit the rate limit, either set a token or log in with `gh auth login`. The error message may
 also have a hint or two.
+
+In GitHub Actions the built-in token is enough - hand it to the step that runs gg:
+
+```yaml
+- run: ./gg.cmd node -v
+  env:
+    GITHUB_TOKEN: ${{ github.token }}
+```
 
 `GG_GITHUB_API_URL` can point gg at any GitHub API-compatible endpoint (e.g. your own proxy on a
 corporate network). Only the gg-specific `GG_GITHUB_TOKEN` is ever sent to a custom endpoint;

@@ -21,6 +21,11 @@ inputs:
     required: false
     default: 'gg'
 
+  github-token:
+    description: 'Token gg uses for the GitHub API when resolving tool releases. Defaults to the workflow token, which lifts the anonymous 60 requests/hour limit. Set to an empty string to opt out.'
+    required: false
+    default: ${{ github.token }}
+
 outputs:
   gg-version:
     description: 'The installed gg.cmd version'
@@ -52,6 +57,7 @@ runs:
       shell: bash
       env:
         GG_CACHE_DIR: ${{ steps.cache-dir.outputs.dir }}
+        GG_GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         if [ "${RUNNER_DEBUG:-0}" = "1" ]; then
           set -euxo pipefail
@@ -85,6 +91,12 @@ runs:
 
         echo "GG_CACHE_DIR=$GG_CACHE_DIR" >> $GITHUB_ENV
         echo "Cache directory: $GG_CACHE_DIR"
+
+        # Anonymous is 60 req/hr per IP, shared with every other job on the runner
+        if [ -n "$GG_GITHUB_TOKEN" ]; then
+          echo "::add-mask::$GG_GITHUB_TOKEN"
+          echo "GG_GITHUB_TOKEN=$GG_GITHUB_TOKEN" >> $GITHUB_ENV
+        fi
 
         GG_VERSION_RAW="$(sh "$HOME/.local/bin/gg.cmd" -V 2>/dev/null || true)"
 
