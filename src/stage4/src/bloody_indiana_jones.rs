@@ -9,6 +9,7 @@ use log::{debug, info};
 use tempfile::tempdir;
 use tokio::task;
 
+use crate::barus::progress_hidden;
 use crate::gem_utils;
 
 fn get_file_name(url: &str) -> String {
@@ -302,7 +303,10 @@ impl BloodyIndianaJones {
                 std::fs::copy(&self.file_path, Path::new(&self.path).join(&self.file_name))
                     .unwrap();
                 self.pb.finish_with_message("Done");
-                println!();
+                // Just moves the cursor past the bar, and it lands on stdout (#309)
+                if !progress_hidden() {
+                    println!();
+                }
                 return;
             }
         }
@@ -362,7 +366,9 @@ impl BloodyIndianaJones {
         .await
         .expect("Unable to move files");
         self.pb.finish_with_message("Done");
-        println!();
+        if !progress_hidden() {
+            println!();
+        }
     }
 
     pub fn cleanup_download(&self) {

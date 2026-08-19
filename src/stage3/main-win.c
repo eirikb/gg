@@ -90,6 +90,9 @@ int __cdecl main() {
   }
 
   int p = 0;
+  /* The dots go to stdout, so anything parsing gg's output gets them too (#309) */
+  const char *hide_progress_env = getenv("GG_HIDE_DOWNLOAD_PROGRESS");
+  const int show_progress = !(hide_progress_env && *hide_progress_env);
 
   size_t message_size = 0;
   size_t data_size = 0;
@@ -112,17 +115,21 @@ int __cdecl main() {
     int np = 100 - (int)((double)message_size / (double)total_size * 100);
     if (np != p) {
       p = np;
-      if (p % 10 == 0) {
-        printf("%d%%", p);
-      } else {
-        printf(".");
+      if (show_progress) {
+        if (p % 10 == 0) {
+          printf("%d%%", p);
+        } else {
+          printf(".");
+        }
+        fflush(stdout);
       }
-      fflush(stdout);
     }
   } while (message_size > 0);
   fclose(f);
 
-  printf("\n");
+  if (show_progress) {
+    printf("\n");
+  }
 
   char newHash[SHA512_BLOCK_LENGTH + 1];
   hashForFile("stage4.tmp", newHash);

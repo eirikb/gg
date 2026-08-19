@@ -4,10 +4,9 @@ use std::fs;
 use std::process::ExitCode;
 
 use futures_util::future::join_all;
-use indicatif::MultiProgress;
 use log::{debug, info, LevelFilter};
 
-use crate::barus::create_barus;
+use crate::barus::{create_barus, create_multi_barus};
 use crate::cli::Cli;
 use crate::config::GgConfig;
 use crate::executor::{prep, try_run, AppInput, Executor, ExecutorCmd, GgVersionReq};
@@ -467,7 +466,7 @@ async fn main() -> ExitCode {
             let mut env_vars: HashMap<String, String> = HashMap::new();
             let mut path_vars: Vec<String> = vec![];
 
-            let m = MultiProgress::new();
+            let m = create_multi_barus();
 
             let alles = executors
                 .iter()

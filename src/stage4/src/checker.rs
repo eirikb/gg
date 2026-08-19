@@ -1,11 +1,11 @@
-use crate::barus::create_barus;
+use crate::barus::{create_barus, create_multi_barus};
 use crate::cli::{starts_like_version, strip_version_prefix};
 use crate::executor::{prep, AppInput, ExecutorCmd, GgMeta, GgVersionReq};
 use crate::tools::{canonical_name, get_all_tools, registry_name};
 use crate::updater;
 use crate::Executor;
 use futures_util::future::join_all;
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info};
 use std::collections::HashMap;
 use std::fs;
@@ -243,7 +243,7 @@ pub async fn check_or_update_all(
 
     println!("Checking for updates...");
 
-    let m = MultiProgress::new();
+    let m = create_multi_barus();
     let spinner_style = ProgressStyle::with_template("{prefix:.bold} {spinner:.green} {msg}")
         .unwrap()
         .tick_strings(&["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏", "✓"]);

@@ -422,6 +422,19 @@ export GG_CACHE_DIR="/path/to/custom/cache"
 
 **Note**: When `GG_CACHE_DIR` is set, it takes precedence over both global and local cache modes.
 
+### Quiet downloads
+
+Set `GG_HIDE_DOWNLOAD_PROGRESS` to any non-empty value to drop the download progress output. Handy when
+something parses what gg.cmd prints:
+
+```bash
+export GG_HIDE_DOWNLOAD_PROGRESS=1
+./gg.cmd node -v
+```
+
+It is an environment variable and not a flag because the bootstrap downloads its own runtime before
+it has seen a single argument.
+
 ## GitHub API access
 
 Tools hosted on GitHub are resolved through the GitHub API. Unauthenticated access is limited to 60

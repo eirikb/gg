@@ -87,6 +87,12 @@ if ($hash)
         $proxyArgs = @{ Proxy = $envProxy; ProxyUseDefaultCredentials = $true }
     }
 
+    # Invoke-WebRequest brings its own progress bar (#309)
+    if ($env:GG_HIDE_DOWNLOAD_PROGRESS)
+    {
+        $ProgressPreference = 'SilentlyContinue'
+    }
+
     try
     {
         Invoke-WebRequest "https://ggcmd.z13.web.core.windows.net/$hash" -OutFile $tempFile @proxyArgs

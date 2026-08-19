@@ -297,6 +297,26 @@ jobs:
             chmod +x "$HOME/.cache/gg/gg-dev/stage4"
           fi
 
+      # Has to run before Run!, or the cache is warm and nothing downloads (#309)
+      # No -v either, that is gg's verbose flag
+      - name: Quiet download keeps stdout clean (#309)
+        if: matrix.cmd == 'node -v'
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GG_HIDE_DOWNLOAD_PROGRESS: 1
+        run: |
+          out=$(sh gg.cmd node --version 2>/dev/null)
+          echo "stdout was: [$out]"
+          if [ "$(printf '%s\n' "$out" | wc -l)" != "1" ]; then
+            echo "::error::#309: something other than the version reached stdout"
+            exit 1
+          fi
+          case "$out" in
+            v[0-9]*) ;;
+            *) echo "::error::#309: expected a bare node version, got [$out]"; exit 1 ;;
+          esac
+
       - name: Run!
         shell: bash
         env:

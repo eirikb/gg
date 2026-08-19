@@ -129,11 +129,17 @@ int main() {
     long messageSize = 0;
     long totalSize = 0;
     int p = 0;
+    /* The dots go to stdout, so anything parsing gg's output gets them too (#309) */
+    const char *hideProgressEnv = getenv("GG_HIDE_DOWNLOAD_PROGRESS");
+    const int showProgress = !(hideProgressEnv && *hideProgressEnv);
 
     do {
         const long res = read(sock, buffer, bufferSize - 1);
         if (res <= 0) {
-            printf("\nDownload interrupted\n");
+            if (showProgress) {
+                printf("\n");
+            }
+            printf("Download interrupted\n");
             fclose(f);
             remove("stage4.tmp");
             return 1;
@@ -162,7 +168,9 @@ int main() {
             messageSize = end - buffer + dataSize + 4;
             totalSize = messageSize;
             fwrite(end + 4, 1, res - (messageSize - dataSize), f);
-            printf("0%%");
+            if (showProgress) {
+                printf("0%%");
+            }
         } else {
             fwrite(buffer, 1, res, f);
         }
@@ -170,17 +178,21 @@ int main() {
         const int np = 100 - (int) ((double) messageSize / (double) totalSize * 100);
         if (np != p) {
             p = np;
-            if (p % 10 == 0) {
-                printf("%d%%", p);
-            } else {
-                printf(".");
+            if (showProgress) {
+                if (p % 10 == 0) {
+                    printf("%d%%", p);
+                } else {
+                    printf(".");
+                }
+                fflush(stdout);
             }
-            fflush(stdout);
         }
     } while (messageSize > 0);
     fclose(f);
 
-    printf("\n");
+    if (showProgress) {
+        printf("\n");
+    }
 
     char newHash[129];
     extern void hashForFile(char *fileName, char *hash);
