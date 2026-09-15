@@ -1,11 +1,10 @@
+use crate::target::{Arch, Os};
+use log::debug;
+use octocrab::ReqwestClientConfig;
 use std::env;
 use std::process::Command;
 use std::sync::{Mutex, OnceLock};
 use std::time::Duration;
-
-use log::debug;
-
-use crate::target::{Arch, Os};
 
 const DEFAULT_GITHUB_API_URL: &str = "https://api.github.com";
 
@@ -96,7 +95,9 @@ pub fn create_github_client() -> Result<octocrab::Octocrab, octocrab::Error> {
     if let Some(token) = token {
         builder = builder.personal_token(token);
     }
-    builder.build()
+
+    // using reqwest because octocrab does not support proxies by default, see https://github.com/XAMPPRocky/octocrab/issues/752
+    builder.build_with_reqwest(ReqwestClientConfig::Default)
 }
 
 /// Turn an octocrab error into a message that tells the user what to do
