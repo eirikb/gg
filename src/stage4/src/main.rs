@@ -516,8 +516,12 @@ async fn main() -> ExitCode {
             info!("Path vars: {}", &path_vars.join(", "));
 
             match try_run(input, &**executor, app_path.clone(), path_vars, env_vars).await {
-                Ok(true) => ExitCode::from(0),
-                Ok(false) => ExitCode::from(1),
+                // Codes above 255 (Windows NTSTATUS values, say) do not fit an ExitCode: still a failure.
+                Ok(code) => ExitCode::from(if (0..=255).contains(&code) {
+                    code as u8
+                } else {
+                    1
+                }),
                 Err(e) => {
                     println!("{}", e);
                     ExitCode::from(1)

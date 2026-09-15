@@ -12,10 +12,7 @@
     ) else (
         if "%1"=="-l" shift /1
     )
-    if exist "%GG_CACHE_DIR%\gg-VERVER\stage2.ps1" (
-        powershell -executionpolicy bypass -file "%GG_CACHE_DIR%\gg-VERVER\stage2.ps1" %*
-        exit /b %errorlevel%
-    )
+    if exist "%GG_CACHE_DIR%\gg-VERVER\stage2.ps1" goto :run
     if not exist "%GG_CACHE_DIR%" mkdir "%GG_CACHE_DIR%"
     powershell -c "sc m2 ([byte[]](gc '%0' -Encoding Byte | select -Skip AAAA)) -Encoding Byte"
     : Git's GNU tar shadows tar on PATH and cannot take "C:" paths (#291)
@@ -27,6 +24,9 @@
         echo gg: could not unpack into "%GG_CACHE_DIR%"
         exit /b 1
     )
+    : Not inside an if-block: there %errorlevel% would expand when the block is
+    : parsed, before powershell runs, and gg.cmd would always exit 0 (#313).
+    :run
     powershell -executionpolicy bypass -file "%GG_CACHE_DIR%\gg-VERVER\stage2.ps1" %*
     exit /b %errorlevel%
 BATCH
