@@ -765,7 +765,7 @@ pub async fn try_run(
     app_path: AppPath,
     path_vars: Vec<String>,
     env_vars: HashMap<String, String>,
-) -> Result<bool, String> {
+) -> Result<i32, String> {
     let args = executor.customize_args(input, &app_path);
     let path_string = &env::var("PATH").unwrap_or("".to_string());
     let paths = env::join_paths(path_vars.clone())
@@ -805,23 +805,26 @@ pub async fn try_run(
             }
         });
 
-        let res = if let Ok(mut guard) = child_handle.lock() {
+        // The tool's own exit code, so that a caller can act on it (#313). A
+        // process ended by a signal has no code; that is a failure too.
+        let code = if let Ok(mut guard) = child_handle.lock() {
             if let Some(ref mut child) = *guard {
                 child
                     .wait()
                     .map_err(|_| "Failed to wait for child process")?
-                    .success()
+                    .code()
+                    .unwrap_or(1)
             } else {
-                false
+                1
             }
         } else {
-            false
+            1
         };
 
-        if !res {
-            info!("Unable to execute {}", bin_path.display());
+        if code != 0 {
+            info!("{} exited with {}", bin_path.display(), code);
         }
-        return Ok(res);
+        return Ok(code);
     }
     Err(format!("Error: Unable to find executable for {}. The tool may not be properly installed or the binary name doesn't match expected patterns.", executor.get_name()))
 }
