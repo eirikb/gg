@@ -7,6 +7,7 @@ use scraper::{Html, Selector};
 use crate::executor::{
     java_deps, AppInput, BinPattern, Download, ExecutorCmd, ExecutorDep, GgVersion,
 };
+use crate::fetch::get;
 use crate::target::{Arch, Os, Variant};
 use crate::Executor;
 
@@ -29,7 +30,7 @@ fn get_tags(version: &str) -> HashSet<String> {
 }
 
 async fn fetch_versions_from_directory(base_url: &str) -> Vec<Download> {
-    let body = match reqwest::get(base_url).await {
+    let body = match get(base_url).await {
         Ok(response) => match response.text().await {
             Ok(text) => text,
             Err(_) => return vec![],

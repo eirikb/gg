@@ -1,4 +1,5 @@
 use crate::executor::{AppInput, AppPath, BinPattern, Download, Executor, ExecutorCmd, GgVersion};
+use crate::fetch::get;
 use crate::target::{Arch, Os};
 use semver::VersionReq;
 use serde::Deserialize;
@@ -54,7 +55,7 @@ impl Executor for Flutter {
             ];
 
             for (url, os) in urls {
-                match reqwest::get(url).await {
+                match get(url).await {
                     Ok(response) => {
                         if let Ok(text) = response.text().await {
                             if let Ok(releases) = serde_json::from_str::<serde_json::Value>(&text) {

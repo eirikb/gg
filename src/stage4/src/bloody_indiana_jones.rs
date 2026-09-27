@@ -10,6 +10,7 @@ use tempfile::tempdir;
 use tokio::task;
 
 use crate::barus::progress_hidden;
+use crate::fetch::client_builder;
 use crate::gem_utils;
 
 fn get_file_name(url: &str) -> String {
@@ -85,7 +86,7 @@ impl BloodyIndianaJones {
         self.pb.set_message("Preparing");
         self.pb.set_message("Downloading");
 
-        let client = reqwest::Client::builder()
+        let client = client_builder()
             .build()
             .expect("Failed to create HTTP client");
 

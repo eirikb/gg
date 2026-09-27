@@ -4,6 +4,7 @@ use std::pin::Pin;
 use log::{debug, info};
 
 use crate::executor::{AppInput, BinPattern, Download, Executor, ExecutorCmd, GgVersion};
+use crate::fetch::get;
 use crate::target::{Arch, Os, Variant};
 
 const DOWNLOAD_BASE_URL: &str = "https://downloads.claude.ai/claude-code-releases";
@@ -43,7 +44,7 @@ async fn get_claude_downloads(target: &crate::target::Target) -> Vec<Download> {
         return vec![];
     };
 
-    let version = match reqwest::get(format!("{DOWNLOAD_BASE_URL}/latest")).await {
+    let version = match get(format!("{DOWNLOAD_BASE_URL}/latest")).await {
         Ok(res) => match res.text().await {
             Ok(text) => text.trim().to_string(),
             Err(e) => {
