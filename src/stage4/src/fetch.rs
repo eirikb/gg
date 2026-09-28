@@ -1,7 +1,16 @@
 use log::warn;
+use reqwest::{ClientBuilder, IntoUrl, Response, Result};
 use serde::de::DeserializeOwned;
 use std::sync::LazyLock;
 use std::time::Duration;
+
+pub fn client_builder() -> ClientBuilder {
+    // reqwest 0.13 dropped support for using bundled certs so we have to add them here
+    let roots = webpki_root_certs::TLS_SERVER_ROOT_CERTS
+        .iter()
+        .map(|root| reqwest::Certificate::from_der(&root)).filter_map(Result::ok);
+    reqwest::Client::builder().tls_certs_merge(roots)
+}
 
 /// A refused connection is quick, but a host that just swallows packets would leave
 /// gg spinning forever - worse than the panic this replaced.
@@ -9,17 +18,21 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
 
 static CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    reqwest::Client::builder()
+    client_builder()
         .connect_timeout(CONNECT_TIMEOUT)
         .timeout(REQUEST_TIMEOUT)
         .build()
         .unwrap_or_default()
 });
 
+pub async fn get<T: IntoUrl>(url: T) -> Result<Response> {
+    CLIENT.get(url).send().await
+}
+
 /// GET a URL and hand back the body. Someone else's index being down is a bad day, not
 /// a reason to panic. Warn level, so the reason shows up without -v.
 pub async fn fetch_text(url: &str) -> Option<String> {
-    let response = match CLIENT.get(url).send().await {
+    let response = match get(url).await {
         Ok(response) => response,
         Err(e) => {
             warn!("Could not reach {url}: {e}");

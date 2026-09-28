@@ -7,6 +7,7 @@ use serde::Serialize;
 
 use crate::executor::{Download, GgVersion};
 use crate::fetch::fetch_json;
+use crate::fetch::get;
 use crate::github_utils::{
     create_github_client, detect_arch_from_name, detect_os_from_name, record_github_error,
 };
@@ -216,7 +217,7 @@ struct TemurinVersionData {
 const TEMURIN_FALLBACK_VERSIONS: [u32; 5] = [8, 11, 17, 21, 25];
 
 async fn get_temurin_available_releases() -> Option<TemurinAvailableReleases> {
-    let text = reqwest::get("https://api.adoptium.net/v3/info/available_releases")
+    let text = get("https://api.adoptium.net/v3/info/available_releases")
         .await
         .ok()?
         .text()
@@ -233,7 +234,7 @@ async fn get_temurin_version_downloads(target: Target, version: u32, lts: bool) 
 
     let mut downloads = Vec::new();
 
-    if let Ok(response) = reqwest::get(&url).await {
+    if let Ok(response) = get(&url).await {
         if let Ok(text) = response.text().await {
             if let Ok(releases) = serde_json::from_str::<Vec<TemurinRelease>>(&text) {
                 for release in releases {

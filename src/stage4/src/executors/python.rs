@@ -6,6 +6,7 @@ use log::debug;
 use serde::Deserialize;
 
 use crate::executor::{AppInput, BinPattern, Download, Executor, ExecutorCmd, GgVersion};
+use crate::fetch::get;
 use crate::target::{Arch, Os, Target, Variant};
 
 /// Python via astral's python-build-standalone (PBS) - the same prebuilt,
@@ -147,7 +148,7 @@ async fn get_python_urls(target: &Target) -> Vec<Download> {
 // uv's metadata is on their moving main branch - a rename or blip should leave
 // "no python found", not panic every gg python user.
 async fn fetch_metadata() -> Option<String> {
-    match reqwest::get(METADATA_URL)
+    match get(METADATA_URL)
         .await
         .and_then(|r| r.error_for_status())
     {

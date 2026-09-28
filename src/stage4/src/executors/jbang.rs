@@ -5,6 +5,7 @@ use std::pin::Pin;
 
 use crate::executor::{AppInput, BinPattern, Download, Executor, ExecutorCmd, ExecutorDep};
 use crate::executors::github::GitHub;
+use crate::fetch::get;
 
 pub struct JBangExecutor {
     github: GitHub,
@@ -79,7 +80,7 @@ pub async fn get_jbang_java_version_from_file(file_path: &str) -> Option<String>
             file_path.to_string()
         };
 
-        if let Ok(response) = reqwest::get(&url).await {
+        if let Ok(response) = get(&url).await {
             if let Ok(content) = response.text().await {
                 return parse_jbang_java_version(&content);
             }

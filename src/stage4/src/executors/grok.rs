@@ -4,6 +4,7 @@ use std::pin::Pin;
 use log::{debug, info, warn};
 
 use crate::executor::{AppInput, BinPattern, Download, Executor, ExecutorCmd, GgVersion};
+use crate::fetch::get;
 use crate::target::{Arch, Os, Variant};
 
 // Grok Build (xAI's coding agent) ships as a self-contained native binary, not
@@ -39,7 +40,7 @@ fn platform_string(target: &crate::target::Target) -> Option<String> {
 
 /// Fetch the latest version from a host's channel file, e.g. `0.2.77`.
 async fn fetch_version(base: &str) -> Option<String> {
-    let res = reqwest::get(format!("{base}/{CHANNEL}")).await.ok()?;
+    let res = get(format!("{base}/{CHANNEL}")).await.ok()?;
     // reqwest only errors on transport failures, so a 4xx/5xx still arrives as
     // Ok. Without this, a digit-leading error body (e.g. "404 Not Found") would
     // pass the guard below, be taken as the version, and defeat the fallback.
