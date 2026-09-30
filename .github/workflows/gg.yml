@@ -1,12 +1,17 @@
 on:
   workflow_dispatch:
+  # Releases come from the push, not from `pull_request: closed` - a PR from a
+  # fork gets a read-only token and no secrets, merged or not
+  push:
+    branches: [ main ]
   pull_request:
-    types: [ opened, synchronize, reopened, closed ]
+    types: [ opened, synchronize, reopened ]
     branches: [ main ]
 
 concurrency:
   group: "${{ github.workflow }}-${{ github.head_ref || github.ref }}-${{ github.event_name }}"
-  cancel-in-progress: true
+  # Never cancel a release halfway, let them queue
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 name: gg.cmd
 jobs:
@@ -17,7 +22,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
     steps:
       - name: Generate version
-        if: github.event.pull_request.merged == true
+        if: github.event_name == 'push'
         id: buildnumber
         uses: einaregilsson/build-number@v3
         with:
@@ -26,7 +31,7 @@ jobs:
       - name: Set version
         id: version
         run: |
-          if [ "${{github.event.pull_request.merged}}" == "true" ]; then
+          if [ "${{ github.event_name }}" == "push" ]; then
             echo "version=${{ steps.buildnumber.outputs.build_number }}" >> $GITHUB_OUTPUT
           else
             echo "version=dev" >> $GITHUB_OUTPUT
@@ -654,8 +659,20 @@ jobs:
     name: Release!
     needs: [ version, gatekeeper ]
     runs-on: ubuntu-latest
-    if: github.event.pull_request.merged == true
+    if: github.event_name == 'push'
     steps:
+      # The squash commit message is just the commit list, the PR body is the
+      # changelog. Straight pushes have no PR, so they get the commit message
+      - name: Release notes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[0].body // empty' > notes.md || true
+          [ -s notes.md ] || printf '%s\n' "$COMMIT_MESSAGE" > notes.md
+          cat notes.md
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -664,7 +681,7 @@ jobs:
         with:
           tag_name: ${{ needs.version.outputs.version }}
           release_name: ${{ needs.version.outputs.version }}
-          body: ${{ github.event.pull_request.body }}
+          body_path: notes.md
 
       - name: Download gg
         uses: actions/download-artifact@v8
