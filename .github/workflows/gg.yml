@@ -578,9 +578,6 @@ jobs:
         cmd: [ "node@14 -v", "java -version", "gradle -version", "openapi version", "run:java@14 java -version", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "just -V", "fortio version", "gh/mozilla/sccache -V", "python -V" ]
 
     runs-on: ubuntu-latest
-    # Docker Hub rate-limits anonymous pulls from shared GitHub runner IPs,
-    # so pull the same official images from AWS's public mirror instead
-    container: public.ecr.aws/docker/library/${{ matrix.container }}:latest
     steps:
       - name: Download gg
         uses: actions/download-artifact@v8
@@ -593,30 +590,51 @@ jobs:
         with:
           name: stage4_x86_64-unknown-linux-musl
 
-      - name: Pre-populate cache with stage4
-        if: needs.hash.outputs.has_secret != 'true'
+      # Not `container:` - that pulls once and gives up, and every registry
+      # rate-limits the shared runner IPs sooner or later (Docker Hub, then
+      # "toomanyrequests: Data limit exceeded" from ECR). So pull by hand, with
+      # somewhere else to go
+      - name: Pull image
         run: |
-          mkdir -p "$HOME/.cache/gg/gg-dev"
-          SYSTEM="x86_64-unknown-linux-musl"
-          if getconf GNU_LIBC_VERSION >/dev/null 2>&1; then SYSTEM=$(echo "$SYSTEM" | sed 's/musl/gnu/'); fi
-          echo "$SYSTEM" > "$HOME/.cache/gg/gg-dev/system"
-          cp stage4 "$HOME/.cache/gg/gg-dev/stage4"
-          chmod +x "$HOME/.cache/gg/gg-dev/stage4"
+          for attempt in 1 2 3; do
+            for registry in public.ecr.aws/docker/library mirror.gcr.io/library docker.io/library; do
+              if docker pull "$registry/${{ matrix.container }}:latest"; then
+                docker tag "$registry/${{ matrix.container }}:latest" gg-test
+                exit 0
+              fi
+            done
+            sleep 10
+          done
+          echo "::error::Could not pull ${{ matrix.container }} from any registry"
+          exit 1
 
       - name: Run!
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
+          cat > test.sh <<'EOF'
           set -x
 
+          # Only downloaded when there is no secret, so no blob for stage2 to fetch
+          if [ -f stage4 ]; then
+            mkdir -p "$HOME/.cache/gg/gg-dev"
+            SYSTEM="x86_64-unknown-linux-musl"
+            if getconf GNU_LIBC_VERSION >/dev/null 2>&1; then SYSTEM=$(echo "$SYSTEM" | sed 's/musl/gnu/'); fi
+            echo "$SYSTEM" > "$HOME/.cache/gg/gg-dev/system"
+            cp stage4 "$HOME/.cache/gg/gg-dev/stage4"
+            chmod +x "$HOME/.cache/gg/gg-dev/stage4"
+          fi
+
           # This is required for nodejs to run - not gg.cmd!
-          if [ "${{ matrix.container }}" == "alpine" ]; then
+          if [ "${{ matrix.container }}" = "alpine" ]; then
             apk add libstdc++
           fi
 
           sh gg.cmd -v ${{ matrix.cmd }}
           echo "Nice, let's try again"
           sh gg.cmd -v ${{ matrix.cmd }}
+          EOF
+          docker run --rm -e GITHUB_TOKEN -v "$PWD:/work" -w /work gg-test sh -e test.sh
 
   # GitHub Actions hate me :/
   gatekeeper:
