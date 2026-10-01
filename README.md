@@ -27,7 +27,7 @@ Install with PowerShell:
 > [!NOTE]
 > If installing via PowerShell, you still need to make `gg.cmd` executable if your project has contributors on Linux or macOS. You can do this with the following `git` command:
 > ```ps1
-> git update-index --chmod=+x
+> git update-index --chmod=+x gg.cmd
 > ```
 
 or
