@@ -402,6 +402,7 @@ pub async fn prep(
                 &executor.get_bins_for_path(input, &app_path_ok),
                 &path_vars,
                 &all_paths,
+                &all_paths,
             )
             .is_some()
                 || executor.cached_install_is_valid(&app_path_ok)
@@ -711,7 +712,12 @@ fn bin_path_vars(executor: &dyn Executor, app_path: &AppPath) -> Vec<String> {
 
 /// Resolve the first of `bins` that exists under the given search paths. Shared
 /// by `try_run` and `prep`'s cache-hit check so resolution stays in lock-step.
-fn resolve_bin_path(bins: &[BinPattern], path_vars: &[String], all_paths: &str) -> Option<PathBuf> {
+fn resolve_bin_path(
+    bins: &[BinPattern],
+    path_vars: &[String],
+    all_paths: &str,
+    regex_paths: &str,
+) -> Option<PathBuf> {
     for bin in bins {
         let bin_path = match bin {
             BinPattern::Exact(name) => {
@@ -742,7 +748,9 @@ fn resolve_bin_path(bins: &[BinPattern], path_vars: &[String], all_paths: &str) 
             }
             BinPattern::Regex(pattern) => {
                 if let Ok(regex) = Regex::new(pattern) {
-                    which_re_in(regex, Some(all_paths))
+                    // Only the tool's own dirs: on $PATH a catch-all pattern
+                    // matches whatever comes first, and that gets run instead
+                    which_re_in(regex, Some(regex_paths))
                         .ok()
                         .and_then(|mut iter| iter.next())
                         .ok_or(which::Error::CannotFindBinaryPath)
@@ -780,7 +788,12 @@ pub async fn try_run(
     info!("PATH: {all_paths}");
     let bins = executor.get_bins_for_path(input, &app_path);
     info!("Trying to find these bins: {:?}", bins);
-    if let Some(bin_path) = resolve_bin_path(&bins, &path_vars, &all_paths) {
+    let own_paths = env::join_paths(bin_path_vars(executor, &app_path))
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    if let Some(bin_path) = resolve_bin_path(&bins, &path_vars, &all_paths, &own_paths) {
         info!("Executing: {:?}. With args:{:?}", bin_path, args);
         let mut command = Command::new(&bin_path);
 
@@ -952,7 +965,7 @@ mod tests {
         let all_paths = path_vars.join(":");
 
         assert!(
-            resolve_bin_path(&bins, &path_vars, &all_paths).is_none(),
+            resolve_bin_path(&bins, &path_vars, &all_paths, &all_paths).is_none(),
             "must report a miss when the expected binary is absent"
         );
 
@@ -963,9 +976,41 @@ mod tests {
         std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
 
         assert_eq!(
-            resolve_bin_path(&bins, &path_vars, &all_paths),
+            resolve_bin_path(&bins, &path_vars, &all_paths, &all_paths),
             Some(bin),
             "must resolve the nested bin once it is present"
+        );
+    }
+
+    // gg gh/herdrdev/herdr ran ~/.local/bin/torchrun: nothing in the tool's dir
+    // matched, and the catch-all pattern went on to $PATH.
+    #[cfg(unix)]
+    #[test]
+    fn test_resolve_bin_path_regex_stays_in_own_dirs() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let own = tempfile::tempdir().unwrap();
+        let system = tempfile::tempdir().unwrap();
+        let stranger = system.path().join("torchrun");
+        std::fs::write(&stranger, "#!/bin/sh\n").unwrap();
+        std::fs::set_permissions(&stranger, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let bins = vec![BinPattern::Regex(r"^[^.]*$".to_string())];
+        let own_paths = own.path().to_str().unwrap().to_string();
+        let path_vars = vec![own_paths.clone()];
+        let all_paths = format!("{own_paths}:{}", system.path().to_str().unwrap());
+
+        assert_eq!(
+            resolve_bin_path(&bins, &path_vars, &all_paths, &own_paths),
+            None
+        );
+
+        let bin = own.path().join("herdr-linux-x86_64");
+        std::fs::write(&bin, "#!/bin/sh\n").unwrap();
+        std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert_eq!(
+            resolve_bin_path(&bins, &path_vars, &all_paths, &own_paths),
+            Some(bin)
         );
     }
 
