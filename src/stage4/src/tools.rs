@@ -323,6 +323,23 @@ pub static TOOL_REGISTRY: LazyLock<HashMap<&'static str, ToolInfo>> = LazyLock::
             },
         },
         ToolInfo {
+            name: "herdr",
+            aliases: vec![],
+            description: "herdr - the runtime your coding agents live on",
+            category: ToolCategory::Utility,
+            tags: vec![],
+            example: Some("gg herdr --version"),
+            factory: |cmd| {
+                Some(create_github_executor(
+                    cmd,
+                    "herdrdev",
+                    "herdr",
+                    vec![],
+                    vec!["herdr", "herdr.exe"],
+                ))
+            },
+        },
+        ToolInfo {
             name: "codex",
             aliases: vec![],
             description: "OpenAI Codex CLI - coding agent for your terminal",

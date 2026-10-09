@@ -4,14 +4,14 @@ use std::pin::Pin;
 
 use crate::executor::{
     find_jar_file, AppInput, AppPath, BinPattern, Download, Executor, ExecutorCmd, ExecutorDep,
-    GgVersion,
+    GgMeta, GgVersion,
 };
 use crate::github_utils::{
     create_github_client, detect_arch_from_name, detect_os_from_name, record_github_error,
 };
 use crate::target::Os::Windows;
 use crate::target::{Arch, Os, Variant};
-use log::debug;
+use log::{debug, warn};
 
 pub struct GitHub {
     pub executor_cmd: ExecutorCmd,
@@ -188,6 +188,42 @@ impl GitHub {
         });
         !has_native_binary
     }
+
+    // Where a bare-binary download gets moved to, so the exact bin patterns hit.
+    // Can be nested (fortio: bin/fortio).
+    fn canonical_bin_name(&self, exe: bool) -> String {
+        let predefined = self
+            .predefined_bins
+            .iter()
+            .flatten()
+            .find(|b| b.to_lowercase().ends_with(".exe") == exe);
+        match predefined {
+            Some(bin) => bin.clone(),
+            None if exe => format!("{}.exe", self.repo),
+            None => self.repo.clone(),
+        }
+    }
+}
+
+// ELF, Mach-O (thin and fat) or a script with a shebang
+fn is_native_executable(path: &std::path::Path) -> bool {
+    use std::io::Read;
+    let mut magic = [0u8; 4];
+    let Ok(mut file) = std::fs::File::open(path) else {
+        return false;
+    };
+    if file.read_exact(&mut magic).is_err() {
+        return false;
+    }
+    matches!(
+        magic,
+        [0x7f, b'E', b'L', b'F']
+            | [0xfe, 0xed, 0xfa, 0xce]
+            | [0xfe, 0xed, 0xfa, 0xcf]
+            | [0xce, 0xfa, 0xed, 0xfe]
+            | [0xcf, 0xfa, 0xed, 0xfe]
+            | [0xca, 0xfe, 0xba, 0xbe]
+    ) || magic.starts_with(b"#!")
 }
 
 /// Prefer the host's libc variant, falling back to the other when it's the only
@@ -333,7 +369,6 @@ impl Executor for GitHub {
         }
 
         patterns.push(BinPattern::Regex(r"^[^.]*$".to_string()));
-        patterns.push(BinPattern::Exact("java".to_string()));
 
         patterns
     }
@@ -354,6 +389,63 @@ impl Executor for GitHub {
 
     fn get_name(&self) -> &str {
         &self.repo
+    }
+
+    fn post_prep(&self, cache_path: &str) {
+        // A release asset that is the executable itself (herdr-linux-x86_64), not
+        // an archive: nothing gave it an exec bit, and its name matches no bin
+        // pattern. Fix both.
+        let cache = std::path::Path::new(cache_path);
+        let Ok(entries) = std::fs::read_dir(cache) else {
+            return;
+        };
+        let mut files = entries
+            .flatten()
+            .filter(|e| e.file_name() != "gg-meta.json")
+            .map(|e| e.path());
+        let (Some(file), None) = (files.next(), files.next()) else {
+            return;
+        };
+        // An archive can unpack to a single file too. That one already has its
+        // real name and mode, so only touch the file that is the download itself.
+        let asset = std::fs::read_to_string(cache.join("gg-meta.json"))
+            .ok()
+            .and_then(|json| serde_json::from_str::<GgMeta>(&json).ok())
+            .and_then(|meta| reqwest::Url::parse(&meta.download.download_url).ok())
+            .and_then(|url| url.path_segments()?.next_back().map(str::to_string));
+        if !file.is_file() || file.file_name().and_then(|n| n.to_str()) != asset.as_deref() {
+            return;
+        }
+        let has_ext = |wanted: &str| {
+            file.extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case(wanted))
+        };
+        let exe = has_ext("exe");
+        // A self-executing jar has a shebang, but runs via java -jar
+        if has_ext("jar") || (!exe && !is_native_executable(&file)) {
+            return;
+        }
+        let dest = cache.join(self.canonical_bin_name(exe));
+        if file != dest {
+            if let Some(parent) = dest.parent() {
+                let _ = std::fs::create_dir_all(parent);
+            }
+            if let Err(e) = std::fs::rename(&file, &dest) {
+                warn!(
+                    "{}: failed to rename {:?} to {:?}: {e}",
+                    self.repo, file, dest
+                );
+                return;
+            }
+        }
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let perms = std::fs::Permissions::from_mode(0o755);
+            if let Err(e) = std::fs::set_permissions(&dest, perms) {
+                warn!("{}: failed to set executable permission: {e}", self.repo);
+            }
+        }
     }
 
     fn customize_args(&self, input: &AppInput, app_path: &AppPath) -> Vec<String> {
@@ -602,5 +694,117 @@ mod tests {
         // A native binary next to the jar -> binary wins, no forced java
         File::create(dir.path().join("RepoSense")).unwrap();
         assert!(!gh.should_run_as_jar(&app_path));
+    }
+
+    fn bare(owner: &str, repo: &str, bins: Option<Vec<&str>>) -> GitHub {
+        let cmd = ExecutorCmd {
+            cmd: format!("gh/{owner}/{repo}"),
+            version: None,
+            distribution: None,
+            include_tags: std::collections::HashSet::new(),
+            exclude_tags: std::collections::HashSet::new(),
+            gems: None,
+        };
+        GitHub::new_with_config(
+            cmd,
+            owner.to_string(),
+            repo.to_string(),
+            None,
+            bins.map(|b| b.into_iter().map(|s| s.to_string()).collect()),
+        )
+    }
+
+    // What prep leaves behind: the unpacked files plus the meta naming the asset
+    fn downloaded(asset: &str, files: &[(&str, &[u8])]) -> tempfile::TempDir {
+        let dir = tempfile::tempdir().unwrap();
+        for (name, content) in files {
+            std::fs::write(dir.path().join(name), content).unwrap();
+        }
+        let meta = serde_json::json!({
+            "version_req": "*",
+            "download": {
+                "version": "1.0.0",
+                "tags": [],
+                "download_url": format!("https://github.com/o/r/releases/download/v1/{asset}"),
+                "arch": "X86_64",
+                "os": "Linux",
+                "variant": "Any"
+            },
+            "cmd": {
+                "cmd": "gh/o/r",
+                "version": null,
+                "distribution": null,
+                "include_tags": [],
+                "exclude_tags": [],
+                "gems": null
+            }
+        });
+        std::fs::write(dir.path().join("gg-meta.json"), meta.to_string()).unwrap();
+        dir
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn post_prep_makes_bare_binary_runnable() {
+        use std::os::unix::fs::PermissionsExt;
+        let asset = "herdr-linux-x86_64";
+        let dir = downloaded(asset, &[(asset, b"\x7fELF....")]);
+
+        bare("herdrdev", "herdr", None).post_prep(dir.path().to_str().unwrap());
+
+        let bin = dir.path().join("herdr");
+        assert!(bin.exists(), "renamed to the repo name");
+        assert!(!dir.path().join(asset).exists());
+        assert_eq!(
+            std::fs::metadata(&bin).unwrap().permissions().mode() & 0o111,
+            0o111,
+            "executable"
+        );
+        assert!(dir.path().join("gg-meta.json").exists(), "meta untouched");
+    }
+
+    #[test]
+    fn post_prep_uses_predefined_bin_name() {
+        let bins = Some(vec!["antigravity", "antigravity.exe"]);
+        let gh = bare("google-antigravity", "antigravity-cli", bins);
+
+        let asset = "antigravity-cli-darwin-arm64";
+        let dir = downloaded(asset, &[(asset, b"#!/bin/sh\n")]);
+        gh.post_prep(dir.path().to_str().unwrap());
+        assert!(dir.path().join("antigravity").exists());
+
+        let asset = "antigravity-cli-windows-x64.exe";
+        let dir = downloaded(asset, &[(asset, b"MZ")]);
+        gh.post_prep(dir.path().to_str().unwrap());
+        assert!(dir.path().join("antigravity.exe").exists());
+
+        // fortio's bin lives in bin/
+        let asset = "fortio-linux-amd64";
+        let dir = downloaded(asset, &[(asset, b"\x7fELF....")]);
+        bare("fortio", "fortio", Some(vec!["bin/fortio", "fortio.exe"]))
+            .post_prep(dir.path().to_str().unwrap());
+        assert!(dir.path().join("bin/fortio").exists());
+    }
+
+    #[test]
+    fn post_prep_leaves_everything_else_alone() {
+        let untouched = |asset: &str, files: &[(&str, &[u8])]| {
+            let dir = downloaded(asset, files);
+            bare("x", "tool", None).post_prep(dir.path().to_str().unwrap());
+            for (name, _) in files {
+                assert!(dir.path().join(name).exists(), "{} was moved", name);
+            }
+        };
+
+        // An archive that unpacked to one binary: argv[0] may matter (busybox)
+        untouched("tool-linux.tar.gz", &[("busybox", b"\x7fELF....")]);
+        untouched(
+            "tool-linux.tar.gz",
+            &[("a", b"\x7fELF...."), ("b", b"\x7fELF....")],
+        );
+        // A jar is a zip, a .deb is an ar archive
+        untouched("tool.jar", &[("tool.jar", b"PK\x03\x04")]);
+        untouched("tool-exec.jar", &[("tool-exec.jar", b"#!/bin/sh\n")]);
+        untouched("tool_amd64.deb", &[("tool_amd64.deb", b"!<arch>\n")]);
     }
 }
