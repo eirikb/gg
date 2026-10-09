@@ -19,7 +19,7 @@ pub struct Python {
 }
 
 const METADATA_URL: &str =
-    "https://raw.githubusercontent.com/astral-sh/uv/main/crates/uv-python/download-metadata.json";
+    "https://raw.githubusercontent.com/astral-sh/uv/main/crates/uv-python-managed/download-metadata.json";
 
 #[derive(Deserialize)]
 struct PyArch {
