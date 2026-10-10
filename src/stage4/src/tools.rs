@@ -160,7 +160,7 @@ pub static TOOL_REGISTRY: LazyLock<HashMap<&'static str, ToolInfo>> = LazyLock::
         ToolInfo {
             name: "rat",
             aliases: vec!["ra"],
-            description: "Apache RAT - Release Audit Tool",
+            description: "Softeria rat - RestAPI Terminal CLI for restapi.com",
             category: ToolCategory::Utility,
             tags: vec![],
             example: Some("gg rat --help"),
