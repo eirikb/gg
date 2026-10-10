@@ -9,6 +9,35 @@ use crate::executor::{AppInput, BinPattern, Download, Executor, ExecutorCmd, GgV
 use crate::fetch::fetch_json;
 use crate::target::{Arch, Os, Variant};
 
+const BASE_URL: &str = "https://ratbinsa.z1.web.core.windows.net";
+
+// Names look like bin/rat-3.9.0-linux-x64.bin
+fn name_to_download(name: &str) -> Download {
+    let mut parts = name.split('-');
+    let version = parts.nth(1).unwrap_or("NA");
+    let os = match parts.next() {
+        Some("windows") => Some(Os::Windows),
+        Some("linux") => Some(Os::Linux),
+        Some("macos") => Some(Os::Mac),
+        _ => None,
+    };
+    // Exact match on the arch part only. An unknown arch stays None, which
+    // the download filter drops
+    let arch = match parts.next().and_then(|part| part.split('.').next()) {
+        Some("x64") => Some(Arch::X86_64),
+        Some("arm64") | Some("aarch64") => Some(Arch::Arm64),
+        _ => None,
+    };
+    Download {
+        version: GgVersion::new(version),
+        tags: Default::default(),
+        download_url: format!("{}/{}", BASE_URL, name),
+        arch,
+        os,
+        variant: Some(Variant::Any),
+    }
+}
+
 pub struct Rat {
     pub executor_cmd: ExecutorCmd,
 }
@@ -23,33 +52,13 @@ impl Executor for Rat {
         _input: &'a AppInput,
     ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
         Box::pin(async move {
-            let versions: Vec<String> =
-                match fetch_json("https://ratbinsa.z1.web.core.windows.net/list.json").await {
-                    Some(versions) => versions,
-                    None => return vec![],
-                };
+            let versions: Vec<String> = match fetch_json(&format!("{}/list.json", BASE_URL)).await {
+                Some(versions) => versions,
+                None => return vec![],
+            };
             versions
                 .into_iter()
-                .map(|name| {
-                    let url = format!("https://ratbinsa.z1.web.core.windows.net/{}", name);
-                    let name = name.clone();
-                    let parts = name.split("-");
-                    let version = parts.clone().nth(1).unwrap_or("NA");
-                    let os = match parts.clone().nth(2) {
-                        Some("windows") => Some(Os::Windows),
-                        Some("linux") => Some(Os::Linux),
-                        Some("macos") => Some(Os::Mac),
-                        _ => None,
-                    };
-                    Download {
-                        version: GgVersion::new(version),
-                        tags: Default::default(),
-                        download_url: url,
-                        arch: Some(Arch::X86_64),
-                        os,
-                        variant: Some(Variant::Any),
-                    }
-                })
+                .map(|name| name_to_download(&name))
                 .collect()
         })
     }
@@ -98,5 +107,66 @@ impl Executor for Rat {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::name_to_download;
+    use crate::target::{Arch, Os};
+
+    #[test]
+    fn test_name_to_download_x64() {
+        let download = name_to_download("bin/rat-3.9.0-linux-x64.bin");
+        assert_eq!(download.os, Some(Os::Linux));
+        assert_eq!(download.arch, Some(Arch::X86_64));
+        assert_eq!(
+            download.version.map(|v| v.to_string()),
+            Some("3.9.0".to_string())
+        );
+        assert_eq!(
+            download.download_url,
+            "https://ratbinsa.z1.web.core.windows.net/bin/rat-3.9.0-linux-x64.bin"
+        );
+    }
+
+    #[test]
+    fn test_name_to_download_x64_other_os() {
+        let download = name_to_download("bin/rat-3.9.0-macos-x64.bin");
+        assert_eq!(download.os, Some(Os::Mac));
+        assert_eq!(download.arch, Some(Arch::X86_64));
+
+        let download = name_to_download("bin/rat-3.9.0-windows-x64.exe");
+        assert_eq!(download.os, Some(Os::Windows));
+        assert_eq!(download.arch, Some(Arch::X86_64));
+    }
+
+    #[test]
+    fn test_name_to_download_arm64() {
+        let download = name_to_download("bin/rat-4.0.0-macos-arm64.bin");
+        assert_eq!(download.os, Some(Os::Mac));
+        assert_eq!(download.arch, Some(Arch::Arm64));
+
+        let download = name_to_download("bin/rat-4.0.0-windows-arm64.exe");
+        assert_eq!(download.os, Some(Os::Windows));
+        assert_eq!(download.arch, Some(Arch::Arm64));
+    }
+
+    #[test]
+    fn test_name_to_download_unknown_arch() {
+        for name in [
+            "bin/rat-4.0.0-linux-riscv.bin",
+            "bin/rat-4.0.0-linux-x86.bin",
+            "bin/rat-4.0.0-linux-notarm64.bin",
+            "bin/rat-4.0.0-linux.bin",
+        ] {
+            assert_eq!(name_to_download(name).arch, None, "{}", name);
+        }
+    }
+
+    #[test]
+    fn test_name_to_download_arch_only_from_its_own_part() {
+        let download = name_to_download("arm64/rat-4.0.0-linux-x64.bin");
+        assert_eq!(download.arch, Some(Arch::X86_64));
     }
 }
