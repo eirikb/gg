@@ -1,6 +1,7 @@
 #include "const.h"
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include "sha256-512/SHA512.h"
 #include <netdb.h>
 #include <netinet/in.h>
@@ -64,6 +65,66 @@ static int parseProxy(char *host, size_t hostSize, char *port, size_t portSize) 
     return 1;
 }
 
+static int fail(FILE *f) {
+    fclose(f);
+    remove("stage4.tmp");
+    return 1;
+}
+
+/* stdout, stage2 drops stderr */
+static void printHeaders(const char *buffer, long size) {
+    if (size <= 0) {
+        printf("(nothing received)\n");
+        return;
+    }
+    const long max = size < 2000 ? size : 2000;
+    for (long i = 0; i < max; i++) {
+        if (buffer[i] != '\r') {
+            putchar(buffer[i]);
+        }
+    }
+    if (buffer[max - 1] != '\n') {
+        printf("\n");
+    }
+}
+
+/* Case-insensitive, some proxies lowercase the names */
+static const char *findHeader(const char *buffer, long headerSize, const char *name) {
+    const size_t nameLen = strlen(name);
+    const char *line = strstr(buffer, "\r\n");
+    while (line != NULL && line + 2 < buffer + headerSize) {
+        line += 2;
+        if (strncasecmp(line, name, nameLen) == 0 && line[nameLen] == ':') {
+            const char *value = line + nameLen + 1;
+            while (*value == ' ' || *value == '\t') {
+                value++;
+            }
+            return value;
+        }
+        line = strstr(line, "\r\n");
+    }
+    return NULL;
+}
+
+/* Digits only, "12garbage" is not 12 */
+static long contentLength(const char *buffer, long headerSize) {
+    const char *v = findHeader(buffer, headerSize, "Content-Length");
+    if (v == NULL || *v < '0' || *v > '9') {
+        return -1;
+    }
+    long value = 0;
+    for (; *v >= '0' && *v <= '9'; v++) {
+        if (value > 100000000) {
+            return -1;
+        }
+        value = value * 10 + (*v - '0');
+    }
+    while (*v == ' ' || *v == '\t') {
+        v++;
+    }
+    return *v == '\r' ? value : -1;
+}
+
 int main() {
     const long bufferSize = 65536;
     const char *host = "ggcmd.z13.web.core.windows.net";
@@ -125,57 +186,60 @@ int main() {
     send(sock, header, strlen(header), 0);
 
     char buffer[bufferSize];
-    long dataSize = 0;
-    long messageSize = 0;
-    long totalSize = 0;
-    int p = 0;
     /* The dots go to stdout, so anything parsing gg's output gets them too (#309) */
     const char *hideProgressEnv = getenv("GG_HIDE_DOWNLOAD_PROGRESS");
     const int showProgress = !(hideProgressEnv && *hideProgressEnv);
 
-    do {
-        const long res = read(sock, buffer, bufferSize - 1);
+    /* px (#325) sends the headers in small pieces, so read until all are in */
+    long have = 0;
+    char *end = NULL;
+    while (end == NULL) {
+        if (have >= bufferSize - 1) {
+            printf("HTTP headers from %s are too large\n", connectHost);
+            printHeaders(buffer, have);
+            return fail(f);
+        }
+        const long res = read(sock, buffer + have, bufferSize - 1 - have);
         if (res <= 0) {
-            if (showProgress) {
-                printf("\n");
-            }
-            printf("Download interrupted\n");
-            fclose(f);
-            remove("stage4.tmp");
-            return 1;
+            printf("Connection to %s closed before the HTTP headers were complete\n", connectHost);
+            printHeaders(buffer, have);
+            return fail(f);
         }
-        if (dataSize == 0) {
-            buffer[res] = '\0';
-            const char *statusSpace = strncmp(buffer, "HTTP/", 5) == 0 ? strchr(buffer, ' ') : NULL;
-            const int status = statusSpace ? atoi(statusSpace + 1) : 0;
-            if (status != 200) {
-                printf("HTTP error %d from %s\n", status, connectHost);
-                fclose(f);
-                remove("stage4.tmp");
-                return 1;
-            }
-            const char *clHeader = strstr(buffer, "Content-Length");
-            const char *cl = clHeader ? strstr(clHeader, " ") : NULL;
-            const char *end = strstr(buffer, "\r\n\r\n");
-            if (cl == NULL || end == NULL) {
-                printf("Unexpected HTTP response from %s\n", host);
-                fclose(f);
-                remove("stage4.tmp");
-                return 1;
-            }
-            char *to = strstr(cl, "\r");
-            dataSize = strtol(cl, &to, 10);
-            messageSize = end - buffer + dataSize + 4;
-            totalSize = messageSize;
-            fwrite(end + 4, 1, res - (messageSize - dataSize), f);
-            if (showProgress) {
-                printf("0%%");
-            }
-        } else {
-            fwrite(buffer, 1, res, f);
-        }
-        messageSize -= res;
-        const int np = 100 - (int) ((double) messageSize / (double) totalSize * 100);
+        have += res;
+        buffer[have] = '\0';
+        end = strstr(buffer, "\r\n\r\n");
+    }
+    const long headerSize = end - buffer + 4;
+
+    const char *statusSpace = strncmp(buffer, "HTTP/", 5) == 0 ? strchr(buffer, ' ') : NULL;
+    const int status = statusSpace ? atoi(statusSpace + 1) : 0;
+    if (status != 200) {
+        printf("HTTP error %d from %s\n", status, connectHost);
+        printHeaders(buffer, headerSize - 2);
+        return fail(f);
+    }
+    /* Chunk markers would end up in the file and just give a hash mismatch */
+    if (findHeader(buffer, headerSize, "Transfer-Encoding") != NULL) {
+        printf("Unsupported Transfer-Encoding in HTTP response from %s\n", connectHost);
+        printHeaders(buffer, headerSize - 2);
+        return fail(f);
+    }
+    const long dataSize = contentLength(buffer, headerSize);
+    if (dataSize < 0) {
+        printf("Missing or invalid Content-Length in HTTP response from %s\n", connectHost);
+        printHeaders(buffer, headerSize - 2);
+        return fail(f);
+    }
+
+    long written = have - headerSize < dataSize ? have - headerSize : dataSize;
+    fwrite(buffer + headerSize, 1, written, f);
+    if (showProgress) {
+        printf("0%%");
+    }
+
+    int p = 0;
+    while (1) {
+        const int np = dataSize > 0 ? (int) ((double) written / (double) dataSize * 100) : 100;
         if (np != p) {
             p = np;
             if (showProgress) {
@@ -187,7 +251,21 @@ int main() {
                 fflush(stdout);
             }
         }
-    } while (messageSize > 0);
+        if (written >= dataSize) {
+            break;
+        }
+        const long left = dataSize - written;
+        const long res = read(sock, buffer, left < bufferSize ? left : bufferSize);
+        if (res <= 0) {
+            if (showProgress) {
+                printf("\n");
+            }
+            printf("Download interrupted\n");
+            return fail(f);
+        }
+        fwrite(buffer, 1, res, f);
+        written += res;
+    }
     fclose(f);
 
     if (showProgress) {
