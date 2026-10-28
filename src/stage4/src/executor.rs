@@ -297,6 +297,16 @@ pub trait Executor {
         true
     }
     fn post_prep(&self, _cache_path: &str) {}
+    // Runs once every executor is prepped, with all their bin dirs. prep runs a
+    // tool and its deps side by side, so a tool that needs a dep to finish its
+    // own install (pip needs python) does that here
+    fn post_prep_with_deps(
+        &self,
+        _app_path: &AppPath,
+        _path_vars: &[String],
+    ) -> Result<(), String> {
+        Ok(())
+    }
 }
 
 pub fn java_deps<'a>() -> Pin<Box<dyn Future<Output = Vec<ExecutorDep>> + 'a>> {

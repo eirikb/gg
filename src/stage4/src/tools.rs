@@ -15,6 +15,7 @@ use crate::executors::jbang::JBangExecutor;
 use crate::executors::maven::Maven;
 use crate::executors::node::{Node, NpmPackageSpec};
 use crate::executors::openapigenerator::OpenAPIGenerator;
+use crate::executors::pypi::PyPi;
 use crate::executors::python::Python;
 use crate::executors::rat::Rat;
 use crate::executors::ruby::Ruby;
@@ -418,17 +419,15 @@ pub static TOOL_REGISTRY: LazyLock<HashMap<&'static str, ToolInfo>> = LazyLock::
             category: ToolCategory::Utility,
             tags: vec![],
             example: Some("gg vibe --version"),
+            // PyPI, not GitHub: from 3.0 the releases there only carry the
+            // vibe-acp editor binary, the CLI itself ships as a wheel
             factory: |cmd| {
-                Some(Box::new(
-                    GitHub::new_with_config(
-                        cmd,
-                        "mistralai".to_string(),
-                        "mistral-vibe".to_string(),
-                        Some(vec![]),
-                        Some(vec!["vibe".to_string(), "vibe.exe".to_string()]),
-                    )
-                    .with_excluded_asset_keywords(vec!["vibe-acp"]),
-                ))
+                Some(Box::new(PyPi {
+                    executor_cmd: cmd,
+                    name: "vibe",
+                    package: "mistral-vibe",
+                    bin: "vibe",
+                }))
             },
         },
         ToolInfo {
