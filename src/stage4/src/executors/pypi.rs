@@ -2,13 +2,18 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fs;
 use std::future::Future;
+use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::sync::{Arc, Mutex};
+use std::thread;
 
-use log::{debug, info};
+use indicatif::ProgressBar;
+use log::{debug, info, log_enabled, Level};
 use serde::Deserialize;
 
+use crate::barus::{create_spinner_barus, spinner_style, steps_style};
 use crate::executor::{
     AppInput, AppPath, BinPattern, Download, Executor, ExecutorCmd, ExecutorDep, GgVersion,
 };
@@ -200,11 +205,231 @@ fn venv_is_sound(venv: &Path) -> bool {
     })
 }
 
+// Output in the error, so a failing venv is not silent
 fn run(mut cmd: Command, what: &str) -> Result<(), String> {
-    match cmd.status() {
-        Ok(s) if s.success() => Ok(()),
-        Ok(s) => Err(format!("{what} failed: {s}")),
+    match cmd.output() {
+        Ok(o) if o.status.success() => Ok(()),
+        Ok(o) => Err(format!(
+            "{what} failed: {}\n{}{}",
+            o.status,
+            String::from_utf8_lossy(&o.stdout),
+            String::from_utf8_lossy(&o.stderr)
+        )),
         Err(e) => Err(format!("{what} failed: {e}")),
+    }
+}
+
+#[derive(Debug, PartialEq)]
+enum PipLine {
+    /// Requirement name, lowercased
+    Collecting(String),
+    /// name-version of the file pip starts on
+    Fetching(String),
+    Installing(u64),
+    Other,
+}
+
+// pip install talks in three phases: one "Collecting x" per requirement while
+// it resolves, with ".metadata" fetches in between that are not downloads,
+// then one "Downloading x.whl" or "Using cached x.whl" per package, then a
+// single "Installing collected packages" line and silence until it is done
+fn pip_line(line: &str) -> PipLine {
+    let line = line.trim_start();
+    if let Some(req) = line.strip_prefix("Collecting ") {
+        // "anyio==4.15.1 (from x)", "foo[extra]>=1", "bar"
+        let name: String = req
+            .chars()
+            .take_while(|c| !c.is_whitespace() && !"=<>~!;[(@".contains(*c))
+            .collect();
+        return PipLine::Collecting(name.to_lowercase());
+    }
+    if let Some(file) = line
+        .strip_prefix("Downloading ")
+        .or_else(|| line.strip_prefix("Using cached "))
+    {
+        if !file.contains(".metadata") {
+            // "anyio-4.15.1-py3-none-any.whl (132 kB)" -> "anyio-4.15.1"
+            let file = file.split_whitespace().next().unwrap_or_default();
+            let stem = file
+                .trim_end_matches(".whl")
+                .trim_end_matches(".tar.gz")
+                .trim_end_matches(".zip");
+            let name = stem.split('-').take(2).collect::<Vec<_>>().join("-");
+            return PipLine::Fetching(name);
+        }
+    }
+    if let Some(list) = line.strip_prefix("Installing collected packages: ") {
+        return PipLine::Installing(list.split(", ").count() as u64);
+    }
+    PipLine::Other
+}
+
+/// One bar over pip's three phases: a spinner while it resolves, a counter
+/// while it downloads, a spinner again while it installs
+struct PipProgress {
+    bar: ProgressBar,
+    package: String,
+    /// Names, not lines: backtracking collects the same name again
+    collected: HashSet<String>,
+    /// Downloads pip has begun; the last one may still be in flight
+    started: u64,
+    installing: Option<u64>,
+}
+
+impl PipProgress {
+    fn new(bar: ProgressBar, package: &str) -> Self {
+        bar.set_style(spinner_style());
+        bar.set_message(format!("resolving {package}"));
+        Self {
+            bar,
+            package: package.to_string(),
+            collected: HashSet::new(),
+            started: 0,
+            installing: None,
+        }
+    }
+
+    fn total(&self) -> u64 {
+        (self.collected.len() as u64).max(self.started)
+    }
+
+    fn on_line(&mut self, line: &str) {
+        match pip_line(line) {
+            PipLine::Collecting(name) => {
+                self.collected.insert(name);
+                if self.started == 0 {
+                    self.bar.set_message(format!(
+                        "resolving {} ({} packages)",
+                        self.package,
+                        self.collected.len()
+                    ));
+                } else {
+                    // A package without metadata files is fetched whole while
+                    // resolving, so the total can still grow
+                    self.bar.set_length(self.total());
+                }
+            }
+            PipLine::Fetching(name) => {
+                self.started += 1;
+                // Numbers before the style: the bar ticks on its own thread
+                // and would draw a 0/0 frame in between. pip says Downloading
+                // before the bytes come, so the one in flight does not count
+                self.bar.set_length(self.total());
+                self.bar.set_position(self.started - 1);
+                if self.started == 1 {
+                    self.bar.set_style(steps_style());
+                }
+                self.bar.set_message(format!("downloading {name}"));
+            }
+            PipLine::Installing(n) => {
+                self.installing = Some(n);
+                self.bar.set_style(spinner_style());
+                self.bar.set_message(format!("installing {n} packages"));
+            }
+            PipLine::Other => {}
+        }
+    }
+
+    fn finish(self) {
+        match self.installing {
+            Some(n) => self
+                .bar
+                .finish_with_message(format!("installed {n} packages")),
+            None => self.bar.finish_with_message("installed"),
+        }
+        // Same as the download bars: a newline after the finished bar, so the
+        // tool's own output starts on a line of its own
+        if !self.bar.is_hidden() {
+            eprintln!();
+        }
+    }
+}
+
+/// pip's warnings matter even when it succeeds (a yanked pin, a deprecation)
+fn pip_warnings(transcript: &[String]) -> impl Iterator<Item = &String> {
+    transcript
+        .iter()
+        .filter(|line| line.starts_with("WARNING:") || line.starts_with("DEPRECATION:"))
+}
+
+#[derive(Debug)]
+struct PipFailure {
+    what: String,
+    transcript: Vec<String>,
+}
+
+// Not lines(): that stops at the first line that is not UTF-8 (a Windows
+// code page path, on the very first line), and a pipe nobody reads blocks
+// pip for good. Decode lossily and read to the end
+fn each_line(reader: impl Read, mut each: impl FnMut(String)) {
+    let mut reader = BufReader::new(reader);
+    let mut buf = Vec::new();
+    loop {
+        buf.clear();
+        match reader.read_until(b'\n', &mut buf) {
+            Ok(0) | Err(_) => return,
+            Ok(_) => {}
+        }
+        let line = String::from_utf8_lossy(&buf);
+        each(
+            line.trim_end_matches(|c: char| c == '\n' || c == '\r')
+                .to_string(),
+        );
+    }
+}
+
+// Runs pip with its output piped. stdout goes line by line to on_line, and
+// everything is kept: the transcript comes back for the warnings in it, or
+// with the failure. With verbose the lines are printed as they come as well
+fn run_pip(
+    mut cmd: Command,
+    verbose: bool,
+    mut on_line: impl FnMut(&str),
+) -> Result<Vec<String>, PipFailure> {
+    cmd.stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    let mut child = cmd.spawn().map_err(|e| PipFailure {
+        what: format!("pip install failed: {e}"),
+        transcript: vec![],
+    })?;
+    let transcript = Arc::new(Mutex::new(Vec::new()));
+    // stderr on its own thread, or pip could fill one pipe while the other
+    // is being read
+    let stderr = child.stderr.take().map(|err| {
+        let transcript = Arc::clone(&transcript);
+        thread::spawn(move || {
+            each_line(err, |line| {
+                if verbose {
+                    eprintln!("{line}");
+                }
+                transcript.lock().unwrap().push(line);
+            })
+        })
+    });
+    if let Some(out) = child.stdout.take() {
+        each_line(out, |line| {
+            if verbose {
+                println!("{line}");
+            }
+            on_line(&line);
+            transcript.lock().unwrap().push(line);
+        });
+    }
+    if let Some(stderr) = stderr {
+        let _ = stderr.join();
+    }
+    let transcript = transcript.lock().map(|t| t.clone()).unwrap_or_default();
+    match child.wait() {
+        Ok(status) if status.success() => Ok(transcript),
+        Ok(status) => Err(PipFailure {
+            what: format!("pip install failed: {status}"),
+            transcript,
+        }),
+        Err(e) => Err(PipFailure {
+            what: format!("pip install failed: {e}"),
+            transcript,
+        }),
     }
 }
 
@@ -294,12 +519,27 @@ impl Executor for PyPi {
         if venv.exists() {
             let _ = fs::remove_dir_all(&venv);
         }
-        // venv is quiet for a few seconds before pip starts talking
-        println!("{}: building a venv for {}", self.name, self.package);
+        // With -v pip's own output streams through instead of the bar
+        let verbose = log_enabled!(Level::Info);
+        let bar = if verbose {
+            ProgressBar::hidden()
+        } else {
+            create_spinner_barus()
+        };
+        bar.set_prefix(self.name.to_string());
+        bar.set_message("creating venv");
+        if bar.is_hidden() {
+            // Nothing draws (-v, GG_HIDE_DOWNLOAD_PROGRESS, no terminal), so
+            // say it the plain way; venv is quiet for a few seconds
+            println!("{}: building a venv for {}", self.name, self.package);
+        }
         info!("{}: creating venv {:?} with {:?}", self.name, venv, python);
         let mut mkvenv = Command::new(&python);
         mkvenv.arg("-m").arg("venv").arg(&venv);
-        run(mkvenv, "python -m venv")?;
+        if let Err(e) = run(mkvenv, "python -m venv") {
+            bar.finish_and_clear();
+            return Err(format!("{}: {e}", self.name));
+        }
 
         info!("{}: installing {:?}", self.name, wheel);
         let mut pip = Command::new(self.venv_bin(&venv, "python"));
@@ -307,13 +547,37 @@ impl Executor for PyPi {
             .arg("pip")
             .arg("install")
             .arg("--no-input")
+            // pip draws its own bars even into a pipe
+            .arg("--progress-bar")
+            .arg("off")
             .arg(&wheel)
             // pip's download cache stays inside gg's cache dir, like npm's
             .env("PIP_CACHE_DIR", dir.join("pip_cache"))
-            .env("PIP_DISABLE_PIP_VERSION_CHECK", "1");
-        if let Err(e) = run(pip, "pip install") {
-            let _ = fs::remove_dir_all(&venv);
-            return Err(format!("{}: {e}", self.name));
+            .env("PIP_DISABLE_PIP_VERSION_CHECK", "1")
+            // UTF-8 on the pipe whatever the code page, and no buffering
+            // between pip's lines and the bar
+            .env("PYTHONUTF8", "1")
+            .env("PYTHONUNBUFFERED", "1");
+        let mut progress = PipProgress::new(bar, self.package);
+        let transcript = match run_pip(pip, verbose, |line| progress.on_line(line)) {
+            Ok(transcript) => transcript,
+            Err(failure) => {
+                progress.bar.finish_and_clear();
+                if !verbose {
+                    // The bar stood in for pip's words, so here they are
+                    for line in &failure.transcript {
+                        eprintln!("{line}");
+                    }
+                }
+                let _ = fs::remove_dir_all(&venv);
+                return Err(format!("{}: {}", self.name, failure.what));
+            }
+        };
+        progress.finish();
+        if !verbose {
+            for line in pip_warnings(&transcript) {
+                eprintln!("{line}");
+            }
         }
         fs::write(
             &done,
@@ -641,7 +905,7 @@ mod tests {
             install_dir: dir.path().to_path_buf(),
         };
         let err = test_pypi().post_prep_with_deps(&app_path, &[]).unwrap_err();
-        assert!(err.contains("no wheel"), "{err}");
+        assert!(err.contains("no wheel"), "{}", err);
     }
 
     #[test]
@@ -657,7 +921,7 @@ mod tests {
         };
         // Not a no-op any more: it wants to rebuild, and gets as far as the wheel
         let err = test_pypi().post_prep_with_deps(&app_path, &[]).unwrap_err();
-        assert!(err.contains("no wheel"), "{err}");
+        assert!(err.contains("no wheel"), "{}", err);
     }
 
     #[test]
@@ -667,7 +931,7 @@ mod tests {
             install_dir: dir.path().to_path_buf(),
         };
         let err = test_pypi().post_prep_with_deps(&app_path, &[]).unwrap_err();
-        assert!(err.contains("no wheel"), "{err}");
+        assert!(err.contains("no wheel"), "{}", err);
 
         fs::write(
             dir.path().join("mistral_vibe-3.0.3-py3-none-any.whl"),
@@ -675,6 +939,164 @@ mod tests {
         )
         .unwrap();
         let err = test_pypi().post_prep_with_deps(&app_path, &[]).unwrap_err();
-        assert!(err.contains("no python"), "{err}");
+        assert!(err.contains("no python"), "{}", err);
+    }
+
+    #[test]
+    fn test_pip_line() {
+        assert_eq!(
+            pip_line("Collecting anyio==4.15.1 (from mistral-vibe==3.0.3)"),
+            PipLine::Collecting("anyio".to_string())
+        );
+        assert_eq!(
+            pip_line("Collecting Foo[extra]>=1"),
+            PipLine::Collecting("foo".to_string())
+        );
+        // Metadata fetches while resolving are not downloads
+        assert_eq!(
+            pip_line("  Downloading anyio-4.15.1-py3-none-any.whl.metadata (4.7 kB)"),
+            PipLine::Other
+        );
+        assert_eq!(
+            pip_line("  Using cached anyio-4.15.1-py3-none-any.whl.metadata (4.7 kB)"),
+            PipLine::Other
+        );
+        assert_eq!(
+            pip_line("Downloading anyio-4.15.1-py3-none-any.whl (132 kB)"),
+            PipLine::Fetching("anyio-4.15.1".to_string())
+        );
+        assert_eq!(
+            pip_line(
+                "Using cached mistral_vibe-3.0.3-cp312-abi3-manylinux_2_28_x86_64.whl (67.4 MB)"
+            ),
+            PipLine::Fetching("mistral_vibe-3.0.3".to_string())
+        );
+        assert_eq!(
+            pip_line("Downloading foo-1.0.tar.gz (10 kB)"),
+            PipLine::Fetching("foo-1.0".to_string())
+        );
+        assert_eq!(
+            pip_line("Installing collected packages: six, anyio, mistral-vibe"),
+            PipLine::Installing(3)
+        );
+        assert_eq!(
+            pip_line("Processing ./mistral_vibe-3.0.3-cp312-abi3-manylinux_2_28_x86_64.whl"),
+            PipLine::Other
+        );
+        assert_eq!(
+            pip_line("Successfully installed anyio-4.15.1 six-1.17.0"),
+            PipLine::Other
+        );
+        assert_eq!(pip_line(""), PipLine::Other);
+    }
+
+    #[test]
+    fn test_pip_progress_resolves_then_counts_downloads() {
+        let mut p = PipProgress::new(ProgressBar::hidden(), "mistral-vibe");
+        for line in [
+            "Processing ./mistral_vibe-3.0.3-cp312-abi3-manylinux_2_28_x86_64.whl",
+            "Collecting anyio==4.15.1 (from mistral-vibe==3.0.3)",
+            "  Downloading anyio-4.15.1-py3-none-any.whl.metadata (4.7 kB)",
+            "Collecting six==1.17.0 (from mistral-vibe==3.0.3)",
+            "  Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)",
+        ] {
+            p.on_line(line);
+        }
+        assert_eq!((p.collected.len(), p.started), (2, 0));
+        assert_eq!(p.bar.message(), "resolving mistral-vibe (2 packages)");
+        // pip announces a download before the bytes come, so it is not done yet
+        p.on_line("Downloading anyio-4.15.1-py3-none-any.whl (132 kB)");
+        assert_eq!((p.bar.position(), p.bar.length()), (0, Some(2)));
+        assert_eq!(p.bar.message(), "downloading anyio-4.15.1");
+        p.on_line("Using cached six-1.17.0-py2.py3-none-any.whl (11 kB)");
+        assert_eq!((p.bar.position(), p.bar.length()), (1, Some(2)));
+        p.on_line("Installing collected packages: six, anyio, mistral-vibe");
+        assert_eq!(p.installing, Some(3));
+        assert_eq!(p.bar.message(), "installing 3 packages");
+    }
+
+    #[test]
+    fn test_pip_progress_total_grows_when_a_wheel_comes_early() {
+        let mut p = PipProgress::new(ProgressBar::hidden(), "x");
+        p.on_line("Collecting a==1 (from x==1)");
+        // No metadata file for this one, pip pulls the whole wheel now
+        p.on_line("  Downloading a-1-py3-none-any.whl (1.0 MB)");
+        p.on_line("Collecting b==1 (from x==1)");
+        p.on_line("Collecting c==1 (from x==1)");
+        assert_eq!((p.bar.position(), p.bar.length()), (0, Some(3)));
+        p.on_line("Downloading b-1-py3-none-any.whl (1 kB)");
+        p.on_line("Downloading c-1-py3-none-any.whl (1 kB)");
+        assert_eq!((p.bar.position(), p.bar.length()), (2, Some(3)));
+    }
+
+    #[test]
+    fn test_pip_progress_backtracking_counts_a_name_once() {
+        let mut p = PipProgress::new(ProgressBar::hidden(), "x");
+        p.on_line("Collecting a>=1 (from x==1)");
+        p.on_line("Collecting b (from x==1)");
+        p.on_line("INFO: pip is looking at multiple versions of a to determine which version is compatible with other requirements. This could take a while.");
+        p.on_line("Collecting a>=1 (from x==1)");
+        p.on_line("Collecting A>=1 (from b==2)");
+        assert_eq!(p.collected.len(), 2);
+        p.on_line("Downloading a-1-py3-none-any.whl (1 kB)");
+        assert_eq!(p.bar.length(), Some(2));
+    }
+
+    #[test]
+    fn test_pip_warnings() {
+        let transcript = vec![
+            "Collecting a==1".to_string(),
+            "WARNING: The candidate selected for download or install is a yanked version: 'a' candidate".to_string(),
+            "DEPRECATION: something".to_string(),
+            "Successfully installed a-1".to_string(),
+        ];
+        let got: Vec<&String> = pip_warnings(&transcript).collect();
+        assert_eq!(got, vec![&transcript[1], &transcript[2]]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_run_pip_feeds_stdout_and_keeps_the_transcript_on_failure() {
+        let mut cmd = Command::new("sh");
+        cmd.arg("-c").arg(
+            "echo 'Collecting a==1'; echo 'ERROR: no' >&2; echo 'Downloading a-1.whl (1 kB)'; exit 3",
+        );
+        let mut seen = vec![];
+        let failure = run_pip(cmd, false, |line| seen.push(line.to_string())).unwrap_err();
+        assert_eq!(seen, vec!["Collecting a==1", "Downloading a-1.whl (1 kB)"]);
+        assert!(failure.what.contains('3'), "{}", failure.what);
+        assert!(failure.transcript.contains(&"ERROR: no".to_string()));
+        assert!(failure.transcript.contains(&"Collecting a==1".to_string()));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_run_pip_reads_past_bytes_that_are_not_utf8() {
+        // A code page path on line one must not stop the reader, or pip
+        // blocks on a full pipe once nobody reads it
+        let mut cmd = Command::new("sh");
+        cmd.arg("-c").arg(
+            "printf 'Processing .\\\\caf\\351\\\\x.whl\\r\\n'; printf 'bad \\377\\376 bytes\\n' >&2; seq 1 20000 | sed 's/^/Collecting p/'; echo 'Downloading p-1.whl (1 kB)'",
+        );
+        let mut seen = vec![];
+        let transcript = run_pip(cmd, false, |line| seen.push(line.to_string())).unwrap();
+        assert_eq!(seen.len(), 20002);
+        assert_eq!(seen[0], "Processing .\\caf\u{FFFD}\\x.whl");
+        assert_eq!(
+            seen.last().map(String::as_str),
+            Some("Downloading p-1.whl (1 kB)")
+        );
+        assert!(transcript.iter().any(|l| l.starts_with("bad ")));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_run_pip_ok_and_missing_binary() {
+        let mut ok = Command::new("sh");
+        ok.arg("-c").arg("echo hi");
+        assert_eq!(run_pip(ok, false, |_| {}).unwrap(), vec!["hi"]);
+        let missing = Command::new("/definitely/not/a/python");
+        let failure = run_pip(missing, false, |_| {}).unwrap_err();
+        assert!(failure.transcript.is_empty());
     }
 }

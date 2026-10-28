@@ -1,5 +1,6 @@
 use indicatif::{MultiProgress, ProgressBar, ProgressDrawTarget, ProgressState, ProgressStyle};
 use std::fmt::Write;
+use std::time::Duration;
 
 // No trim - stage3 and the ps1 can only tell set from empty, and all three
 // have to agree on what "set" means
@@ -42,6 +43,36 @@ fn create_barus_with(hidden: bool) -> ProgressBar {
     pb
 }
 
+/// For work that reports lines, not bytes (pip's package list). Ticks on its
+/// own, so it keeps moving while the tool is silent
+pub fn create_spinner_barus() -> ProgressBar {
+    create_spinner_barus_with(progress_hidden())
+}
+
+fn create_spinner_barus_with(hidden: bool) -> ProgressBar {
+    if hidden {
+        return ProgressBar::hidden();
+    }
+    let pb = ProgressBar::new_spinner();
+    pb.set_style(spinner_style());
+    pb.enable_steady_tick(Duration::from_millis(100));
+    pb
+}
+
+pub fn spinner_style() -> ProgressStyle {
+    ProgressStyle::with_template("{prefix:.bold} {spinner:.green} {msg} [{elapsed_precise}]")
+        .unwrap()
+}
+
+/// The download bar's look, counting items instead of bytes
+pub fn steps_style() -> ProgressStyle {
+    ProgressStyle::with_template(
+        "{prefix:.bold} {spinner:.green} {msg} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len}",
+    )
+    .unwrap()
+    .progress_chars("#>-")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -60,6 +91,7 @@ mod tests {
     #[test]
     fn test_hidden_bar_stays_hidden_inside_a_multi() {
         assert!(create_barus_with(true).is_hidden());
+        assert!(create_spinner_barus_with(true).is_hidden());
         let m = create_multi_barus_with(true);
         assert!(m.add(ProgressBar::new_spinner()).is_hidden());
         assert!(m.insert(0, create_barus_with(true)).is_hidden());
