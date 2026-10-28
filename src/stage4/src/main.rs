@@ -510,6 +510,13 @@ async fn main() -> ExitCode {
                 }
             }
 
+            for (executor, (app_path, _, _)) in executors.iter().zip(res.iter()) {
+                if let Err(e) = executor.post_prep_with_deps(app_path, &path_vars) {
+                    println!("Prep failed: {}", e);
+                    return ExitCode::from(1);
+                }
+            }
+
             let (app_path, _, _) = &res[0];
             let executor = &executors[0];
 
