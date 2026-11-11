@@ -47,7 +47,7 @@ jobs:
 
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-          - os: macos-14
+          - os: macos-15
             target: aarch64-apple-darwin
           - os: ubuntu-22.04-arm
             target: aarch64-unknown-linux-musl
@@ -164,7 +164,7 @@ jobs:
           - os: ubuntu-22.04-arm
             target: aarch64-unknown-linux-gnu
             stage4: aarch64-unknown-linux-musl
-          - os: macos-14
+          - os: macos-15
             target: aarch64-apple-darwin
             stage4: aarch64-apple-darwin
           - os: macos-15-intel
@@ -337,13 +337,13 @@ jobs:
     needs: [ stage1, hash ]
     strategy:
       matrix:
-        os: [ macos-14, macos-15-intel ]
+        os: [ macos-15, macos-15-intel ]
         # graal runs native-image, since java -version would pass on any old JDK.
         # Pinned to 21 - CE stopped shipping macos-x64 at 25.0.2, so @25 would leave
         # macos-15-intel behind
         cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "deno -V",  "jbang --version", "gh/cli/cli version", "gh version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "run:java@21-graal native-image --version", "fastlane --version", "python -V", "vibe --version" ]
         include:
-          - os: macos-14
+          - os: macos-15
             stage4_target: aarch64-apple-darwin
           - os: macos-15-intel
             stage4_target: x86_64-apple-darwin
@@ -400,12 +400,12 @@ jobs:
     needs: [ stage1, hash ]
     strategy:
       matrix:
-        os: [ ubuntu-22.04-arm, macos-14, macos-15-intel ]
+        os: [ ubuntu-22.04-arm, macos-15, macos-15-intel ]
         cmd: [ "node -v", "java -version", "gradle -version", "openapi version", "deno -V", "jbang --version", "just -V", "run:java@21-azul java -version", "run:java@21-tem java -version", "run:java@17-tem java -version", "fastlane --version", "python -V", "vibe --version" ]
         include:
           - os: ubuntu-22.04-arm
             stage4_target: aarch64-unknown-linux-musl
-          - os: macos-14
+          - os: macos-15
             stage4_target: aarch64-apple-darwin
           - os: macos-15-intel
             stage4_target: x86_64-apple-darwin
