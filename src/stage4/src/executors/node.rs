@@ -27,16 +27,8 @@ enum Lts {
 #[serde(rename_all = "camelCase")]
 struct Root2 {
     pub version: String,
-    pub date: String,
     pub files: Vec<String>,
-    pub npm: Option<String>,
-    pub v8: String,
-    pub uv: Option<String>,
-    pub zlib: Option<String>,
-    pub openssl: Option<String>,
-    pub modules: Option<String>,
     pub lts: Lts,
-    pub security: bool,
 }
 
 pub struct Node {
@@ -231,10 +223,20 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
         Some(root) => root,
         None => return vec![],
     };
+    downloads_from_index(&root, host, file)
+}
 
+fn downloads_from_index(root: &Root, host: &str, file: &str) -> Vec<Download> {
     root.iter().filter(|r|
         r.files.contains(&file.to_string())
-    ).map(|r| {
+    ).filter_map(|r| {
+        let version_string = r.version.as_str();
+        let version = GgVersion::new(version_string)?;
+        // nodejs.org lists alphas next to the releases, and v27.0.0-alpha.0.0.0
+        // beats every v26 when nothing is pinned
+        if !version.to_version().pre.is_empty() {
+            return None;
+        }
         let lts = matches!(r.lts, Lts::String(_));
         let file_fix = if file.ends_with("-zip") {
             file.replace("-zip", ".zip")
@@ -247,17 +249,15 @@ async fn download_urls(host: &str, target: &Target) -> Vec<Download> {
         } else {
             HashSet::new()
         };
-        let version_string = r.version.as_str();
-        let version = GgVersion::new(version_string);
-        Download {
+        Some(Download {
             download_url: format!("https://{host}/download/release/{version_string}/node-{version_string}-{file_fix}"),
-            version,
+            version: Some(version),
             tags,
             // Arch and Os are mapped by target Arch/Os
             arch: Some(Arch::Any),
             os: Some(Os::Any),
             variant: Some(Variant::Any),
-        }
+        })
     }).collect()
 }
 
@@ -266,5 +266,57 @@ async fn get_node_urls(target: &Target) -> Vec<Download> {
         (Os::Linux, _, Some(Variant::Musl)) => unofficial_downloads(target).await,
         (Os::Windows, Arch::Arm64, _) => unofficial_downloads(target).await,
         _ => official_downloads(target).await,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Trimmed from nodejs.org on 2026-11-11, plus an rc and a version that won't parse
+    const INDEX: &str = r#"[
+      {"version":"v27.0.0-alpha.0.0.0","date":"2026-10-29","files":["linux-x64","win-x64-zip"],"npm":"12.1.0","v8":"15.6.75.25","lts":false,"security":false},
+      {"version":"v26.13.1","date":"2026-11-10","files":["linux-x64","win-x64-zip"],"npm":"11.20.0","v8":"14.6.202.34","lts":"Lithium","security":true},
+      {"version":"v26.14.0-rc.1","date":"2026-11-05","files":["linux-x64","win-x64-zip"],"npm":"11.20.0","v8":"14.6.202.34","lts":false,"security":false},
+      {"version":"latest","date":"2026-11-05","files":["linux-x64","win-x64-zip"],"npm":"11.20.0","v8":"14.6.202.34","lts":false,"security":false},
+      {"version":"v25.9.0","date":"2026-04-01","files":["linux-x64"],"npm":"11.6.0","v8":"14.1.146.11","lts":false,"security":false},
+      {"version":"v24.12.0","date":"2026-03-01","files":["win-x64-zip"],"npm":"11.6.0","v8":"13.6.233.10","lts":"Krypton","security":false}
+    ]"#;
+
+    #[test]
+    fn test_index_skips_prereleases() {
+        let root: Root = serde_json::from_str(INDEX).unwrap();
+        let downloads = downloads_from_index(&root, "nodejs.org", "linux-x64");
+        let got: Vec<(String, bool)> = downloads
+            .iter()
+            .map(|d| {
+                (
+                    d.version.as_ref().unwrap().to_string(),
+                    d.tags.contains("lts"),
+                )
+            })
+            .collect();
+        assert_eq!(
+            got,
+            vec![("26.13.1".to_string(), true), ("25.9.0".to_string(), false)]
+        );
+        assert_eq!(
+            downloads[0].download_url,
+            "https://nodejs.org/download/release/v26.13.1/node-v26.13.1-linux-x64.tar.gz"
+        );
+    }
+
+    #[test]
+    fn test_index_unofficial_zip_skips_prereleases() {
+        let root: Root = serde_json::from_str(INDEX).unwrap();
+        let downloads = downloads_from_index(&root, "unofficial-builds.nodejs.org", "win-x64-zip");
+        let urls: Vec<&str> = downloads.iter().map(|d| d.download_url.as_str()).collect();
+        assert_eq!(
+            urls,
+            vec![
+                "https://unofficial-builds.nodejs.org/download/release/v26.13.1/node-v26.13.1-win-x64.zip",
+                "https://unofficial-builds.nodejs.org/download/release/v24.12.0/node-v24.12.0-win-x64.zip",
+            ]
+        );
     }
 }

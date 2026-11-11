@@ -7,6 +7,7 @@ use crate::Executor;
 use futures_util::future::join_all;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{debug, info};
+use semver::Version;
 use std::collections::HashMap;
 use std::fs;
 use std::process::ExitCode;
@@ -153,7 +154,7 @@ async fn check_tool_update(
             let current_ver = current_version.clone().map(|v| v.to_version());
             let latest_ver = latest_version.clone().map(|v| v.to_version());
 
-            let needs_update = latest_ver > current_ver;
+            let needs_update = needs_update(current_ver.as_ref(), latest_ver.as_ref());
             let is_major_update = if let (Some(current), Some(latest)) = (&current_ver, &latest_ver)
             {
                 latest.major > current.major
@@ -176,6 +177,19 @@ async fn check_tool_update(
         }
     }
     Ok(None)
+}
+
+/// Newer wins, and so does a stable release over a prerelease nobody asked for:
+/// node handed out v27.0.0-alpha.0.0.0 as latest for a while, and 26.13.1 is
+/// lower than that, so those installs would otherwise never move back.
+/// A pinned prerelease only matches itself, so it is never moved off.
+fn needs_update(current: Option<&Version>, latest: Option<&Version>) -> bool {
+    match (current, latest) {
+        (Some(current), Some(latest)) => {
+            latest > current || (!current.pre.is_empty() && latest.pre.is_empty())
+        }
+        _ => latest > current,
+    }
 }
 
 fn should_include_update(update_info: &UpdateInfo, allow_major: bool) -> bool {
@@ -600,6 +614,22 @@ mod tests {
     fn name_for(cmd: &str) -> String {
         let executor = <dyn Executor>::new(meta_for(cmd).cmd).unwrap();
         registry_name(&*executor)
+    }
+
+    #[test]
+    fn test_needs_update_moves_off_an_unasked_prerelease() {
+        let v = |s: &str| Version::parse(s).unwrap();
+        let check = |current: &str, latest: &str| needs_update(Some(&v(current)), Some(&v(latest)));
+        assert!(check("25.6.0", "26.13.1"));
+        assert!(!check("26.13.1", "26.13.1"));
+        assert!(!check("26.13.1", "25.6.0"));
+        // Stuck on the alpha nodejs.org handed out as latest
+        assert!(check("27.0.0-alpha.0.0.0", "26.13.1"));
+        // A pinned prerelease only ever finds itself
+        assert!(!check("27.0.0-alpha.0.0.0", "27.0.0-alpha.0.0.0"));
+        assert!(check("27.0.0-alpha.0.0.0", "27.0.0-alpha.1"));
+        assert!(needs_update(None, Some(&v("26.13.1"))));
+        assert!(!needs_update(Some(&v("26.13.1")), None));
     }
 
     #[test]
