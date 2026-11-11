@@ -27,16 +27,8 @@ enum Lts {
 #[serde(rename_all = "camelCase")]
 struct Root2 {
     pub version: String,
-    pub date: String,
     pub files: Vec<String>,
-    pub npm: Option<String>,
-    pub v8: String,
-    pub uv: Option<String>,
-    pub zlib: Option<String>,
-    pub openssl: Option<String>,
-    pub modules: Option<String>,
     pub lts: Lts,
-    pub security: bool,
 }
 
 pub struct Node {
