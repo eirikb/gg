@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Eirik Brandtzæg <eirikb@eirikb.no>"]
 edition = "2018"
 
+[profile.dev]
+debug = true
+
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls", "stream" ] }

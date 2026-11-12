@@ -1,0 +1,27 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "lldb",
+        "request": "launch",
+        "name": "Run CLI (stage4)",
+        "program": "cargo",
+        "cargo": ["run", "-m", "${workspaceFolder}/src/stage4/Cargo.toml"],
+        "args": ["${input:args}"],
+        "preRunCommands": [
+          // prevents debugger hanging due to recursion error, not sure why...
+          "type category disable Rust"
+        ]
+      },
+    ],
+     "inputs": [
+      {
+        "id": "args",
+        "type": "promptString",
+        "description": "args for gg command",
+      },
+    ]
+}
