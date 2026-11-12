@@ -394,8 +394,8 @@ pub static TOOL_REGISTRY: LazyLock<HashMap<&'static str, ToolInfo>> = LazyLock::
         },
         ToolInfo {
             name: "kimi",
-            aliases: vec!["kimi-cli"],
-            description: "Kimi CLI - Moonshot AI's coding agent for your terminal",
+            aliases: vec!["kimi-cli", "kimi-code"],
+            description: "Kimi Code CLI - Moonshot AI's coding agent for your terminal",
             category: ToolCategory::Utility,
             tags: vec![],
             example: Some("gg kimi --version"),
@@ -404,11 +404,14 @@ pub static TOOL_REGISTRY: LazyLock<HashMap<&'static str, ToolInfo>> = LazyLock::
                     GitHub::new_with_config(
                         cmd,
                         "MoonshotAI".to_string(),
-                        "kimi-cli".to_string(),
+                        // moved here from kimi-cli (Python, ended at 1.52.0)
+                        // when it was rewritten in Node
+                        "kimi-code".to_string(),
                         Some(vec![]),
                         Some(vec!["kimi".to_string(), "kimi.exe".to_string()]),
                     )
-                    .with_excluded_asset_keywords(vec!["onedir"]),
+                    // .zst is the bare binary zstd'd, same platform as the archives
+                    .with_excluded_asset_keywords(vec![".zst"]),
                 ))
             },
         },

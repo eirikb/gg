@@ -52,9 +52,9 @@ impl GitHub {
     }
 
     /// Skip assets whose name contains any of these keywords. For repos that
-    /// publish several same-platform variants per release (kimi-cli's
-    /// `-onedir` bundles, mistral-vibe's `vibe-acp-*` editor-protocol
-    /// builds), the os+arch+version sort ties and selection becomes
+    /// publish several same-platform variants per release (kimi-code's
+    /// bare `.zst` binaries next to the archives, mistral-vibe's `vibe-acp-*`
+    /// editor-protocol builds), the os+arch+version sort ties and selection becomes
     /// arbitrary; excluding the unwanted variants keeps it deterministic.
     pub fn with_excluded_asset_keywords(mut self, keywords: Vec<&str>) -> Self {
         self.excluded_asset_keywords = keywords.into_iter().map(|k| k.to_lowercase()).collect();
@@ -542,14 +542,14 @@ mod tests {
 
     #[test]
     fn test_is_excluded_asset() {
-        // kimi-cli ships a single-binary and an -onedir bundle per platform
-        let excluded = vec!["onedir".to_string()];
+        // kimi-code ships a .tar.gz, a .zip and a bare zstd'd binary per platform
+        let excluded = vec![".zst".to_string()];
         assert!(GitHub::is_excluded_asset(
-            "kimi-1.47.0-x86_64-unknown-linux-gnu-onedir.tar.gz",
+            "kimi-code-linux-x64.zst",
             &excluded
         ));
         assert!(!GitHub::is_excluded_asset(
-            "kimi-1.47.0-x86_64-unknown-linux-gnu.tar.gz",
+            "kimi-code-linux-x64.tar.gz",
             &excluded
         ));
 
