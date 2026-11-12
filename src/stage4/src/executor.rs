@@ -97,7 +97,9 @@ impl GgVersionReq {
         // already carries an operator is left alone. `<`/`>` count too, or
         // ">=18.0.0" gets an extra "=" glued on and stops parsing.
         let has_op = version_req.starts_with(['^', '~', '=', '<', '>']);
-        let dots = version_req.matches('.').count();
+        // Core only: 2.6.0-canary.20261112 has three dots and is still exact
+        let core = version_req.split(['-', '+']).next().unwrap_or(version_req);
+        let dots = core.matches('.').count();
         let version_req_with_prefix = if !has_op && dots == 2 {
             format!("={}", version_req)
         } else if !has_op && dots == 1 {
@@ -476,8 +478,14 @@ pub async fn prep(
         for reason in crate::github_utils::take_github_errors() {
             eprintln!("{reason}");
         }
+        // A pin that doesn't exist (gg kimi@1.52.0, from before it moved repo)
+        // ends here too, and reads as an unsupported platform without it
+        let version = version_req
+            .as_ref()
+            .map(|v| format!(", version: {v}"))
+            .unwrap_or_default();
         return Err(format!(
-            "No matching download found for OS: {:?}, Arch: {:?}",
+            "No matching download found for OS: {:?}, Arch: {:?}{version}",
             input.target.os, input.target.arch
         ));
     };
@@ -554,6 +562,25 @@ fn variant_noise(filename: &str) -> usize {
         .iter()
         .filter(|flavor| tokens.contains(flavor))
         .count()
+}
+
+/// Stable before prerelease before versionless. kimi-code ships 2.6.0-canary.*
+/// ahead of 2.6.0, and semver puts that above 2.5.3. A sort key and not a
+/// filter, so a prerelease-only list or a project-file pin (.sdkmanrc, which
+/// this never sees) still lands on one. Only a suffix with letters in it counts:
+/// RubyInstaller-3.3.6-1 is a build revision, not a canary.
+fn release_rank(d: &Download) -> u8 {
+    match &d.version {
+        Some(v) => {
+            let pre = v.to_version().pre;
+            if pre.chars().any(|c| c.is_ascii_alphabetic()) {
+                1
+            } else {
+                0
+            }
+        }
+        None => 2,
+    }
 }
 
 fn get_url_matches(urls: &[Download], input: &AppInput, executor: &dyn Executor) -> Vec<Download> {
@@ -657,6 +684,11 @@ fn get_url_matches(urls: &[Download], input: &AppInput, executor: &dyn Executor)
         let b_score_bucket = if b_score <= 1 { 0 } else { b_score };
 
         match a_score_bucket.cmp(&b_score_bucket) {
+            std::cmp::Ordering::Equal => {}
+            other => return other,
+        }
+
+        match release_rank(a).cmp(&release_rank(b)) {
             std::cmp::Ordering::Equal => {}
             other => return other,
         }
@@ -878,6 +910,158 @@ mod tests {
         fn get_name(&self) -> &str {
             "nope"
         }
+    }
+
+    struct Fixed {
+        cmd: ExecutorCmd,
+        urls: Vec<Download>,
+    }
+
+    impl Executor for Fixed {
+        fn get_executor_cmd(&self) -> &ExecutorCmd {
+            &self.cmd
+        }
+        fn get_download_urls<'a>(
+            &'a self,
+            _input: &'a AppInput,
+        ) -> Pin<Box<dyn Future<Output = Vec<Download>> + 'a>> {
+            let urls = self.urls.clone();
+            Box::pin(async move { urls })
+        }
+        fn get_bins(&self, _input: &AppInput) -> Vec<BinPattern> {
+            vec![BinPattern::Exact("kimi".to_string())]
+        }
+        fn get_name(&self) -> &str {
+            "kimi-code"
+        }
+    }
+
+    fn kimi(version: Option<&str>, tags: &[&str]) -> (Fixed, AppInput) {
+        let urls = tags
+            .iter()
+            .map(|tag| Download {
+                // .invalid, so a test that gets as far as downloading fails
+                // instead of filling whatever GG_CACHE_DIR points at
+                download_url: format!("https://example.invalid/{tag}/kimi-code-linux-x64.tar.gz"),
+                version: GgVersion::new(tag),
+                os: Some(Os::Linux),
+                arch: Some(Arch::X86_64),
+                tags: HashSet::new(),
+                variant: Some(Variant::Any),
+            })
+            .collect();
+        let executor = Fixed {
+            cmd: ExecutorCmd {
+                cmd: "kimi".to_string(),
+                version: version.and_then(GgVersionReq::new),
+                distribution: None,
+                include_tags: Default::default(),
+                exclude_tags: Default::default(),
+                gems: None,
+            },
+            urls,
+        };
+        let input = AppInput {
+            target: Target {
+                arch: Arch::X86_64,
+                os: Os::Linux,
+                variant: None,
+            },
+            app_args: vec![],
+        };
+        (executor, input)
+    }
+
+    fn picked(version: Option<&str>, tags: &[&str]) -> Option<String> {
+        let (executor, input) = kimi(version, tags);
+        let urls = executor.urls.clone();
+        get_url_matches(&urls, &input, &executor)
+            .first()
+            .and_then(|d| d.version.clone())
+            .map(|v| v.to_string())
+    }
+
+    #[test]
+    fn test_stable_beats_newer_prerelease_when_unpinned() {
+        // As kimi-code's release list looked from 2026-11-05 to 11-12
+        let tags = [
+            "@moonshot-ai/kimi-code@2.6.0-canary.20261109040420-9c1a9c3",
+            "@moonshot-ai/kimi-code@2.5.3",
+            "@moonshot-ai/kimi-code@2.5.2",
+        ];
+        assert_eq!(picked(None, &tags).as_deref(), Some("2.5.3"));
+    }
+
+    #[test]
+    fn test_prerelease_only_still_resolves() {
+        let tags = ["@moonshot-ai/kimi-code@2.6.0-canary.20261109040420-9c1a9c3"];
+        assert_eq!(
+            picked(None, &tags).as_deref(),
+            Some("2.6.0-canary.20261109040420-9c1a9c3")
+        );
+    }
+
+    #[test]
+    fn test_pinned_prerelease_still_matches() {
+        // 2.6.0 and a later canary on the list: an exact pin must not drift.
+        // Not through the CLI, which splits that pin on its dashes.
+        let tags = [
+            "@moonshot-ai/kimi-code@2.6.0",
+            "@moonshot-ai/kimi-code@2.6.0-canary.20261112033252-d729f91",
+            "@moonshot-ai/kimi-code@2.6.0-canary.20261109040420-9c1a9c3",
+            "@moonshot-ai/kimi-code@2.5.3",
+        ];
+        assert_eq!(
+            picked(Some("2.6.0-canary.20261109040420-9c1a9c3"), &tags).as_deref(),
+            Some("2.6.0-canary.20261109040420-9c1a9c3")
+        );
+    }
+
+    #[test]
+    fn test_range_pin_skips_prereleases() {
+        let tags = [
+            "@moonshot-ai/kimi-code@2.6.0-canary.20261109040420-9c1a9c3",
+            "@moonshot-ai/kimi-code@2.5.3",
+        ];
+        assert_eq!(picked(Some("^2"), &tags).as_deref(), Some("2.5.3"));
+    }
+
+    #[test]
+    fn test_prerelease_still_beats_versionless() {
+        let (mut executor, input) = kimi(
+            None,
+            &["@moonshot-ai/kimi-code@2.6.0-canary.20261109040420-9c1a9c3"],
+        );
+        let mut nightly = executor.urls[0].clone();
+        nightly.download_url = "https://example.invalid/nightly/kimi-code-linux-x64.tar.gz".into();
+        nightly.version = None;
+        executor.urls.insert(0, nightly);
+        let urls = executor.urls.clone();
+        let first = get_url_matches(&urls, &input, &executor);
+        assert!(first[0].version.is_some(), "{:?}", first[0].download_url);
+    }
+
+    #[test]
+    fn test_numeric_suffix_is_a_revision_not_a_prerelease() {
+        // RubyInstaller-3.3.6-1: newest still wins over a plain older one
+        let tags = ["RubyInstaller-3.3.6-1", "RubyInstaller-3.3.5"];
+        assert_eq!(picked(None, &tags).as_deref(), Some("3.3.6-1"));
+    }
+
+    #[test]
+    fn test_version_req_dotted_prerelease_is_exact() {
+        let req = GgVersionReq::new("2.6.0-canary.20261109040420-9c1a9c3").unwrap();
+        assert_eq!("=2.6.0-canary.20261109040420-9c1a9c3", req.to_string());
+    }
+
+    #[tokio::test]
+    async fn test_missing_pinned_version_names_the_version() {
+        let (executor, input) = kimi(Some("1.52.0"), &["@moonshot-ai/kimi-code@2.6.0"]);
+        let message = prep(&executor, &input, &ProgressBar::hidden())
+            .await
+            .err()
+            .expect("1.52.0 is not in the list");
+        assert!(message.contains("1.52.0"), "{}", message);
     }
 
     // Used to be panic!("Did not find any download URL!") - that is #272
