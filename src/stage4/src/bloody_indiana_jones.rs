@@ -9,7 +9,6 @@ use log::{debug, info};
 use tempfile::tempdir;
 use tokio::task;
 
-use crate::barus::progress_hidden;
 use crate::fetch::client_builder;
 use crate::gem_utils;
 
@@ -304,10 +303,6 @@ impl BloodyIndianaJones {
                 std::fs::copy(&self.file_path, Path::new(&self.path).join(&self.file_name))
                     .unwrap();
                 self.pb.finish_with_message("Done");
-                // Just moves the cursor past the bar, and it lands on stdout (#309)
-                if !progress_hidden() {
-                    println!();
-                }
                 return;
             }
         }
@@ -366,10 +361,10 @@ impl BloodyIndianaJones {
         })
         .await
         .expect("Unable to move files");
+        // No println!() after it: other bars may still be drawing, and a line
+        // the MultiProgress doesn't know about leaves a stale copy of them
+        // (#324). main prints the newline once they are all done
         self.pb.finish_with_message("Done");
-        if !progress_hidden() {
-            println!();
-        }
     }
 
     pub fn cleanup_download(&self) {
