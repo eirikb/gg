@@ -337,8 +337,9 @@ impl PipProgress {
                 .finish_with_message(format!("installed {n} packages")),
             None => self.bar.finish_with_message("installed"),
         }
-        // Same as the download bars: a newline after the finished bar, so the
-        // tool's own output starts on a line of its own
+        // A newline after the finished bar, so a tool that starts with \r
+        // doesn't draw over it. Safe here: this runs after the download bars
+        // are all done, so it can't leave a stale one behind (#324)
         if !self.bar.is_hidden() {
             eprintln!();
         }

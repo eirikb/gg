@@ -477,12 +477,23 @@ async fn main() -> ExitCode {
                     (x, pb)
                 })
                 .map(|(x, pb)| async move {
-                    let app_path = prep(&**x, input, &pb).await?;
-                    let env = x.get_env(&app_path);
-                    let bin_dirs = x.get_bin_dirs();
-                    Ok::<_, String>((app_path, env, bin_dirs))
+                    let res = prep(&**x, input, &pb).await.map(|app_path| {
+                        let env = x.get_env(&app_path);
+                        let bin_dirs = x.get_bin_dirs();
+                        (app_path, env, bin_dirs)
+                    });
+                    // pb drops with the future, so a cached tool's empty bar
+                    // is gone right away, not left there while others download
+                    (res, !pb.is_hidden() && pb.message() == "Done")
                 });
-            let res = join_all(alles).await;
+            let (res, drew): (Vec<_>, Vec<_>) = join_all(alles).await.into_iter().unzip();
+
+            // The last bar leaves the cursor at the end of its line, so a tool
+            // that starts with \r would draw over it. One newline here, once
+            // nothing draws any more - a newline while bars still drew was #324
+            if drew.contains(&true) {
+                eprintln!();
+            }
 
             res.iter().filter(|x| x.is_err()).for_each(|x| {
                 println!("Prep failed: {}", x.clone().err().unwrap());
