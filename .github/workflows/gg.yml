@@ -42,7 +42,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
+          # Not ubuntu-latest: 26.04 builds C for x86-64-v3, so AVX got into the static
+          # binary and it died with SIGILL on older CPUs (#334)
+          - os: ubuntu-22.04
             target: x86_64-unknown-linux-musl
 
           - os: windows-latest
@@ -75,6 +77,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: "stage42"
+          # C objects from one image must not be restored on another
+          key: ${{ matrix.os }}
 
       - name: Build
         shell: bash
@@ -91,6 +95,13 @@ jobs:
           find . -type f -name stage4 -exec cp {} ../stage4 \;
           strip ../stage4
 
+      - name: Run on a baseline x86-64 CPU
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        shell: bash
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install qemu-user
+          qemu-x86_64 -cpu qemu64 ./stage4 --version
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
