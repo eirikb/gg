@@ -216,6 +216,37 @@ jobs:
           find . -type f \( -name stage3 -o -name stage3.exe \) -exec cp {} ../../stage3_${{ matrix.target }} \;
           strip ../../stage3_${{ matrix.target }}
 
+      - name: Download stage4
+        if: matrix.os == 'ubuntu-22.04'
+        uses: actions/download-artifact@v8
+        with:
+          name: stage4_${{ matrix.stage4 }}
+          path: stage4
+
+      - name: Run on a baseline x86-64 CPU
+        if: matrix.os == 'ubuntu-22.04'
+        shell: bash
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install qemu-user
+          stage3="$PWD/stage3_${{ matrix.target }}"
+          # Serve stage4 locally through stage3's proxy support, so the download and the
+          # SHA512 check run on every leg (forks too) without the network.
+          # The path is the proxied URL as http.server maps it, host from main.c
+          serve=$(mktemp -d)
+          mkdir -p "$serve/http:/ggcmd.z13.web.core.windows.net"
+          cp stage4/stage4 "$serve/http:/ggcmd.z13.web.core.windows.net/$(cat hash/hash_stage4_${{ matrix.stage4 }})"
+          python3 -m http.server 8080 --bind 127.0.0.1 --directory "$serve" >/dev/null 2>&1 &
+          trap "kill $!" EXIT
+          for _ in $(seq 50); do curl -s -o /dev/null 127.0.0.1:8080 && break; sleep 0.1; done
+          cd "$(mktemp -d)"
+          http_proxy=http://127.0.0.1:8080 GG_HIDE_DOWNLOAD_PROGRESS=1 \
+            timeout 120 qemu-x86_64 -cpu qemu64 "$stage3" || {
+            echo "::error::stage3 failed on a baseline x86-64 CPU (exit $?, 132 is SIGILL)"
+            exit 1
+          }
+          test -f stage4
+
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
