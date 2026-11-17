@@ -367,6 +367,9 @@ pub async fn prep(
                 .replace("^", "_hat_")
                 .replace("~", "_tilde_")
                 .replace("=", "_eq_")
+                // Windows rejects < and > in file names (jbang's //JAVA 21+ is >=21)
+                .replace(">", "_gt_")
+                .replace("<", "_lt_")
             + executor_cmd
                 .include_tags
                 .iter()
