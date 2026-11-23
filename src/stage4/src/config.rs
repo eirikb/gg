@@ -12,6 +12,8 @@ pub struct GgConfig {
     pub dependencies: HashMap<String, String>,
     #[serde(default)]
     pub aliases: HashMap<String, String>,
+    #[serde(default)]
+    pub wrappers: bool
 }
 
 
