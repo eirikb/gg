@@ -11,6 +11,7 @@ use crate::cli::Cli;
 use crate::config::GgConfig;
 use crate::executor::{prep, try_run, AppInput, Executor, ExecutorCmd, GgVersionReq};
 use crate::target::Target;
+use crate::wrappers::create_wrappers;
 use clap::Parser;
 
 mod barus;
@@ -28,6 +29,7 @@ mod github_utils;
 mod target;
 mod tools;
 mod updater;
+mod wrappers;
 
 use crate::tools::{canonical_name, get_all_tools, get_tool_info, registry_name, ToolCategory};
 
@@ -266,6 +268,13 @@ async fn main() -> ExitCode {
     }
 
     debug!(target: "main", "{:?}", &cli);
+
+    if config.wrappers {
+        if let Err(err) = create_wrappers(&config).await {
+            println!("Failed to create wrappers: {err}");
+            return ExitCode::from(1);
+        }
+    }
 
     if let Some(cmd) = cmds.first() {
         if cmd.cmd.starts_with("__multi_alias__") {
